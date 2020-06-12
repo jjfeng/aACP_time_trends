@@ -130,6 +130,9 @@ def train_rating_model(YELP_TRAIN, fields, criterion, N_EPOCHS=20, split_ratio=0
 
     # Load and process data
     train_data = data.TabularDataset(path = YELP_TRAIN, format = 'json',fields = fields)
+    print(YELP_TRAIN)
+    print("NUM TRAIN", len(train_data.examples))
+    assert len(train_data.examples) > 2
     TEXT = fields["text"][1]
     TEXT.build_vocab(train_data,vectors = "glove.6B.%dd" % embed_dim)
 
@@ -157,7 +160,8 @@ def train_rating_model(YELP_TRAIN, fields, criterion, N_EPOCHS=20, split_ratio=0
     #    shuffle=True)
     for epoch in range(N_EPOCHS):
         train_loss = train(model, train_iterator, optimizer, criterion)
-        print(f'\tTrain Loss: {train_loss:.3f}')
+        if epoch % 5 == 0:
+            print(f'\tTrain Loss {epoch}: {train_loss:.3f}')
 
     evaluate(model, valid_iterator, criterion)
     return model
