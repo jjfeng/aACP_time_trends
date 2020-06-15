@@ -78,11 +78,11 @@ def main(args=sys.argv[1:]):
 
     num_hidden = 10
     N_EPOCHS = 40
-    YEARS = range(2008,2013)
+    YEARS = range(2008,2011)
     MONTHS = range(1,13)
     #N_EPOCHS = 4
     #YEARS = range(2008,2009)
-    #MONTHS = range(1,4)
+    #MONTHS = range(1,13)
 
     times = []
     models = []
@@ -113,8 +113,8 @@ def main(args=sys.argv[1:]):
     ETA_FACTOR = 0.1
     path_func = lambda x: YELP_TEST % x
     forecasters = [
-            #ExpWeightingWithHuman(T, human_max_loss=alpha, eta_factor=0.1, new_model_eta=0.3),
-            #BlindWeight(),
+            ExpWeightingWithHuman(T, human_max_loss=alpha, eta_factor=0.1, new_model_eta=0.3),
+            BlindWeight(),
             OraclePredictor([path_func(t) for t in times], models, human_max_loss=alpha)
     ]
     for forecaster in forecasters:
@@ -132,7 +132,7 @@ def main(args=sys.argv[1:]):
 
         plt.clf()
         plt.figure(figsize=(6,6))
-        plt.plot(np.arange(T - 1), human_history)
+        plt.plot(np.arange(T - 1), np.cumsum(human_history)/np.arange(1,T))
         plt.ylabel("Human prob")
         plt.xlabel("Time")
         plt.hlines(y=alpha, xmin=0, xmax=T)

@@ -2,7 +2,10 @@ import os
 import sys
 import itertools
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
+
+from statsmodels.tsa.arima.model import ARIMA
 
 import torch
 from torch import nn
@@ -12,6 +15,14 @@ from torchtext import data
 
 from yelp_online_learning import *
 
+def plot_time_trends(time_res, fig_name):
+    plt.figure(figsize=(6,6))
+    plt.plot(time_res.time, time_res["losses"])
+    plt.plot(time_res.time, time_res["arima_output"])
+    plt.ylabel("Loss")
+    plt.xlabel("Time")
+    plt.savefig(fig_name)
+
 def main(args=sys.argv[1:]):
     torch.manual_seed(0)
     YELP_TRAIN = "data/yelp_academic_dataset_review_year_train_%s_%s.json"
@@ -20,8 +31,8 @@ def main(args=sys.argv[1:]):
 
     num_hidden = 10
     N_EPOCHS = 40
-    year = 2018
-    month = 12
+    year = 2008
+    month = 1
 
     out_model_file = OUT_TEMPLATE % (year, month)
     if not os.path.exists(out_model_file):
@@ -43,25 +54,42 @@ def main(args=sys.argv[1:]):
     MONTHS = range(1,13)
     path_func = lambda x: YELP_TEST % x
 
-    losses = []
-    times = []
+    time_res = {"losses": [], "arima_output": [], "time": []}
     criterion = nn.L1Loss()
-    for t in itertools.product(YEARS, MONTHS):
-        print(t)
-        times.append(t)
+    for t_idx, t in enumerate(itertools.product(YEARS, MONTHS)):
+        print(t_idx, t)
+        time_res["time"].append(t_idx)
+
+        if t_idx > 7:
+            arima_model = ARIMA(np.array(time_res["losses"]).flatten(), order=(2,1,0))
+            res = arima_model.fit()
+            arima_output = res.forecast()
+        else:
+            arima_output = None
+        time_res["arima_output"].append(arima_output)
+
         path_time = path_func((str(t[0]), str(t[1])))
         loss_t = run_test(model_dict['model'], path_time, fields=model_dict['fields'], criterion=criterion)
-        losses.append(loss_t)
-    losses = np.array(losses).flatten()
+        time_res["losses"].append(loss_t)
 
-    T = len(times)
-    plt.figure(figsize=(6,6))
-    plt.plot(range(len(times)), losses)
-    plt.ylabel("Loss")
-    plt.xlabel("Time")
+    # Plot time trends
     fig_name = "_output/yelp_loss_%d_%d.png" % (year, month)
+    plot_time_trends(pd.DataFrame(time_res), fig_name)
     print(fig_name)
-    plt.savefig(fig_name)
+
+    # ARIMA for time trends
+    #arima_model = ARIMA(losses, order=(2,1,0))
+    #res = arima_model.fit()
+    #print(res.summary())
+
+    # plot residual errors
+    #plt.clf()
+    #residuals = pd.DataFrame(res.resid)
+    #residuals.plot()
+    #plt.show()
+    #residuals.plot(kind='kde')
+    #plt.show()
+    #print(residuals.describe())
 
 if __name__ == "__main__":
     main(sys.argv[1:])
