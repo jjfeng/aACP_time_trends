@@ -57,9 +57,9 @@ import itertools
 #    with open(path_test_new, "w") as f:
 #        f.writelines(test_lines[year])
 
-YEARS = range(2008,2010)
+YEARS = range(2008,2019)
 MONTHS = range(1,13)
-MAX_LINES = 1000
+MAX_LINES = 2000
 split_ratio = 0.5
 valid_year = 5000
 path = "/Users/jeanfeng/Downloads/10100_1035793_bundle_archive/yelp_academic_dataset_review.json"
