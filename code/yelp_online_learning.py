@@ -11,6 +11,7 @@ import torchtext
 from torchtext import data
 
 from model import TextSentiment
+from mixture_experts import TimeTrendForecaster
 from mixture_experts import ExpWeightingWithHuman, BlindWeight, OraclePredictor
 from test_yelp import train_rating_model, run_test
 
@@ -113,9 +114,10 @@ def main(args=sys.argv[1:]):
     ETA_FACTOR = 0.1
     path_func = lambda x: YELP_TEST % x
     forecasters = [
-            ExpWeightingWithHuman(T, human_max_loss=alpha, eta_factor=0.1, new_model_eta=0.3),
-            BlindWeight(),
+            #ExpWeightingWithHuman(T, human_max_loss=alpha, eta_factor=0.1, new_model_eta=0.3),
+            #BlindWeight(),
             OraclePredictor([path_func(t) for t in times], models, human_max_loss=alpha)
+            #TimeTrendForecaster(human_max_loss=alpha)
     ]
     for forecaster in forecasters:
         loss_history, human_history = run_simulation(models, path_func, times, forecaster=forecaster)

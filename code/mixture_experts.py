@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.special
+from statsmodels.tsa.arima.model import ARIMA
 
 import torch
 from torch import nn
@@ -33,13 +34,73 @@ class OraclePredictor:
         criterion = nn.L1Loss()
         oracle_loss_robot = np.array([
                 run_test(model['model'], path_time, fields=model['fields'], criterion=criterion) for model in curr_models])
+
         if np.min(oracle_loss_robot) < self.human_max_loss:
             self.weights = np.array(oracle_loss_robot == np.min(oracle_loss_robot), dtype=float)
         else:
-            self.weights = np.zeros(oracle_loss_robot.shape)
+            weight = self.human_max_loss/np.min(oracle_loss_robot)
+            self.weights = weight * np.array(oracle_loss_robot == np.min(oracle_loss_robot), dtype=float)
 
     def get_predict_weights(self, time_t):
         return self.weights, 1 - np.sum(self.weights)
+
+class TimeTrendForecaster(Predictor):
+    """
+    Ordinary exponential weighting, modified to let in new experts
+    First expert is human
+    """
+    def __init__(self, human_max_loss: float, order=(2,1,0), min_size: int = 7):
+        self.human_max_loss = human_max_loss
+        self.curr_num_experts = 0
+        self.order = order
+        self.min_size = min_size
+
+        self.loss_histories = []
+
+    def __str__(self):
+        return "ARIMA_%d_%d_%d" % self.order
+
+    def add_expert(self, time_t):
+        self.curr_num_experts += 1
+        self.loss_histories.append(None)
+
+    def update_weights(self, time_t, indiv_robot_loss_t = None, prev_weights=None):
+        if indiv_robot_loss_t is None:
+            return
+
+        model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
+        for i in range(self.curr_num_experts):
+            if self.loss_histories[i] is None:
+                self.loss_histories[i] = np.array([model_losses_t[i]])
+            else:
+                self.loss_histories[i] = np.concatenate([self.loss_histories[i], [model_losses_t[i]]])
+
+    def get_predict_weights(self, time_t):
+        predictions = []
+        for i in range(self.curr_num_experts):
+            if self.loss_histories[i] is not None:
+                if self.loss_histories[i].size > self.min_size:
+                    predictions.append(self.fit_arima_get_output(self.loss_histories[i]))
+                else:
+                    # Use average until we can use ARIMA model?
+                    predictions.append(np.mean(self.loss_histories[i]))
+            else:
+                predictions.append(self.human_max_loss + 1)
+
+        print("PREDICTIONS", predictions)
+        if np.min(predictions) < self.human_max_loss:
+            return np.array(predictions == np.min(predictions), dtype=float), 0
+        else:
+            weight = self.human_max_loss/np.min(predictions)
+            print("weight", weight)
+            return weight * np.array(predictions == np.min(predictions), dtype=float), 1 - weight
+
+    def fit_arima_get_output(self, losses):
+        arima_model = ARIMA(losses, order=self.order)
+        res = arima_model.fit()
+        print("FORE", res.forecast())
+        return res.forecast(steps=1)[0]
+
 
 class BlindWeight:
     def __init__(self):
@@ -145,71 +206,3 @@ class ExpWeightingWithHuman(ExpWeighting):
         norm_weights = scipy.special.softmax(self.weights)
         return norm_weights[1:], norm_weights[0]
 
-#class ExpWeightWithHumanPredictorConstraints(ExpWeightingWithPredictor):
-#    """
-#    Add constraint checking
-#    """
-#    def __init__(self, predictor: Predictor, T, batch_n: int, human_max_loss: float, eta, new_model_eta, prediction_upweight :float  = 1, alpha:float=0.05):
-#        self.predictor = predictor
-#        self.human_max_loss = human_max_loss
-#        self.weights = np.array([0.1, 0.9])
-#        self.batch_n = batch_n
-#        self.T = T
-#        self.curr_num_experts = 2
-#        self.eta = eta
-#        self.new_model_eta = new_model_eta
-#        self.prediction_upweight = prediction_upweight
-#        self.alpha = alpha
-#        self.tot_losses = 0
-#        self.actual_losses = 0
-#
-#    def __str__(self):
-#        return "Exp%s" % str(self.predictor)
-#
-#    def add_expert(self, time_t):
-#        self.predictor.add_expert()
-#        if time_t == 0:
-#            return self.weights
-#
-#        # Set either to what our new_model_eta is or the same as the previously submitted model
-#        new_model_eta = (1 - self.new_model_eta)
-#        updated_weight = np.concatenate([self.weights, [0]])
-#        new_init_weights = np.array([0] * self.curr_num_experts + [1])
-#        self.weights = (1 - new_model_eta) * updated_weight + new_model_eta * new_init_weights
-#
-#        self.curr_num_experts += 1
-#
-#    def update_weights(self, time_t, indiv_loss_robot_t = None, prev_weights = None):
-#        if time_t == 0:
-#            return self.weights
-#        batch_n = indiv_loss_robot_t.shape[1]
-#        loss_t = np.concatenate([
-#            [batch_n * self.human_max_loss],
-#            np.sum(indiv_loss_robot_t, axis=1)])
-#        if loss_t is not None:
-#            self.tot_losses += np.sum(prev_weights * loss_t)
-#            self.actual_losses += np.sum(prev_weights[1:] * loss_t[1:])
-#        self.predictor.update_estimates(indiv_loss_robot_t)
-#
-#        update_weight = np.exp(-self.eta * loss_t)
-#        numerator = update_weight * self.weights
-#        denom = np.sum(numerator)
-#        self.weights = numerator/denom
-#
-#    def get_predict_weights(self, time_t):
-#        _pred_loss, _upper_bound = self.predictor.predict_loss(time_t)
-#        pred_loss = self.batch_n * _pred_loss
-#        upper_bound = self.batch_n * _upper_bound
-#        mean_loss_prediction = (self.actual_losses + upper_bound)/(time_t + 1)/self.batch_n
-#        good_mask = mean_loss_prediction < self.alpha
-#        if np.sum(good_mask) == 0:
-#            return np.zeros(self.weights.size - 1), 1
-#        # if np.sum(good_mask) != good_mask.size:
-#            # print("   SUBSET:", np.sum(good_mask), good_mask.size)
-#
-#        update_weight = np.exp(-self.eta * self.prediction_upweight * np.concatenate([[self.batch_n * self.human_max_loss], pred_loss]))
-#        numerator = update_weight * self.weights
-#        ml_numerator = numerator[1:]
-#        ml_numerator[np.logical_not(good_mask)] = 0
-#        denom = numerator[0] + np.sum(ml_numerator)
-#        return ml_numerator/denom, numerator[0]/denom

@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from statsmodels.tsa.arima.model import ARIMA
 
 import torch
 from torch import nn
@@ -13,6 +12,7 @@ from torch import optim
 import torchtext
 from torchtext import data
 
+from mixture_experts import TimeTrendForecaster
 from yelp_online_learning import *
 
 def plot_time_trends(time_res, fig_name):
@@ -52,7 +52,10 @@ def main(args=sys.argv[1:]):
 
     YEARS = range(2008,2019)
     MONTHS = range(1,13)
+    min_size = 7
     path_func = lambda x: YELP_TEST % x
+
+    forecaster = TimeTrendForecaster(1, order=(2,1,0), min_size=min_size)
 
     time_res = {"losses": [], "arima_output": [], "time": []}
     criterion = nn.L1Loss()
@@ -60,10 +63,8 @@ def main(args=sys.argv[1:]):
         print(t_idx, t)
         time_res["time"].append(t_idx)
 
-        if t_idx > 7:
-            arima_model = ARIMA(np.array(time_res["losses"]).flatten(), order=(2,1,0))
-            res = arima_model.fit()
-            arima_output = res.forecast()
+        if t_idx > forecaster.min_size:
+            arima_output = forecaster.fit_arima_get_output(np.array(time_res["losses"]).flatten())
         else:
             arima_output = None
         time_res["arima_output"].append(arima_output)
@@ -76,20 +77,6 @@ def main(args=sys.argv[1:]):
     fig_name = "_output/yelp_loss_%d_%d.png" % (year, month)
     plot_time_trends(pd.DataFrame(time_res), fig_name)
     print(fig_name)
-
-    # ARIMA for time trends
-    #arima_model = ARIMA(losses, order=(2,1,0))
-    #res = arima_model.fit()
-    #print(res.summary())
-
-    # plot residual errors
-    #plt.clf()
-    #residuals = pd.DataFrame(res.resid)
-    #residuals.plot()
-    #plt.show()
-    #residuals.plot(kind='kde')
-    #plt.show()
-    #print(residuals.describe())
 
 if __name__ == "__main__":
     main(sys.argv[1:])
