@@ -80,7 +80,11 @@ class TimeTrendForecaster(Predictor):
         for i in range(self.curr_num_experts):
             if self.loss_histories[i] is not None:
                 if self.loss_histories[i].size > self.min_size:
-                    predictions.append(self.fit_arima_get_output(self.loss_histories[i]))
+                    try:
+                        predictions.append(self.fit_arima_get_output(self.loss_histories[i]))
+                    except Exception as e:
+                        print(e)
+                        predictions.append(np.mean(self.loss_histories[i]))
                 else:
                     # Use average until we can use ARIMA model?
                     predictions.append(np.mean(self.loss_histories[i]))
@@ -205,4 +209,31 @@ class ExpWeightingWithHuman(ExpWeighting):
     def get_predict_weights(self, time_t):
         norm_weights = scipy.special.softmax(self.weights)
         return norm_weights[1:], norm_weights[0]
+
+class MetaExpWeighting:
+    """
+    Ordinary exponential weighting, modified to let in new experts
+    """
+    def __init__(self, T, eta, num_experts: int, forecaster_keys):
+        self.curr_num_experts = num_experts
+        self.forecaster_keys = forecaster_keys
+        self.weights = np.ones(num_experts)/num_experts
+        self.T = T
+        self.eta = eta
+
+    def __str__(self):
+        return "Exp"
+
+    def update_weights(self, time_t, loss_t, prev_weights = None):
+        if time_t == 0:
+            return self.weights
+        loss_t = np.sum(loss_t, axis=1)
+        update_weight = np.exp(-self.eta * loss_t)
+        numerator = update_weight * self.weights
+        denom = np.sum(numerator)
+        self.weights = numerator/denom
+
+    def get_predict_weights(self, time_t):
+        return self.weights
+
 

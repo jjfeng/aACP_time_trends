@@ -114,10 +114,10 @@ def main(args=sys.argv[1:]):
     ETA_FACTOR = 0.1
     path_func = lambda x: YELP_TEST % x
     forecasters = [
-            #ExpWeightingWithHuman(T, human_max_loss=alpha, eta_factor=0.1, new_model_eta=0.3),
+            #ExpWeightingWithHuman(T, human_max_loss=alpha, eta_factor=0.1, new_model_eta=0.1),
             #BlindWeight(),
-            OraclePredictor([path_func(t) for t in times], models, human_max_loss=alpha)
-            #TimeTrendForecaster(human_max_loss=alpha)
+            #OraclePredictor([path_func(t) for t in times], models, human_max_loss=alpha)
+            TimeTrendForecaster(human_max_loss=alpha)
     ]
     for forecaster in forecasters:
         loss_history, human_history = run_simulation(models, path_func, times, forecaster=forecaster)
