@@ -13,7 +13,7 @@ from torchtext import data
 
 from model import TextSentiment
 from mixture_experts import BlindWeight
-from mixture_experts import TimeTrendForecaster
+from mixture_experts import TimeTrendForecaster, ConstantForecaster
 from mixture_experts import MetaExpWeighting
 from mixture_experts import ExpWeightingWithHuman
 from test_yelp import train_rating_model, run_test
@@ -166,9 +166,10 @@ def main(args=sys.argv[1:]):
     forecasters = [
             ExpWeightingWithHuman(T, human_max_loss=alpha, eta_factor=0.1, new_model_eta=0.3),
             TimeTrendForecaster(human_max_loss=alpha),
+            ConstantForecaster(human_max_loss=alpha),
             BlindWeight(),
     ]
-    meta_forecaster = MetaExpWeighting(T, eta=0.1, num_experts=len(forecasters), forecaster_keys=[str(forecaster) for forecaster in forecasters])
+    meta_forecaster = MetaExpWeighting(T, eta=2.0, num_experts=len(forecasters), forecaster_keys=[str(forecaster) for forecaster in forecasters])
     histories = {}
     for forecaster in forecasters:
         out_forecaster_file = OUT_FORECASTER_TEMPLATE % (str(forecaster), max(YEARS))

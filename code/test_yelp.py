@@ -173,8 +173,7 @@ def main(args=sys.argv[1:]):
     #YELP = "/Users/jeanfeng/Downloads/10100_1035793_bundle_archive/yelp_academic_dataset_review.json"
 
     torch.manual_seed(0)
-    YELP_TRAIN = "data/yelp_academic_dataset_review_year_train_2018.json"
-    YELP_TEST = "data/yelp_academic_dataset_review_year_valid_2018.json"
+    YELP_TRAIN = "data/yelp_academic_dataset_review_year_train_2008_1.json"
 
     TEXT = data.Field(include_lengths=True, batch_first=True)
     LABEL = data.LabelField(use_vocab=False, dtype = torch.float, batch_first=True)
@@ -182,19 +181,18 @@ def main(args=sys.argv[1:]):
     fields = {"stars": ('label',LABEL), "text": ('text', TEXT)}
     criterion = nn.L1Loss()
     #criterion = nn.CrossEntropyLoss()
-    model = train_rating_model(YELP_TRAIN, fields, criterion, N_EPOCHS = 10)
+    model = train_rating_model(YELP_TRAIN, fields, criterion, N_EPOCHS = 50)
 
     # Evaluate the model
-    years = []
     test_losses = []
-    for year in [2008, 2009, 2018]: #range(2008, 2019):
-        print("YEAR", year)
-        yelp_file = "data/yelp_academic_dataset_review_year_valid_%d.json" % year
-        test_loss = run_test(model, yelp_file, fields, criterion)
-        test_losses.append(test_loss)
-        years.append(year)
+    for year in range(2008, 2019):
+        for month in range(1, 13):
+            print("YEAR", year, "month", month)
+            yelp_file = "data/yelp_academic_dataset_review_year_valid_%d_%d.json" % (year, month)
+            test_loss = run_test(model, yelp_file, fields, criterion)
+            test_losses.append(test_loss)
 
-    sns.lineplot(np.array(years), np.array(test_losses))
+    sns.lineplot(np.arange(len(test_losses)), np.array(test_losses))
     plt.savefig("_output/test_losses.png")
 
 if __name__ == "__main__":

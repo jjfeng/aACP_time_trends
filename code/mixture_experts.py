@@ -106,6 +106,35 @@ class TimeTrendForecaster(Predictor):
         return res.forecast(steps=1)[0]
 
 
+class ConstantForecaster(TimeTrendForecaster):
+    """
+    """
+    def __init__(self, human_max_loss: float, min_size: int = 7):
+        self.human_max_loss = human_max_loss
+        self.curr_num_experts = 0
+        self.min_size = min_size
+
+        self.loss_histories = []
+
+    def __str__(self):
+        return "Constant"
+
+    def get_predict_weights(self, time_t):
+        predictions = []
+        for i in range(self.curr_num_experts):
+            if self.loss_histories[i] is not None:
+                predictions.append(np.mean(self.loss_histories[i]))
+            else:
+                predictions.append(self.human_max_loss + 1)
+
+        print("PREDICTIONS", predictions)
+        if np.min(predictions) < self.human_max_loss:
+            return np.array(predictions == np.min(predictions), dtype=float), 0
+        else:
+            weight = self.human_max_loss/np.min(predictions)
+            print("weight", weight)
+            return weight * np.array(predictions == np.min(predictions), dtype=float), 1 - weight
+
 class BlindWeight:
     def __init__(self):
         self.weights = np.array([1])
