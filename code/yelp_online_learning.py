@@ -109,14 +109,13 @@ def main(args=sys.argv[1:]):
                 times.append((year, month))
 
     T = len(models)
-    alpha = 0.88
-    ETA_FACTOR = 0.1
+    alpha = 0.9
     path_func = lambda x: YELP_TEST % x
     forecasters = [
-            ExpWeightingWithHuman(num_experts=len(models), human_max_loss=alpha, eta=4),
-            #BlindWeight(),
-            #OraclePredictor([path_func(t) for t in times], models, human_max_loss=alpha)
-            TimeTrendForecaster(num_experts=len(models), eta=4,  human_max_loss=alpha)
+            #ExpWeightingWithHuman(num_experts=len(models), human_max_loss=alpha, eta=4),
+            # Eta for the time trend forecaster is much bigger because the regret bounds say that
+            # if your predictions are good, you should crank up the eta value.
+            TimeTrendForecaster(num_experts=len(models), eta=10,  human_max_loss=alpha)
     ]
     for forecaster in forecasters:
         loss_history, human_history = run_simulation(models, path_func, times, forecaster=forecaster, human_max_loss=alpha)
