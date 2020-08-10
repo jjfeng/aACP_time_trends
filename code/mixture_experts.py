@@ -49,55 +49,62 @@ class TimeTrendForecaster(Predictor):
     Ordinary exponential weighting, modified to let in new experts
     First expert is human
     """
-    def __init__(self, human_max_loss: float, order=(2,1,0), min_size: int = 7):
+    def __init__(self, num_experts: int, eta: float, human_max_loss: float, order=(2,1,0), min_size: int = 7):
         self.human_max_loss = human_max_loss
+        self.eta = eta
+        self.num_experts = num_experts
+        self.weights = np.ones(num_experts)
         self.curr_num_experts = 0
         self.order = order
         self.min_size = min_size
 
-        self.loss_histories = []
+        self.loss_histories = np.zeros((num_experts, 1))
 
     def __str__(self):
         return "ARIMA_%d_%d_%d" % self.order
 
     def add_expert(self, time_t):
         self.curr_num_experts += 1
-        self.loss_histories.append(None)
 
     def update_weights(self, time_t, indiv_robot_loss_t = None, prev_weights=None):
         if indiv_robot_loss_t is None:
             return
 
         model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
-        for i in range(self.curr_num_experts):
-            if self.loss_histories[i] is None:
-                self.loss_histories[i] = np.array([model_losses_t[i]])
-            else:
-                self.loss_histories[i] = np.concatenate([self.loss_histories[i], [model_losses_t[i]]])
+        forecaster_loss = np.sum(prev_weights * np.concatenate([[self.human_max_loss], model_losses_t]))
+        new_losses = np.concatenate([model_losses_t, [forecaster_loss] * (self.num_experts - self.curr_num_experts)]).reshape((-1, 1))
+        self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
 
     def get_predict_weights(self, time_t):
-        predictions = []
+        predictions = np.zeros(self.curr_num_experts)
         for i in range(self.curr_num_experts):
-            if self.loss_histories[i] is not None:
+            if i < time_t:
                 if self.loss_histories[i].size > self.min_size:
                     try:
-                        predictions.append(self.fit_arima_get_output(self.loss_histories[i]))
+                        predictions[i] = self.fit_arima_get_output(self.loss_histories[i])
                     except Exception as e:
                         print(e)
-                        predictions.append(np.mean(self.loss_histories[i]))
+                        predictions[i] = np.mean(self.loss_histories[i])
                 else:
                     # Use average until we can use ARIMA model?
-                    predictions.append(np.mean(self.loss_histories[i]))
+                    predictions[i] = np.mean(self.loss_histories[i])
             else:
-                predictions.append(self.human_max_loss + 1)
+                predictions[i] = self.human_max_loss + 1
 
-        print("PREDICTIONS", predictions)
-        if np.min(predictions) < self.human_max_loss:
-            return np.array(predictions == np.min(predictions), dtype=float), 0
-        else:
-            weight = self.human_max_loss/np.min(predictions)
-            print("weight", weight)
-            return weight * np.array(predictions == np.min(predictions), dtype=float), 1 - weight
+        projected_expert_losses = np.sum(self.loss_histories[:self.curr_num_experts], axis=1) + predictions
+        projected_human_loss = self.human_max_loss * (time_t + 1)
+        print("project expert", projected_expert_losses)
+        raw_weights = np.exp(- self.eta * np.concatenate([[projected_human_loss], projected_expert_losses]))
+        all_weights = raw_weights/np.sum(raw_weights)
+        return all_weights[1:], all_weights[0]
+
+        #print("PREDICTIONS", predictions)
+        #if np.min(predictions) < self.human_max_loss:
+        #    return np.array(predictions == np.min(predictions), dtype=float), 0
+        #else:
+        #    weight = self.human_max_loss/np.min(predictions)
+        #    print("weight", weight)
+        #    return weight * np.array(predictions == np.min(predictions), dtype=float), 1 - weight
 
     def fit_arima_get_output(self, losses):
         arima_model = ARIMA(losses, order=self.order)

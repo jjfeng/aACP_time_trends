@@ -23,7 +23,7 @@ def train_rating_model_year_month(path, n_epochs, num_hidden=5):
     model = train_rating_model(path, fields, criterion, N_EPOCHS = n_epochs, split_ratio=0.9, num_hidden=num_hidden)
     return model, fields
 
-def run_simulation(models, path_func, times, forecaster, is_oracle=False):
+def run_simulation(models, path_func, times, forecaster, is_oracle=False, human_max_loss=0):
     MONTHS = range(1,13)
     criterion = nn.L1Loss(reduce=False)
 
@@ -51,13 +51,13 @@ def run_simulation(models, path_func, times, forecaster, is_oracle=False):
         total_n += batch_n
         if np.sum(robot_weights) < 1e-10:
             print("HUMAN")
-            loss_t = 0
+            loss_t = human_max_loss
             expert_history.append(1)
         # print("WIEHGT", forecaster.weights)
         else:
             assert np.isclose(np.sum(robot_weights) + human_weight, 1)
             print("ROBOT", robot_weights)
-            loss_t = np.concatenate([[0], np.sum(indiv_loss_robot_t, axis=1)])
+            loss_t = np.concatenate([[human_max_loss * batch_n], np.sum(indiv_loss_robot_t, axis=1)])
             expert_history.append(human_weight)
         print("LOSSES", np.mean(indiv_loss_robot_t, axis=1))
         tot_loss += np.sum(loss_t * weights)
@@ -79,7 +79,7 @@ def main(args=sys.argv[1:]):
 
     num_hidden = 10
     N_EPOCHS = 40
-    YEARS = range(2008,2011)
+    YEARS = range(2008,2009)
     MONTHS = range(1,13)
     #N_EPOCHS = 4
     #YEARS = range(2008,2009)
@@ -117,10 +117,10 @@ def main(args=sys.argv[1:]):
             #ExpWeightingWithHuman(T, human_max_loss=alpha, eta_factor=0.1, new_model_eta=0.1),
             #BlindWeight(),
             #OraclePredictor([path_func(t) for t in times], models, human_max_loss=alpha)
-            TimeTrendForecaster(human_max_loss=alpha)
+            TimeTrendForecaster(num_experts=len(models), eta=0.1,  human_max_loss=alpha)
     ]
     for forecaster in forecasters:
-        loss_history, human_history = run_simulation(models, path_func, times, forecaster=forecaster)
+        loss_history, human_history = run_simulation(models, path_func, times, forecaster=forecaster, human_max_loss=alpha)
         print("PROB HUMAN HIST", human_history)
 
         plt.figure(figsize=(6,6))
