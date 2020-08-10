@@ -26,9 +26,9 @@ class FakeBernoulliModel:
         eps1 = min(1, max(0, self.eps[1] - self.decay * np.sin(t + self.offset)))
         return eps0, eps1
 
-    def score(self, dataset):
+    def loss(self, dataset):
         yhat = self.predict(dataset.x, t=0)
-        return yhat.flatten() == dataset.y.flatten()
+        return yhat.flatten() != dataset.y.flatten()
 
 
 class FineControlProposer(Proposer):

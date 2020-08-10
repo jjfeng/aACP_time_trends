@@ -48,7 +48,7 @@ def parse_args(args):
     parser.add_argument(
         "--support-setting", type=str, default="constant", choices=["constant"]
     )
-    parser.add_argument("--proposer-noise", type=float, default=0.1)
+    parser.add_argument("--proposer-noise", type=float, default=0.01)
     parser.add_argument("--proposer-increment", type=float, default=0)
     parser.add_argument("--proposer-decay", type=float, default=0)
     parser.add_argument("--proposer-offset-scale", type=float, default=0)

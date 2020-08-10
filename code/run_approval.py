@@ -61,9 +61,8 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     )
     return policy
 
-def run_simulation(
-        nature: Nature, proposer: Proposer, policy: Policy
-):
+
+def run_simulation(nature: Nature, proposer: Proposer, policy: Policy):
     # Create the data generated each batch
     proposer.propose_model(nature.get_trial_data(0))
 
@@ -92,6 +91,7 @@ def run_simulation(
 
     return approval_hist
 
+
 def main(args=sys.argv[1:]):
     args = parse_args(args)
     logging.basicConfig(
@@ -112,6 +112,7 @@ def main(args=sys.argv[1:]):
     )
 
     approval_history = run_simulation(nature, proposer, policy)
+    print(approval_history)
 
     pickle_to_file(approval_history, args.out_file)
 

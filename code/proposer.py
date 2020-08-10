@@ -17,7 +17,8 @@ class Proposer:
         raise NotImplementedError()
 
     def score_models(self, dataset: Dataset):
-        return np.array([model.score(dataset) for model in self.proposal_history])
+        return np.array([model.loss(dataset) for model in self.proposal_history])
+
 
 class FixedProposer:
     def __init__(self, models: List):
