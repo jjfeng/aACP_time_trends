@@ -7,19 +7,23 @@ import data_gen_funcs_bernoulli
 from dataset import Dataset
 from support_sim_settings import SupportSimSettings
 
+
 class DataGenerator:
     """
     Simulation engine
     """
-    def __init__(self,
-            sim_func_form: str,
-            sim_func_name: str,
-            support_sim_settings: SupportSimSettings,
-            num_classes: int =1,
-            noise_sd: float = 1,
-            std_dev_x: float =1,
-            max_y: float =1,
-            min_y: float =0):
+
+    def __init__(
+        self,
+        sim_func_form: str,
+        sim_func_name: str,
+        support_sim_settings: SupportSimSettings,
+        num_classes: int = 1,
+        noise_sd: float = 1,
+        std_dev_x: float = 1,
+        max_y: float = 1,
+        min_y: float = 0,
+    ):
         self.num_p = support_sim_settings.num_p
         self.std_dev_x = std_dev_x
         self.num_classes = num_classes
@@ -48,7 +52,7 @@ class DataGenerator:
         elif self.sim_func_form == "bernoulli":
             raise ValueError("sure?")
 
-    def create_data(self, num_obs: int, t_idx: int, seed:int = None):
+    def create_data(self, num_obs: int, t_idx: int, seed: int = None):
         """
         @param num_obs: number of observations
         @param seed: if given, set the seed before generating data
@@ -90,7 +94,7 @@ class DataGenerator:
             # 2D probability matrices
             all_ys = []
             for i in range(mu_true.shape[0]):
-                mu_row = mu_true[i,:]
+                mu_row = mu_true[i, :]
                 true_distribution = scipy.stats.multinomial(n=1, p=mu_row)
                 y = true_distribution.rvs(size=1)
                 all_ys.append(y)

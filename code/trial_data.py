@@ -4,9 +4,10 @@ from numpy import ndarray
 
 from data_generator import DataGenerator
 from dataset import Dataset
-#from support_sim_settings import SupportSimSettings
 
-#class TrialMetaData:
+# from support_sim_settings import SupportSimSettings
+
+# class TrialMetaData:
 #    def __init__(self,
 #            batch_sizes: ndarray,
 #            sim_func_form: str,
@@ -54,10 +55,12 @@ from dataset import Dataset
 
 
 class TrialData:
-    def __init__(self,
-            batch_sizes: ndarray,
-            data_generator: DataGenerator = None,
-            batch_data: List[Dataset] = []):
+    def __init__(
+        self,
+        batch_sizes: ndarray,
+        data_generator: DataGenerator = None,
+        batch_data: List[Dataset] = [],
+    ):
         self.data_generator = data_generator
         self.batch_sizes = batch_sizes
 
@@ -70,22 +73,20 @@ class TrialData:
     def get_start_to_end_data(self, start_index: int, end_index: int = None):
         cum_data = self.batch_data[start_index]
         if end_index is None:
-            for data in self.batch_data[start_index + 1:]:
+            for data in self.batch_data[start_index + 1 :]:
                 cum_data = cum_data.merge(data)
         else:
-            for data in self.batch_data[start_index + 1:end_index]:
+            for data in self.batch_data[start_index + 1 : end_index]:
                 cum_data = cum_data.merge(data)
         return cum_data
 
     def make_new_batch(self):
         new_data = self.data_generator.create_data(
-                self.batch_sizes[self.num_batches],
-                self.num_batches)
+            self.batch_sizes[self.num_batches], self.num_batches
+        )
         self.batch_data.append(new_data)
 
     def subset(self, end_index: int):
         return TrialData(
-                self.data_generator,
-                self.batch_sizes,
-                self.batch_data[:end_index]
-            )
+            self.data_generator, self.batch_sizes, self.batch_data[:end_index]
+        )

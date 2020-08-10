@@ -7,9 +7,11 @@ from torch import nn
 
 from test_yelp import run_test
 
+
 class Predictor:
     def __str__(self):
         return "predictor"
+
 
 class OraclePredictor:
     def __init__(self, path_times, models, human_max_loss: float):
@@ -28,27 +30,42 @@ class OraclePredictor:
 
         self.curr_num_experts += 1
 
-    def update_weights(self, time_t, loss_t, prev_weights = None):
+    def update_weights(self, time_t, loss_t, prev_weights=None):
         path_time = self.path_times[time_t]
-        curr_models = self.models[:time_t + 1]
+        curr_models = self.models[: time_t + 1]
         criterion = nn.L1Loss()
-        oracle_loss_robot = np.array([
-                run_test(model['model'], path_time, fields=model['fields'], criterion=criterion) for model in curr_models])
+        oracle_loss_robot = np.array(
+            [
+                run_test(
+                    model["model"],
+                    path_time,
+                    fields=model["fields"],
+                    criterion=criterion,
+                )
+                for model in curr_models
+            ]
+        )
 
         if np.min(oracle_loss_robot) < self.human_max_loss:
-            self.weights = np.array(oracle_loss_robot == np.min(oracle_loss_robot), dtype=float)
+            self.weights = np.array(
+                oracle_loss_robot == np.min(oracle_loss_robot), dtype=float
+            )
         else:
-            weight = self.human_max_loss/np.min(oracle_loss_robot)
-            self.weights = weight * np.array(oracle_loss_robot == np.min(oracle_loss_robot), dtype=float)
+            weight = self.human_max_loss / np.min(oracle_loss_robot)
+            self.weights = weight * np.array(
+                oracle_loss_robot == np.min(oracle_loss_robot), dtype=float
+            )
 
     def get_predict_weights(self, time_t):
         return self.weights, 1 - np.sum(self.weights)
+
 
 class ExpWeightingWithHuman(Predictor):
     """
     Ordinary exponential weighting, modified to let in new experts
     First expert is human
     """
+
     def __init__(self, num_experts: int, eta: float, human_max_loss: float):
         self.human_max_loss = human_max_loss
         self.eta = eta
@@ -64,28 +81,44 @@ class ExpWeightingWithHuman(Predictor):
     def add_expert(self, time_t):
         self.curr_num_experts += 1
 
-    def update_weights(self, time_t, indiv_robot_loss_t = None, prev_weights=None):
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
         if indiv_robot_loss_t is None:
             return
 
         model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
-        forecaster_loss = np.sum(prev_weights * np.concatenate([[self.human_max_loss], model_losses_t]))
-        new_losses = np.concatenate([model_losses_t, [forecaster_loss] * (self.num_experts - self.curr_num_experts)]).reshape((-1, 1))
+        forecaster_loss = np.sum(
+            prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
+        )
+        new_losses = np.concatenate(
+            [
+                model_losses_t,
+                [forecaster_loss] * (self.num_experts - self.curr_num_experts),
+            ]
+        ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
 
     def get_predict_weights(self, time_t):
-        expert_losses = np.sum(self.loss_histories[:self.curr_num_experts], axis=1)
+        expert_losses = np.sum(self.loss_histories[: self.curr_num_experts], axis=1)
         human_loss = self.human_max_loss * time_t
-        raw_weights = np.exp(- self.eta * np.concatenate([[human_loss], expert_losses]))
-        all_weights = raw_weights/np.sum(raw_weights)
+        raw_weights = np.exp(-self.eta * np.concatenate([[human_loss], expert_losses]))
+        all_weights = raw_weights / np.sum(raw_weights)
         return all_weights[1:], all_weights[0]
+
 
 class TimeTrendForecaster(Predictor):
     """
     Ordinary exponential weighting, modified to let in new experts
     First expert is human
     """
-    def __init__(self, num_experts: int, eta: float, human_max_loss: float, order=(2,1,0), min_size: int = 7):
+
+    def __init__(
+        self,
+        num_experts: int,
+        eta: float,
+        human_max_loss: float,
+        order=(2, 1, 0),
+        min_size: int = 7,
+    ):
         self.human_max_loss = human_max_loss
         self.eta = eta
         self.num_experts = num_experts
@@ -102,13 +135,20 @@ class TimeTrendForecaster(Predictor):
     def add_expert(self, time_t):
         self.curr_num_experts += 1
 
-    def update_weights(self, time_t, indiv_robot_loss_t = None, prev_weights=None):
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
         if indiv_robot_loss_t is None:
             return
 
         model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
-        forecaster_loss = np.sum(prev_weights * np.concatenate([[self.human_max_loss], model_losses_t]))
-        new_losses = np.concatenate([model_losses_t, [forecaster_loss] * (self.num_experts - self.curr_num_experts)]).reshape((-1, 1))
+        forecaster_loss = np.sum(
+            prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
+        )
+        new_losses = np.concatenate(
+            [
+                model_losses_t,
+                [forecaster_loss] * (self.num_experts - self.curr_num_experts),
+            ]
+        ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
         print("loss histo", self.loss_histories)
 
@@ -118,7 +158,9 @@ class TimeTrendForecaster(Predictor):
             if i < time_t:
                 if self.loss_histories[i].size > self.min_size:
                     try:
-                        predictions[i] = self.fit_arima_get_output(self.loss_histories[i])
+                        predictions[i] = self.fit_arima_get_output(
+                            self.loss_histories[i]
+                        )
                     except Exception as e:
                         print(e)
                         predictions[i] = np.mean(self.loss_histories[i])
@@ -128,10 +170,15 @@ class TimeTrendForecaster(Predictor):
             else:
                 predictions[i] = self.human_max_loss + 0.1
 
-        projected_expert_losses = np.sum(self.loss_histories[:self.curr_num_experts], axis=1) + predictions
+        projected_expert_losses = (
+            np.sum(self.loss_histories[: self.curr_num_experts], axis=1) + predictions
+        )
         projected_human_loss = self.human_max_loss * (time_t + 1)
-        raw_weights = np.exp(- self.eta * np.concatenate([[projected_human_loss], projected_expert_losses]))
-        all_weights = raw_weights/np.sum(raw_weights)
+        raw_weights = np.exp(
+            -self.eta
+            * np.concatenate([[projected_human_loss], projected_expert_losses])
+        )
+        all_weights = raw_weights / np.sum(raw_weights)
         return all_weights[1:], all_weights[0]
 
     def fit_arima_get_output(self, losses):
@@ -139,6 +186,7 @@ class TimeTrendForecaster(Predictor):
         res = arima_model.fit()
         print("FORE", res.forecast())
         return res.forecast(steps=1)[0]
+
 
 class BlindWeight:
     def __init__(self):
@@ -156,7 +204,7 @@ class BlindWeight:
         self.weights = np.array([0] * self.curr_num_experts + [1])
         self.curr_num_experts += 1
 
-    def update_weights(self, time_t, loss_t, prev_weights = None):
+    def update_weights(self, time_t, loss_t, prev_weights=None):
         if time_t == 0:
             return self.weights
         return self.weights
@@ -164,10 +212,12 @@ class BlindWeight:
     def get_predict_weights(self, time_t):
         return self.weights, 0
 
+
 class ExpWeighting:
     """
     Ordinary exponential weighting, modified to let in new experts
     """
+
     def __init__(self, T, eta, new_model_eta):
         self.weights = np.array([1])
         self.T = T
@@ -183,26 +233,30 @@ class ExpWeighting:
             return
 
         # Set either to what our new_model_eta is or the same as the previously submitted model
-        new_model_eta = min(1 - self.new_model_eta, self.weights[-1]/(1 + self.weights[-1]))
+        new_model_eta = min(
+            1 - self.new_model_eta, self.weights[-1] / (1 + self.weights[-1])
+        )
         updated_weight = np.concatenate([self.weights, [0]])
         new_init_weights = np.array([0] * self.curr_num_experts + [1])
-        self.weights = (1 - new_model_eta) * updated_weight + new_model_eta * new_init_weights
+        self.weights = (
+            1 - new_model_eta
+        ) * updated_weight + new_model_eta * new_init_weights
         self.curr_num_experts += 1
 
-    def update_weights(self, time_t, loss_t, prev_weights = None):
+    def update_weights(self, time_t, loss_t, prev_weights=None):
         if time_t == 0:
             return self.weights
         loss_t = np.sum(loss_t, axis=1)
         update_weight = np.exp(-self.eta * loss_t)
         numerator = update_weight * self.weights
         denom = np.sum(numerator)
-        self.weights = numerator/denom
+        self.weights = numerator / denom
 
     def get_predict_weights(self, time_t):
         return self.weights
 
 
-#class ExpWeightingWithHuman(ExpWeighting):
+# class ExpWeightingWithHuman(ExpWeighting):
 #    """
 #    Ordinary exponential weighting, modified to let in new experts
 #    First expert is human
@@ -244,30 +298,30 @@ class ExpWeighting:
 #        norm_weights = scipy.special.softmax(self.weights)
 #        return norm_weights[1:], norm_weights[0]
 
+
 class MetaExpWeighting:
     """
     Ordinary exponential weighting, modified to let in new experts
     """
+
     def __init__(self, T, eta, num_experts: int, forecaster_keys):
         self.curr_num_experts = num_experts
         self.forecaster_keys = forecaster_keys
-        self.weights = np.ones(num_experts)/num_experts
+        self.weights = np.ones(num_experts) / num_experts
         self.T = T
         self.eta = eta
 
     def __str__(self):
         return "Exp"
 
-    def update_weights(self, time_t, loss_t, prev_weights = None):
+    def update_weights(self, time_t, loss_t, prev_weights=None):
         if time_t == 0:
             return self.weights
         loss_t = np.sum(loss_t, axis=1)
         update_weight = np.exp(-self.eta * loss_t)
         numerator = update_weight * self.weights
         denom = np.sum(numerator)
-        self.weights = numerator/denom
+        self.weights = numerator / denom
 
     def get_predict_weights(self, time_t):
         return self.weights
-
-

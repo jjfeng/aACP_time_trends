@@ -4,9 +4,11 @@ from typing import List, Tuple
 
 import data_x_gen_funcs
 
+
 class SupportSimSettings:
     def generate_x(self, size: int):
         raise NotImplementedError("implement me")
+
 
 class SupportSimSettingsUniform(SupportSimSettings):
     def __init__(self, num_p: int, min_func_name: str, max_func_name: str):
@@ -29,6 +31,7 @@ class SupportSimSettingsUniform(SupportSimSettings):
         min_x = self.min_func(t_idx)
         max_x = self.max_func(t_idx)
         return np.random.rand(n, self.num_p) * (max_x - min_x) + min_x
+
 
 class SupportSimSettingsNormal(SupportSimSettings):
     def __init__(self, num_p: int, std_func_name, mu_func_name):

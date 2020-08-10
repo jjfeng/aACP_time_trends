@@ -1,5 +1,5 @@
 """
-Creates "nature" object, which is in chrage of spurting out batched data
+Creates model proposer
 """
 import sys
 import argparse
@@ -12,7 +12,7 @@ from trial_data import TrialData
 from nature import FixedNature
 from data_generator import DataGenerator
 from support_sim_settings import *
-from dataset import Dataset
+from proposer_fine_control import FineControlProposer, MoodyFineControlProposer
 from common import pickle_to_file
 
 
@@ -28,6 +28,13 @@ def parse_args(args):
         default=0,
     )
     parser.add_argument(
+        "--update-engine",
+        type=str,
+        help="which model updater to use",
+        default="fine_control",
+        choices=["fine_control", "lasso", "moody"],
+    )
+    parser.add_argument(
         "--density-parametric-form",
         type=str,
         default="bernoulli",
@@ -41,23 +48,41 @@ def parse_args(args):
     parser.add_argument(
         "--support-setting", type=str, default="constant", choices=["constant"]
     )
+    parser.add_argument("--proposer-noise", type=float, default=0.1)
+    parser.add_argument("--proposer-increment", type=float, default=0.1)
+    parser.add_argument("--proposer-decay", type=float, default=0)
+    parser.add_argument("--proposer-offset-scale", type=float, default=0)
     parser.add_argument("--min-y", type=float, default=-1)
     parser.add_argument("--max-y", type=float, default=1)
-    parser.add_argument("--num-batches", type=int, default=20)
-    parser.add_argument("--first-batch-size", type=int, default=40)
-    parser.add_argument("--batch-size", type=int, default=40)
-    parser.add_argument("--batch-incr", type=int, default=0)
-    parser.add_argument("--log-file", type=str, default="_output/nature_log.txt")
-    parser.add_argument("--out-file", type=str, default="_output/nature.pkl")
+    parser.add_argument("--log-file", type=str, default="_output/proposer_log.txt")
+    parser.add_argument("--out-file", type=str, default="_output/proposer.pkl")
     parser.set_defaults()
     args = parser.parse_args()
 
-    assert args.num_batches > 1
     assert args.min_y < args.max_y
-    args.batch_sizes = [args.first_batch_size] + [
-        args.batch_size + args.batch_incr * i for i in range(args.num_batches - 1)
-    ]
     return args
+
+
+def get_proposer(args, data_gen):
+    if args.update_engine == "moody":
+        return MoodyFineControlProposer(
+            data_gen,
+            noise=args.proposer_noise,
+            init_period=args.proposer_init_period,
+            period=args.proposer_period,
+            increment=args.proposer_increment,
+            decay=args.proposer_decay,
+        )
+    elif args.update_engine == "fine_control":
+        return FineControlProposer(
+            data_gen,
+            noise=args.proposer_noise,
+            increment=args.proposer_increment,
+            decay=args.proposer_decay,
+            offset_scale=args.proposer_offset_scale,
+        )
+    else:
+        raise ValueError("which proposer?")
 
 
 def main(args=sys.argv[1:]):
@@ -69,6 +94,7 @@ def main(args=sys.argv[1:]):
     logging.info(args)
 
     np.random.seed(args.seed)
+
     if args.support_setting == "constant":
         support_sim_settings = SupportSimSettingsUniform(
             args.num_p,
@@ -84,7 +110,6 @@ def main(args=sys.argv[1:]):
         )
     else:
         raise ValueError("Asdfasdf")
-
     data_gen = DataGenerator(
         args.density_parametric_form,
         args.sim_func_name,
@@ -92,12 +117,10 @@ def main(args=sys.argv[1:]):
         max_y=args.max_y,
         min_y=args.min_y,
     )
-    trial_data = TrialData(args.batch_sizes, data_gen)
-    for batch_index in range(args.num_batches):
-        trial_data.make_new_batch()
-    nature = FixedNature(trial_data)
 
-    pickle_to_file(nature, args.out_file)
+    proposer = get_proposer(args, data_gen)
+
+    pickle_to_file(proposer, args.out_file)
 
 
 if __name__ == "__main__":

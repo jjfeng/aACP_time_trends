@@ -4,7 +4,9 @@ import torch.nn.functional as F
 
 # Example from pytorch website
 class TextSentiment(nn.Module):
-    def __init__(self, vocab_size, vocab, embed_dim, num_class, num_hidden=50, freeze=True):
+    def __init__(
+        self, vocab_size, vocab, embed_dim, num_class, num_hidden=50, freeze=True
+    ):
         super().__init__()
         self.embed_dim = embed_dim
         self.embedding = nn.EmbeddingBag.from_pretrained(vocab.vectors, freeze=freeze)
@@ -14,14 +16,25 @@ class TextSentiment(nn.Module):
 
     def forward(self, text, text_len):
         embedded = self.embedding(text)
-        embedded = embedded[:,:self.embed_dim]
-        embedded = torch.cat([embedded, torch.tensor(torch.reshape(text_len, (text_len.shape[0], 1)), dtype=torch.float)], dim=1)
+        embedded = embedded[:, : self.embed_dim]
+        embedded = torch.cat(
+            [
+                embedded,
+                torch.tensor(
+                    torch.reshape(text_len, (text_len.shape[0], 1)), dtype=torch.float
+                ),
+            ],
+            dim=1,
+        )
         hidden = F.relu(self.fc1(embedded))
         hidden = F.relu(self.fc2(hidden))
         return self.fc3(hidden)
 
+
 class DensityRatioModel(nn.Module):
-    def __init__(self, vocab_size, vocab, embed_dim, num_class, num_hidden=50, freeze=False):
+    def __init__(
+        self, vocab_size, vocab, embed_dim, num_class, num_hidden=50, freeze=False
+    ):
         super().__init__()
         self.embed_dim = embed_dim
         self.embedding = nn.EmbeddingBag.from_pretrained(vocab.vectors, freeze=freeze)
@@ -30,13 +43,24 @@ class DensityRatioModel(nn.Module):
 
     def forward(self, text, text_len):
         embedded = self.embedding(text)
-        embedded = embedded[:,:self.embed_dim]
-        embedded = torch.cat([embedded, torch.tensor(torch.reshape(text_len, (text_len.shape[0], 1)), dtype=torch.float)], dim=1)
+        embedded = embedded[:, : self.embed_dim]
+        embedded = torch.cat(
+            [
+                embedded,
+                torch.tensor(
+                    torch.reshape(text_len, (text_len.shape[0], 1)), dtype=torch.float
+                ),
+            ],
+            dim=1,
+        )
         hidden = F.relu(self.fc1(embedded))
         return self.fc2(hidden)
 
+
 class TextYearModel(nn.Module):
-    def __init__(self, vocab_size, vocab, embed_dim, num_class, num_hidden=50, freeze=True):
+    def __init__(
+        self, vocab_size, vocab, embed_dim, num_class, num_hidden=50, freeze=True
+    ):
         super().__init__()
         self.embed_dim = embed_dim
         self.embedding = nn.EmbeddingBag.from_pretrained(vocab.vectors, freeze=freeze)
@@ -46,13 +70,19 @@ class TextYearModel(nn.Module):
 
     def forward(self, text, text_len, year):
         embedded = self.embedding(text)
-        embedded = embedded[:,:self.embed_dim]
-        embedded = torch.cat([
-            embedded,
-            torch.tensor(torch.reshape(text_len, (text_len.shape[0], 1)), dtype=torch.float),
-            torch.tensor(torch.reshape(year, (year.shape[0], 1)), dtype=torch.float)
-        ], dim=1)
+        embedded = embedded[:, : self.embed_dim]
+        embedded = torch.cat(
+            [
+                embedded,
+                torch.tensor(
+                    torch.reshape(text_len, (text_len.shape[0], 1)), dtype=torch.float
+                ),
+                torch.tensor(
+                    torch.reshape(year, (year.shape[0], 1)), dtype=torch.float
+                ),
+            ],
+            dim=1,
+        )
         hidden = F.relu(self.fc1(embedded))
         hidden = F.relu(self.fc2(hidden))
         return self.fc3(hidden)
-
