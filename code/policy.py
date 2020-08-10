@@ -2,6 +2,9 @@ import numpy as np
 
 
 class Policy:
+    def __init__(self, human_max_loss: float):
+        self.human_max_loss = human_max_loss
+
     def add_expert(self, time_t):
         self.curr_num_experts += 1
 
@@ -48,7 +51,6 @@ class OptimisticMirrorDescent(Policy):
             ]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
-        print("loss histo", self.loss_histories)
 
     def get_predict_weights(self, time_t: int):
         predictions = np.array(
@@ -58,10 +60,11 @@ class OptimisticMirrorDescent(Policy):
             ]
         )
 
+        num_steps = self.loss_histories.shape[1] + 1
         projected_expert_losses = (
             np.sum(self.loss_histories[: self.curr_num_experts], axis=1) + predictions
         )
-        projected_human_loss = self.human_max_loss * (time_t + 1)
+        projected_human_loss = self.human_max_loss * num_steps
         raw_weights = np.exp(
             -self.eta
             * np.concatenate([[projected_human_loss], projected_expert_losses])

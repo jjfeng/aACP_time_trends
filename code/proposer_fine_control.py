@@ -26,6 +26,10 @@ class FakeBernoulliModel:
         eps1 = min(1, max(0, self.eps[1] - self.decay * np.sin(t + self.offset)))
         return eps0, eps1
 
+    def score(self, dataset):
+        yhat = self.predict(dataset.x, t=0)
+        return yhat.flatten() == dataset.y.flatten()
+
 
 class FineControlProposer(Proposer):
     """
@@ -112,8 +116,9 @@ class FineControlProposer(Proposer):
         true_pos = (prob_pos_pos0 + prob_pos_pos1) / (prob_pos0 + prob_pos1)
         return true_pos
 
-    def propose_model(self, trial_data, curr_model_idx: int):
+    def propose_model(self, trial_data):
         # did_append = len(self.approval_history) <= 1 or curr_model_idx != self.approval_history[-1]
+        curr_model_idx = len(self.proposal_history) - 1
         if (
             len(self.approval_history) == 0
             or curr_model_idx != self.approval_history[-1]

@@ -10,8 +10,11 @@ import pandas as pd
 
 # from approval_simulation_common import *
 from time_trend_predictor import ARIMAPredictor
-from policy import OptimisticMirrorDescent
-from common import pickle_from_file
+from nature import Nature
+from proposer import Proposer
+from approval_history import ApprovalHistory
+from policy import Policy, OptimisticMirrorDescent
+from common import pickle_from_file, pickle_to_file
 
 
 def parse_args(args):
@@ -32,8 +35,8 @@ def parse_args(args):
         "--policy-name",
         type=str,
         help="name of approval policy",
-        default="ExpWeighting",
-        choices=["ExpWeighting",],
+        default="OMD",
+        choices=["OMD",],
     )
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
@@ -45,6 +48,8 @@ def parse_args(args):
 
 
 def create_policy(policy_name, args, human_max_loss, num_experts):
+    assert policy_name == "OMD"
+
     time_trend_predictor = ARIMAPredictor(
         order=(1, 2, 0), min_size=7, max_loss=human_max_loss + 0.1
     )
@@ -56,6 +61,36 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     )
     return policy
 
+def run_simulation(
+        nature: Nature, proposer: Proposer, policy: Policy
+):
+    # Create the data generated each batch
+    proposer.propose_model(nature.get_trial_data(0))
+
+    # Run the platform trial
+    indiv_loss_robot_t = None
+    prev_weights = None
+    approval_hist = ApprovalHistory()
+    for t in range(nature.total_time - 1):
+        print("TIME STEP", t)
+        policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights)
+        policy.add_expert(t)
+        robot_weights, human_weight = policy.get_predict_weights(t)
+        weights = np.concatenate([[human_weight], robot_weights])
+
+        sub_trial_data = nature.get_trial_data(t + 1)
+        indiv_loss_robot_t = proposer.score_models(sub_trial_data.batch_data[-1])
+        batch_n = indiv_loss_robot_t.shape[1]
+        all_loss_t = np.concatenate(
+            [[policy.human_max_loss * batch_n], np.sum(indiv_loss_robot_t, axis=1)]
+        )
+        policy_loss_t = np.sum(all_loss_t * weights) / batch_n
+        approval_hist.append(human_weight, policy_loss_t, all_loss_t)
+        prev_weights = weights
+
+        proposer.propose_model(sub_trial_data)
+
+    return approval_hist
 
 def main(args=sys.argv[1:]):
     args = parse_args(args)

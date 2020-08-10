@@ -18,5 +18,5 @@ class FixedNature:
     def total_time(self):
         return len(self.trial_data.batch_data)
 
-    def get_batch(self, time_t: int):
-        return self.trial_data.batch_data[time_t]
+    def get_trial_data(self, time_t: int):
+        return self.trial_data.subset(time_t + 1)

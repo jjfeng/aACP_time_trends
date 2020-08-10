@@ -43,7 +43,7 @@ def parse_args(args):
     )
     parser.add_argument("--min-y", type=float, default=-1)
     parser.add_argument("--max-y", type=float, default=1)
-    parser.add_argument("--num-batches", type=int, default=20)
+    parser.add_argument("--num-batches", type=int, default=5)
     parser.add_argument("--first-batch-size", type=int, default=40)
     parser.add_argument("--batch-size", type=int, default=40)
     parser.add_argument("--batch-incr", type=int, default=0)

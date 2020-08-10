@@ -18,16 +18,16 @@ class ARIMAPredictor(TimeTrendPredictor):
 
     def forecast(self, data: np.ndarray):
         if data.size > 1:
-            if losses.size > self.min_size:
+            if data.size > self.min_size:
                 try:
-                    arima_model = ARIMA(losses, order=self.order)
+                    arima_model = ARIMA(data, order=self.order)
                     res = arima_model.fit()
                     res = res.forecast(steps=1)[0]
                 except Exception as e:
-                    res = np.mean(losses)
+                    res = np.mean(data)
             else:
                 # Use average until we can use ARIMA model?
-                res = np.mean(losses)
+                res = np.mean(data)
         else:
             res = self.max_loss
         return res
