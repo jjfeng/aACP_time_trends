@@ -14,8 +14,8 @@ from time_trend_predictor import ARIMAPredictor
 from nature import Nature
 from proposer import Proposer
 from approval_history import ApprovalHistory
-from policy import Policy, OptimisticMirrorDescent, MirrorDescent, OptimisticPolicy, FixedShare
-from common import pickle_from_file, pickle_to_file
+from policy import *
+from common import pickle_from_file, pickle_to_file, plot_loss, plot_human_use
 
 
 def parse_args(args):
@@ -37,11 +37,13 @@ def parse_args(args):
         type=str,
         help="name of approval policy",
         default="OMD",
-        choices=["OMD","MD", "Optimistic", "FixedShare"],
+        choices=["OMD","MD", "Optimistic", "FixedShare", "OptimisticFixedShare"],
     )
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
     parser.add_argument("--out-file", type=str, default="_output/approver_history.pkl")
+    parser.add_argument("--loss-plot", type=str, default="_output/approver_history_loss.png")
+    parser.add_argument("--human-plot", type=str, default="_output/approver_history_human.png")
     parser.set_defaults()
     args = parser.parse_args()
 
@@ -49,10 +51,10 @@ def parse_args(args):
 
 
 def create_policy(policy_name, args, human_max_loss, num_experts):
+    time_trend_predictor = ARIMAPredictor(
+        order=(2, 1, 0), min_size=7, max_loss=human_max_loss + 0.1
+    )
     if policy_name == "OMD":
-        time_trend_predictor = ARIMAPredictor(
-            order=(2, 1, 0), min_size=7, max_loss=human_max_loss + 0.1
-        )
         policy = OptimisticMirrorDescent(
             num_experts,
             eta=args.eta,
@@ -60,9 +62,6 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             time_trend_predictor=time_trend_predictor,
         )
     elif policy_name == "Optimistic":
-        time_trend_predictor = ARIMAPredictor(
-            order=(2, 1, 0), min_size=7, max_loss=human_max_loss + 0.1
-        )
         policy = OptimisticPolicy(
             num_experts,
             eta=args.eta,
@@ -80,6 +79,13 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             num_experts,
             eta=args.eta,
             human_max_loss=human_max_loss,
+        )
+    elif policy_name == "OptimisticFixedShare":
+        policy = OptimisticFixedShare(
+            num_experts,
+            eta=args.eta,
+            human_max_loss=human_max_loss,
+            time_trend_predictor=time_trend_predictor,
         )
     return policy
 
@@ -144,6 +150,9 @@ def main(args=sys.argv[1:]):
     approval_history = run_simulation(nature, proposer, policy)
     logging.info(approval_history)
     print(approval_history)
+
+    plot_loss(np.array(approval_history.policy_loss_history), args.loss_plot, alpha=args.human_max_loss)
+    plot_human_use(np.array(approval_history.human_history), args.human_plot)
 
     pickle_to_file(approval_history, args.out_file)
 

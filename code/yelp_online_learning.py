@@ -13,7 +13,7 @@ from torchtext import data
 from model import TextSentiment
 from time_trend_predictor import ARIMAPredictor
 from mixture_experts import TimeTrendForecaster
-from policy import OptimisticPolicy
+from policy import *
 from mixture_experts import ExpWeightingWithHuman, BlindWeight, OraclePredictor
 from test_yelp import train_rating_model, run_test
 
@@ -164,7 +164,9 @@ def main(args=sys.argv[1:]):
         # Eta for the time trend forecaster is much bigger because the regret bounds say that
         # if your predictions are good, you should crank up the eta value.
         #TimeTrendForecaster(num_experts=len(models), eta=10, human_max_loss=alpha),
-        OptimisticPolicy(num_experts=len(models), eta=50, human_max_loss=alpha, time_trend_predictor=time_trend_predictor)
+        #OptimisticPolicy(num_experts=len(models), eta=50, human_max_loss=alpha, time_trend_predictor=time_trend_predictor)
+        FixedShare(num_experts=len(models), eta=20, human_max_loss=alpha, alpha=0.1)
+        #OptimisticFixedShare(num_experts=len(models), eta=20, human_max_loss=alpha, time_trend_predictor=time_trend_predictor, alpha=0.1)
     ]
     for forecaster in forecasters:
         loss_history, human_history = run_simulation(
