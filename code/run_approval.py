@@ -14,7 +14,7 @@ from time_trend_predictor import ARIMAPredictor
 from nature import Nature
 from proposer import Proposer
 from approval_history import ApprovalHistory
-from policy import Policy, OptimisticMirrorDescent, MirrorDescent, OptimisticPolicy
+from policy import Policy, OptimisticMirrorDescent, MirrorDescent, OptimisticPolicy, FixedShare
 from common import pickle_from_file, pickle_to_file
 
 
@@ -37,7 +37,7 @@ def parse_args(args):
         type=str,
         help="name of approval policy",
         default="OMD",
-        choices=["OMD","MD", "Optimistic"],
+        choices=["OMD","MD", "Optimistic", "FixedShare"],
     )
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
@@ -69,8 +69,14 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             human_max_loss=human_max_loss,
             time_trend_predictor=time_trend_predictor,
         )
-    else:
+    elif policy_name == "MD":
         policy = MirrorDescent(
+            num_experts,
+            eta=args.eta,
+            human_max_loss=human_max_loss,
+        )
+    elif policy_name == "FixedShare":
+        policy = FixedShare(
             num_experts,
             eta=args.eta,
             human_max_loss=human_max_loss,

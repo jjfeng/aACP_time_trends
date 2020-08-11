@@ -164,7 +164,7 @@ nest.pop('policy')
 
 nest.add(
     'policy',
-    ['Optimistic'])
+    ['Optimistic', 'FixedShare'])
 
 @nest.add_target_with_env(localenv)
 def run_approval(env, outdir, c):
@@ -175,7 +175,7 @@ def run_approval(env, outdir, c):
         'python run_approval.py',
         '--seed',
         c['seed'],
-        '--eta 0',
+        '--eta 50',
         '--human-max-loss',
         HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
