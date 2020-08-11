@@ -12,17 +12,13 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 NUM_TEST_OBS = 40000
+HUMAN_LOSS = 0.33
 SIMULATION_DICT = {
     "moody": {
         "updater": "moody",
-        "increment": 0.01,
-        "num_batches": 10,
-        "batch_size": 20,
-        "batch_incr": 0,
-        "noise": 0.35,
-        "init_period": 15,
-        "period": 10,
-        "max_wait": 5},
+        "num_batches": 15,
+        "batch_size": 200,
+        "batch_incr": 0},
 }
 
 nest.add(
@@ -63,6 +59,11 @@ def create_nature(env, outdir, c):
         [],
         ' '.join(map(str, cmd)))
 
+nest.add(
+    'sin_decay',
+    [0.3],
+    label_func=lambda c: 'sin_decay_%.2f' % c)
+
 @nest.add_target_with_env(localenv)
 def create_proposer(env, outdir, c):
     targets = [
@@ -71,8 +72,12 @@ def create_proposer(env, outdir, c):
     cmd = [
         'python create_proposer.py',
         '--density-parametric bernoulli',
-        '--update-engine fine_control',
-        '--proposer-noise 0.01',
+        '--update-engine random',
+        '--proposer-noise 0.2',
+        '--proposer-increment 0.2',
+        '--proposer-offset 0.1',
+        '--proposer-decay',
+        c['sin_decay'],
         '--num-p 1',
         '--seed',
         c['seed'],
@@ -85,7 +90,13 @@ def create_proposer(env, outdir, c):
 
 nest.add(
     'policy',
-    ['OMD'])
+    ['MD'])
+
+nest.add(
+    'eta',
+    #[0.5,1,2,4,8,16],
+    [8,],
+    label_func=lambda c: 'eta_%d' % c)
 
 @nest.add_target_with_env(localenv)
 def run_approval(env, outdir, c):
@@ -96,8 +107,77 @@ def run_approval(env, outdir, c):
         'python run_approval.py',
         '--seed',
         c['seed'],
+        '--eta',
+        c['eta'],
         '--human-max-loss',
-        0.3,
+        HUMAN_LOSS,
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name',
+        c['policy'],
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+nest.pop('policy')
+#
+#nest.add(
+#    'policy',
+#    ['OMD'])
+#
+#nest.add(
+#    'eta',
+#    [0.5,1,2,4,8,16],
+#    label_func=lambda c: 'eta_%d' % c)
+#
+#@nest.add_target_with_env(localenv)
+#def run_approval(env, outdir, c):
+#    targets = [
+#        join(outdir, 'approval_hist.pkl'),
+#        join(outdir, 'approval_hist_log.txt')]
+#    cmd = [
+#        'python run_approval.py',
+#        '--seed',
+#        c['seed'],
+#        '--eta',
+#        c['eta'],
+#        '--human-max-loss',
+#        HUMAN_LOSS,
+#        '--nature-file ${SOURCES[0]}',
+#        '--proposer-file ${SOURCES[1]}',
+#        '--policy-name',
+#        c['policy'],
+#	'--out-file ${TARGETS[0]}',
+#	'--log-file ${TARGETS[1]}']
+#
+#    sources = [c['create_nature'][0], c['create_proposer'][0]]
+#    return env.Command(
+#        targets,
+#        sources,
+#        ' '.join(map(str, cmd)))
+
+
+nest.add(
+    'policy',
+    ['Optimistic'])
+
+@nest.add_target_with_env(localenv)
+def run_approval(env, outdir, c):
+    targets = [
+        join(outdir, 'approval_hist.pkl'),
+        join(outdir, 'approval_hist_log.txt')]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--eta 0',
+        '--human-max-loss',
+        HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name',

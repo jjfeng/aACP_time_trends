@@ -11,7 +11,9 @@ import torchtext
 from torchtext import data
 
 from model import TextSentiment
+from time_trend_predictor import ARIMAPredictor
 from mixture_experts import TimeTrendForecaster
+from policy import OptimisticPolicy
 from mixture_experts import ExpWeightingWithHuman, BlindWeight, OraclePredictor
 from test_yelp import train_rating_model, run_test
 
@@ -71,7 +73,7 @@ def run_simulation(
         total_n += batch_n
         if np.sum(robot_weights) < 1e-10:
             print("HUMAN")
-            loss_t = human_max_loss
+            loss_t = human_max_loss * batch_n
             expert_history.append(1)
         # print("WIEHGT", forecaster.weights)
         else:
@@ -154,11 +156,15 @@ def main(args=sys.argv[1:]):
     T = len(models)
     alpha = 0.9
     path_func = lambda x: YELP_TEST % x
+    time_trend_predictor = ARIMAPredictor(
+        order=(2, 1, 0), min_size=7, max_loss=alpha + 0.1
+    )
     forecasters = [
-        # ExpWeightingWithHuman(num_experts=len(models), human_max_loss=alpha, eta=4),
+        #ExpWeightingWithHuman(num_experts=len(models), human_max_loss=alpha, eta=10),
         # Eta for the time trend forecaster is much bigger because the regret bounds say that
         # if your predictions are good, you should crank up the eta value.
-        TimeTrendForecaster(num_experts=len(models), eta=10, human_max_loss=alpha)
+        #TimeTrendForecaster(num_experts=len(models), eta=10, human_max_loss=alpha),
+        OptimisticPolicy(num_experts=len(models), eta=50, human_max_loss=alpha, time_trend_predictor=time_trend_predictor)
     ]
     for forecaster in forecasters:
         loss_history, human_history = run_simulation(

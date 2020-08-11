@@ -12,7 +12,7 @@ from trial_data import TrialData
 from nature import FixedNature
 from data_generator import DataGenerator
 from support_sim_settings import *
-from proposer_fine_control import FineControlProposer, MoodyFineControlProposer
+from proposer_fine_control import RandomProposer
 from common import pickle_to_file
 
 
@@ -31,8 +31,8 @@ def parse_args(args):
         "--update-engine",
         type=str,
         help="which model updater to use",
-        default="fine_control",
-        choices=["fine_control", "lasso", "moody"],
+        default="random",
+        choices=["random"],
     )
     parser.add_argument(
         "--density-parametric-form",
@@ -64,25 +64,13 @@ def parse_args(args):
 
 
 def get_proposer(args, data_gen):
-    if args.update_engine == "moody":
-        return MoodyFineControlProposer(
-            data_gen,
-            noise=args.proposer_noise,
-            init_period=args.proposer_init_period,
-            period=args.proposer_period,
-            increment=args.proposer_increment,
-            decay=args.proposer_decay,
-        )
-    elif args.update_engine == "fine_control":
-        return FineControlProposer(
+    return RandomProposer(
             data_gen,
             noise=args.proposer_noise,
             increment=args.proposer_increment,
             decay=args.proposer_decay,
             offset_scale=args.proposer_offset_scale,
-        )
-    else:
-        raise ValueError("which proposer?")
+    )
 
 
 def main(args=sys.argv[1:]):

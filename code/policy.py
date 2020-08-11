@@ -11,10 +11,13 @@ class Policy:
     def get_predict_weights(self, time_t: int):
         raise NotImplementedError()
 
+    def predict_next_losses(self, time_t: int):
+        return np.zeros(self.curr_num_experts)
+
 
 class OptimisticMirrorDescent(Policy):
     """
-    Ordinary exponential weighting, modified to let in new experts
+    Optimistic mirror descent, modified to let in new experts
     First expert is human
     """
 
@@ -60,7 +63,7 @@ class OptimisticMirrorDescent(Policy):
             ]
         )
 
-        num_steps = self.loss_histories.shape[1] + 1
+        num_steps = self.loss_histories.shape[1]
         projected_expert_losses = (
             np.sum(self.loss_histories[: self.curr_num_experts], axis=1) + predictions
         )
@@ -71,6 +74,118 @@ class OptimisticMirrorDescent(Policy):
         )
         all_weights = raw_weights / np.sum(raw_weights)
         return all_weights[1:], all_weights[0]
+
+    def predict_next_losses(self, time_t: int):
+        predictions = np.array(
+            [
+                self.fit_and_predict(self.loss_histories[i])
+                for i in range(self.curr_num_experts)
+            ]
+        )
+        return predictions
+
+    def fit_and_predict(self, losses):
+        return self.time_trend_predictor.forecast(losses)
+
+class MirrorDescent(Policy):
+    """
+    Ordinary exponential weighting, modified to let in new experts
+    First expert is human
+    """
+
+    def __init__(self, num_experts: int, eta: float, human_max_loss: float):
+        self.human_max_loss = human_max_loss
+        self.eta = eta
+        self.num_experts = num_experts
+        self.weights = np.ones(num_experts)
+        self.curr_num_experts = 0
+
+        self.loss_histories = np.zeros((num_experts, 1))
+
+    def __str__(self):
+        return "ExpWeighting"
+
+    def add_expert(self, time_t):
+        self.curr_num_experts += 1
+
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
+        if indiv_robot_loss_t is None:
+            return
+
+        model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
+        forecaster_loss = np.sum(
+            prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
+        )
+        new_losses = np.concatenate(
+            [
+                model_losses_t,
+                [forecaster_loss] * (self.num_experts - self.curr_num_experts),
+            ]
+        ).reshape((-1, 1))
+        self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
+
+    def get_predict_weights(self, time_t):
+        expert_losses = np.sum(self.loss_histories[: self.curr_num_experts], axis=1)
+        human_loss = self.human_max_loss * time_t
+        raw_weights = np.exp(-self.eta * np.concatenate([[human_loss], expert_losses]))
+        all_weights = raw_weights / np.sum(raw_weights)
+        return all_weights[1:], all_weights[0]
+
+class OptimisticPolicy(Policy):
+    """
+    """
+
+    def __init__(
+        self, num_experts: int, eta: float, human_max_loss: float, time_trend_predictor
+    ):
+        self.human_max_loss = human_max_loss
+        self.eta = eta
+        self.num_experts = num_experts
+        self.weights = np.ones(num_experts)
+        self.curr_num_experts = 0
+        self.time_trend_predictor = time_trend_predictor
+
+        self.loss_histories = []
+
+    def __str__(self):
+        return "Optimistic"
+
+    def add_expert(self, time_t):
+        self.curr_num_experts += 1
+        self.loss_histories.append([])
+
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
+        if indiv_robot_loss_t is None:
+            return
+
+        model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
+        for i in range(self.curr_num_experts):
+            self.loss_histories[i].append(model_losses_t[i])
+
+    def get_predict_weights(self, time_t: int):
+        predictions = np.array(
+            [
+                self.fit_and_predict(np.array(self.loss_histories[i]))
+                for i in range(self.curr_num_experts)
+            ]
+        )
+        print(predictions)
+
+        all_pred = np.concatenate([[self.human_max_loss], predictions])
+        minimizer = np.argmin(all_pred)
+        all_weights = np.zeros(all_pred.size)
+        all_weights[minimizer] = 1
+
+        return all_weights[1:], all_weights[0]
+
+    def predict_next_losses(self, time_t: int):
+        predictions = np.array(
+            [
+                self.fit_and_predict(np.array(self.loss_histories[i]))
+                for i in range(self.curr_num_experts)
+            ]
+        )
+        return predictions
 
     def fit_and_predict(self, losses):
         return self.time_trend_predictor.forecast(losses)
