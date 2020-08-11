@@ -1,0 +1,9 @@
+*.pyc
+*.swp
+*.png
+*.pdf
+*/_output
+.sconsign.dblite
+_output/
+data/
+.vector_cache/
