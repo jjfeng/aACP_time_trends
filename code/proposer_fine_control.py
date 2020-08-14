@@ -58,7 +58,7 @@ class RandomProposer(Proposer):
         if approval_hist.size == 0:
             noise = np.ones(2) * self.noise
         else:
-            noise = np.ones(2) * max(self.noise + np.random.randn() * self.increment, 0)
+            noise = np.ones(2) * max(self.noise + np.sin(-len(self.proposal_history) * self.increment) * self.increment, 0)
         model = FakeBernoulliModel(
             self.data_gen,
             noise,
