@@ -221,10 +221,12 @@ class MonotonicFixedShare(Policy):
     """
     Fixed Share
     First expert is human
+    Try to enforce monotonicity in the expert seq. The current transition matrix IS NOT correct.
+    We need to split the baseline to indicate the minimum next expert index
     """
 
     def __init__(
-            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.01,
+            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.05,
     ):
         assert eta > 0
         self.human_max_loss = human_max_loss
@@ -271,8 +273,8 @@ class MonotonicFixedShare(Policy):
         for i in range(1, self.weights.size - 1):
             transition_matrix[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
         transition_matrix[-1,-1] = 1-self.baseline_alpha
-        transition_matrix[0,0] = self.alpha/2
-        transition_matrix[0,1:] = (1 - self.alpha/2)/(self.weights.size - 1)
+        transition_matrix[0,0] = (1 - self.alpha * 2)
+        transition_matrix[0,1:] = (2 * self.alpha)/(self.weights.size - 1)
         transition_matrix[1:,0] = self.baseline_alpha
         #print("TRAN", transition_matrix)
         assert not np.any(np.isnan(transition_matrix))

@@ -77,3 +77,4 @@ class LassoProposer(Proposer):
         if do_append:
             self.proposal_history.append(model)
         return model
+
