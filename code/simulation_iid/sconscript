@@ -1,0 +1,169 @@
+import os
+
+from os.path import join
+from nestly.scons import SConsWrap
+from nestly import Nest
+from SCons.Script import Environment, Command, AddOption
+import numpy as np
+
+Import('env')
+localenv = env.Clone()
+
+nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
+
+NUM_TEST_OBS = 40000
+HUMAN_LOSS = 0.33
+BATCH_SIZE = 10
+NUM_BATCHES = 10
+
+nest.add(
+    'seed',
+    range(1),
+    label_func=lambda c: 'seed_%d' % c)
+
+@nest.add_target_with_env(localenv)
+def create_nature(env, outdir, c):
+    targets = [
+        join(outdir, 'nature.pkl'),
+        join(outdir, 'nature_log.txt')]
+    cmd = [
+        'python create_nature.py',
+        '--density-parametric bernoulli',
+        '--first-batch',
+        BATCH_SIZE,
+        '--batch-size',
+        BATCH_SIZE,
+        '--batch-incr 0',
+        '--num-batches',
+        NUM_BATCHES,
+        '--num-p 1',
+        '--seed',
+        c['seed'],
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+    return env.Command(
+        targets,
+        [],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def create_proposer(env, outdir, c):
+    targets = [
+        join(outdir, 'proposer.pkl'),
+        join(outdir, 'proposer_log.txt')]
+    cmd = [
+        'python create_proposer.py',
+        '--density-parametric bernoulli',
+        '--update-engine random',
+        '--proposer-noise 0.15',
+        '--proposer-increment 0',
+        '--proposer-offset 0',
+        '--proposer-decay 0',
+        '--num-p 1',
+        '--seed',
+        c['seed'],
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+    return env.Command(
+        targets,
+        [],
+        ' '.join(map(str, cmd)))
+
+nest.add(
+    'eta',
+    [1])
+
+@nest.add_target_with_env(localenv)
+def run_fixedshare(env, outdir, c):
+    targets = [
+        join(outdir, 'fixedshare_approval_hist.pkl'),
+        join(outdir, 'fixedshare_approval_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--eta',
+        c['eta'],
+        '--human-max-loss',
+        HUMAN_LOSS,
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name FixedShare',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def plot_fixedshare(env, outdir, c):
+    targets = [
+        join(outdir, 'fixedshare_approval_hist_loss.png'),
+        join(outdir, 'fixedshare_approval_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        '--human-max-loss',
+        HUMAN_LOSS,
+        '--policy-name FixedShare',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_fixedshare'],
+        ' '.join(map(str, cmd)))
+
+nest.pop('eta')
+
+@nest.add_target_with_env(localenv)
+def run_blind_approval(env, outdir, c):
+    targets = [
+        join(outdir, 'blind_approval_hist.pkl'),
+        join(outdir, 'blind_approval_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--human-max-loss',
+        HUMAN_LOSS,
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name BlindApproval',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+
+@nest.add_target_with_env(localenv)
+def plot_blind(env, outdir, c):
+    targets = [
+        join(outdir, 'blind_approval_hist_loss.png'),
+        join(outdir, 'blind_approval_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        '--human-max-loss',
+        HUMAN_LOSS,
+        '--policy-name BlindApproval',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_blind_approval'],
+        ' '.join(map(str, cmd)))
+
+
