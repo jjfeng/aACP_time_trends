@@ -2,7 +2,8 @@ import numpy as np
 
 
 class ApprovalHistory:
-    def __init__(self):
+    def __init__(self, human_max_loss: float):
+        self.human_max_loss = human_max_loss
         self.policy_loss_history = []
         self.all_loss_history = []
         self.human_history = []

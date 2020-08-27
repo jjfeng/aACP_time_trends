@@ -18,6 +18,7 @@ class DataGenerator:
         sim_func_form: str,
         sim_func_name: str,
         coef_drift_speed: float,
+        prob_coef_drift: float,
         support_sim_settings: SupportSimSettings,
         num_classes: int = 1,
         noise_sd: float = 1,
@@ -33,6 +34,7 @@ class DataGenerator:
         self.noise_sd = noise_sd
         self.sim_func_form = sim_func_form
         self.coef_drift_speed = coef_drift_speed
+        self.prob_coef_drift = prob_coef_drift
         self.support_sim_settings = support_sim_settings
         if sim_func_form in ["gaussian", "bounded_gaussian"]:
             self.raw_mu_func = getattr(data_gen_funcs, sim_func_name + "_mu")
@@ -52,7 +54,9 @@ class DataGenerator:
         @return sigma when Y|X is gaussian
         """
         assert len(self.coefs) == (t_idx + 1)
-        self.coefs.append(self.coefs[-1] + np.random.randn(1, self.coefs[0].size) * self.coef_drift_speed)
+        do_drift = np.random.binomial(1, self.prob_coef_drift)
+        print("DO DRIFT", do_drift, t_idx)
+        self.coefs.append(self.coefs[-1] + np.random.randn(1, self.coefs[0].size) * self.coef_drift_speed * do_drift)
         print(self.coefs[-1])
         return self.raw_mu_func(self.coefs[-1], xs)
 

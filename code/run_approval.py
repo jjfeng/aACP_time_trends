@@ -37,7 +37,7 @@ def parse_args(args):
         type=str,
         help="name of approval policy",
         default="FixedShare",
-        choices=["FixedShare", "BlindApproval"],
+        choices=["FixedShare", "FixedShareWithBlind", "BlindApproval"],
     )
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
@@ -80,6 +80,13 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             alpha=args.alpha,
             human_max_loss=human_max_loss,
         )
+    elif policy_name == "FixedShareWithBlind":
+        policy = FixedShareWithBlind(
+            num_experts,
+            eta=args.eta,
+            alpha=args.alpha,
+            human_max_loss=human_max_loss,
+        )
     elif policy_name == "OptimisticFixedShare":
         policy = OptimisticFixedShare(
             num_experts,
@@ -92,8 +99,8 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     return policy
 
 
-def run_simulation(nature: Nature, proposer: Proposer, policy: Policy):
-    approval_hist = ApprovalHistory()
+def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max_loss: float):
+    approval_hist = ApprovalHistory(human_max_loss=human_max_loss)
 
     # Create the data generated each batch
     proposer.propose_model(nature.get_trial_data(0), approval_hist)
@@ -107,7 +114,7 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy):
         policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights)
         policy.add_expert(t)
         robot_weights, human_weight = policy.get_predict_weights(t)
-        loss_predictions = policy.predict_next_losses(t)
+        #loss_predictions = policy.predict_next_losses(t)
         weights = np.concatenate([[human_weight], robot_weights])
 
         sub_trial_data = nature.get_trial_data(t + 1)
@@ -121,9 +128,9 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy):
         prev_weights = weights
         logging.info("losses %s", all_loss_t/batch_n)
         print("losses", all_loss_t/batch_n)
-        logging.info("loss pred %s", loss_predictions)
-        if loss_predictions.size > 2 and np.var(loss_predictions) > 0:
-            logging.info("corr %s", scipy.stats.spearmanr(all_loss_t[1:]/batch_n, loss_predictions))
+        #logging.info("loss pred %s", loss_predictions)
+        #if loss_predictions.size > 2 and np.var(loss_predictions) > 0:
+        #    logging.info("corr %s", scipy.stats.spearmanr(all_loss_t[1:]/batch_n, loss_predictions))
         logging.info("weights %s", weights)
 
         proposer.propose_model(sub_trial_data, approval_hist)
@@ -143,14 +150,19 @@ def main(args=sys.argv[1:]):
     nature = pickle_from_file(args.nature_file)
     proposer = pickle_from_file(args.proposer_file)
 
+    model = proposer.propose_model(nature.get_trial_data(0), None, do_append=False)
+    human_max_loss = np.mean(model.loss(nature.get_trial_data(1).get_start_to_end_data(1)))
+    human_max_loss = min(0.1, 1.25 * human_max_loss)
+    print("HUMAN MAX", human_max_loss)
+
     policy = create_policy(
         args.policy_name,
         args,
-        human_max_loss=args.human_max_loss,
+        human_max_loss=human_max_loss,
         num_experts=nature.total_time,
     )
 
-    approval_history = run_simulation(nature, proposer, policy)
+    approval_history = run_simulation(nature, proposer, policy, human_max_loss)
     logging.info(approval_history)
     print(approval_history)
 

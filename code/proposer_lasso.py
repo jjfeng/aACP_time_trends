@@ -52,7 +52,7 @@ class LassoProposer(Proposer):
         self.min_val = min_val
         self.proposal_history = []
 
-    def propose_model(self, trial_data: TrialData, curr_model_idx: int = None):
+    def propose_model(self, trial_data: TrialData, curr_model_idx: int = None, do_append: bool = True):
         assert trial_data.num_batches == self.num_models + 1
 
         if self.sim_func_form == "gaussian":
@@ -74,5 +74,6 @@ class LassoProposer(Proposer):
         print("NUM OBS", cum_data.num_obs)
         model.fit(cum_data.x, cum_data.y.flatten())
 
-        self.proposal_history.append(model)
+        if do_append:
+            self.proposal_history.append(model)
         return model

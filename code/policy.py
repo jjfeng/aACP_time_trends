@@ -80,9 +80,6 @@ class OptimisticFixedShare(OptimisticPolicy):
             return
 
         model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
-        forecaster_loss = np.sum(
-            prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
-        )
         new_losses = np.concatenate(
             [
                 model_losses_t,
@@ -116,6 +113,64 @@ class OptimisticFixedShare(OptimisticPolicy):
         print("optim weights", all_weights)
         return all_weights[1:], all_weights[0]
 
+class FixedShareWithBlind(Policy):
+    """
+    Fixed Share
+    First expert is human
+    Second expert is the blind approval
+    """
+
+    def __init__(
+            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1
+    ):
+        assert eta > 0
+        self.human_max_loss = human_max_loss
+        self.eta = eta
+        self.alpha = alpha
+        self.num_experts = num_experts
+        self.curr_num_experts = 0
+        # initialized with human and blind weight
+        self.weights = np.array([1, 2])
+
+        self.loss_histories = np.zeros((self.num_experts, 1))
+        print("alpha", self.alpha)
+
+    def __str__(self):
+        return "FixedShareWithBlind"
+
+    def add_expert(self, time_t):
+        self.curr_num_experts += 1
+        self.weights = np.concatenate([self.weights, [0]])
+
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
+        if indiv_robot_loss_t is None:
+            return
+
+        model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
+        new_losses = np.concatenate(
+            [
+                model_losses_t,
+                [0] * (self.num_experts - self.curr_num_experts),
+            ]
+        ).reshape((-1, 1))
+        self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
+        v_weights = self.weights * np.exp(- self.eta * np.concatenate([
+            [
+                self.human_max_loss,  # human loss
+                model_losses_t[-1]],  # blind loss
+            model_losses_t]))
+        self.weights = (1 - self.alpha) * v_weights + self.alpha * np.mean(v_weights)
+        # Adding normalization to prevent numerical underflow
+        #self.weights /= np.max(self.weights)
+        print("fixedshare blind wei", self.weights)
+
+    def get_predict_weights(self, time_t: int):
+        all_weights = self.weights / np.sum(self.weights)
+        robot_weights = all_weights[2:]
+        print("blind weight", all_weights[1])
+        robot_weights[-1] += all_weights[1]
+        return robot_weights, all_weights[0]
+
 class FixedShare(Policy):
     """
     Fixed Share
@@ -142,7 +197,10 @@ class FixedShare(Policy):
 
     def add_expert(self, time_t):
         self.curr_num_experts += 1
-        self.weights = np.concatenate([self.weights, [0]])
+        if self.curr_num_experts == 1:
+            self.weights = np.concatenate([self.weights, [10]])
+        else:
+            self.weights = np.concatenate([self.weights, [0]])
 
     def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
         if indiv_robot_loss_t is None:
@@ -162,7 +220,7 @@ class FixedShare(Policy):
         v_weights = self.weights * np.exp(- self.eta * np.concatenate([[self.human_max_loss], model_losses_t]))
         self.weights = (1 - self.alpha) * v_weights + self.alpha * np.mean(v_weights)
         # Adding normalization to prevent numerical underflow
-        self.weights /= np.max(self.weights)
+        #self.weights /= np.max(self.weights)
         print("self wei", self.weights)
 
     def get_predict_weights(self, time_t: int):

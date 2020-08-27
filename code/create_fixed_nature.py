@@ -40,6 +40,9 @@ def parse_args(args):
     parser.add_argument(
         "--coef-drift-speed", type=float, default=0
     )
+    parser.add_argument(
+        "--prob-coef-drift", type=float, default=0
+    )
     parser.add_argument("--num-p", type=int, default=50)
     parser.add_argument(
         "--support-setting", type=str, default="constant", choices=["constant"]
@@ -93,6 +96,7 @@ def main(args=sys.argv[1:]):
         args.density_parametric_form,
         args.sim_func_name,
         args.coef_drift_speed,
+        args.prob_coef_drift,
         support_sim_settings,
         noise_sd=args.y_sigma,
         max_y=args.max_y,

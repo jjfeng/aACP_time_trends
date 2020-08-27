@@ -32,8 +32,6 @@ def parse_args(args):
         "--policy-name",
         type=str,
         help="name of approval policy",
-        default="FixedShare",
-        choices=["FixedShare", "BlindApproval"],
     )
     parser.add_argument("--history-file", type=str, default="_output/approver_history.pkl")
     parser.add_argument("--loss-plot", type=str, default="_output/approver_history_loss.png")
@@ -52,7 +50,7 @@ def main(args=sys.argv[1:]):
     print(approval_history)
 
     plot_loss(
-            np.array(approval_history.policy_loss_history), args.loss_plot, alpha=args.human_max_loss, ymin=args.y_min, ymax=args.y_max)
+            np.array(approval_history.policy_loss_history), args.loss_plot, alpha=approval_history.human_max_loss, ymin=0, ymax=approval_history.human_max_loss * 3)
     plot_human_use(np.array(approval_history.human_history), args.human_plot)
 
 
