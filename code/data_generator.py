@@ -17,6 +17,7 @@ class DataGenerator:
         self,
         sim_func_form: str,
         sim_func_name: str,
+        coef_drift_speed: float,
         support_sim_settings: SupportSimSettings,
         num_classes: int = 1,
         noise_sd: float = 1,
@@ -31,15 +32,29 @@ class DataGenerator:
         self.max_y = max_y
         self.noise_sd = noise_sd
         self.sim_func_form = sim_func_form
+        self.coef_drift_speed = coef_drift_speed
         self.support_sim_settings = support_sim_settings
         if sim_func_form in ["gaussian", "bounded_gaussian"]:
-            self.mu_func = getattr(data_gen_funcs, sim_func_name + "_mu")
+            self.raw_mu_func = getattr(data_gen_funcs, sim_func_name + "_mu")
             self.raw_sigma_func = getattr(data_gen_funcs, sim_func_name + "_sigma")
         elif sim_func_form == "bernoulli":
-            self.mu_func = getattr(data_gen_funcs_bernoulli, sim_func_name + "_mu")
+            self.raw_mu_func = getattr(data_gen_funcs_bernoulli, sim_func_name + "_mu")
         else:
             print(sim_func_form)
             raise ValueError("huh?")
+
+        # Create changing coefs
+        self.coefs = [np.zeros((1, self.num_p))]
+        self.coefs[0][0,:5] = 1
+
+    def mu_func(self, xs: ndarray, t_idx: int = 0):
+        """
+        @return sigma when Y|X is gaussian
+        """
+        assert len(self.coefs) == (t_idx + 1)
+        self.coefs.append(self.coefs[-1] + np.random.randn(1, self.coefs[0].size) * self.coef_drift_speed)
+        print(self.coefs[-1])
+        return self.raw_mu_func(self.coefs[-1], xs)
 
     def sigma_func(self, xs: ndarray):
         """
@@ -62,17 +77,17 @@ class DataGenerator:
         if seed is not None:
             np.random.seed(seed)
         data_gen_xs = self.support_sim_settings.generate_x(num_obs, t_idx)
-        dataset = self.create_data_given_x(data_gen_xs)
+        dataset = self.create_data_given_x(data_gen_xs, t_idx)
         return dataset
 
-    def create_data_given_x(self, xs: ndarray):
+    def create_data_given_x(self, xs: ndarray, t_idx: int):
         """
         For the given Xs, generate responses and dataset
         regression-type data only
         @return Dataset
         """
         size_n = xs.shape[0]
-        mu_true = self.mu_func(xs)
+        mu_true = self.mu_func(xs, t_idx)
         if len(mu_true.shape) == 1:
             mu_true = np.reshape(mu_true, (size_n, 1))
         if self.sim_func_form == "gaussian":

@@ -14,12 +14,17 @@ nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 DENSITY = "gaussian"
 NUM_TEST_OBS = 40000
 HUMAN_LOSS = 0.1
-Y_MAX = HUMAN_LOSS + 0.02
+Y_MAX = HUMAN_LOSS + 0.3
 Y_MIN = 0
 INIT_BATCH_SIZE = 20
 NUM_P = 50
 BATCH_SIZE = 10
 NUM_BATCHES = 20
+
+nest.add(
+    'drift',
+    [0.1],
+    label_func=lambda c: 'drift_%.2f' % c)
 
 nest.add(
     'seed',
@@ -41,6 +46,8 @@ def create_nature(env, outdir, c):
         BATCH_SIZE,
         '--batch-incr 0',
         '--y-sigma 0.05',
+        '--coef-drift',
+        c['drift'],
         '--num-batches',
         NUM_BATCHES,
         '--num-p',
@@ -76,8 +83,13 @@ def create_proposer(env, outdir, c):
 
 nest.add(
     'eta',
-    [1],
+    [0.01],
     label_func=lambda c: 'eta_%.2f' % c)
+
+nest.add(
+    'alpha',
+    [0.05],
+    label_func=lambda c: 'alpha_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
 def run_fixedshare(env, outdir, c):
@@ -91,7 +103,8 @@ def run_fixedshare(env, outdir, c):
         c['seed'],
         '--eta',
         c['eta'],
-        '--alpha 0.2',
+        '--alpha',
+        c['alpha'],
         '--human-max-loss',
         HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
