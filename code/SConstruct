@@ -23,5 +23,8 @@ sc.Export('env')
 
 env.SConsignFile()
 
+flag = 'simulation_iid'
+sc.SConscript(flag + '/sconscript', exports=['flag'])
+
 flag = 'simulation_fine_control'
 sc.SConscript(flag + '/sconscript', exports=['flag'])

@@ -11,10 +11,15 @@ localenv = env.Clone()
 
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
+DENSITY = "gaussian"
 NUM_TEST_OBS = 40000
-HUMAN_LOSS = 0.33
+HUMAN_LOSS = 0.1
+Y_MAX = HUMAN_LOSS + 0.02
+Y_MIN = 0
+INIT_BATCH_SIZE = 20
+NUM_P = 50
 BATCH_SIZE = 10
-NUM_BATCHES = 10
+NUM_BATCHES = 20
 
 nest.add(
     'seed',
@@ -28,15 +33,18 @@ def create_nature(env, outdir, c):
         join(outdir, 'nature_log.txt')]
     cmd = [
         'python create_nature.py',
-        '--density-parametric bernoulli',
+        '--density-parametric',
+        DENSITY,
         '--first-batch',
-        BATCH_SIZE,
+        INIT_BATCH_SIZE,
         '--batch-size',
         BATCH_SIZE,
         '--batch-incr 0',
+        '--y-sigma 0.05',
         '--num-batches',
         NUM_BATCHES,
-        '--num-p 1',
+        '--num-p',
+        NUM_P,
         '--seed',
         c['seed'],
 	'--out-file ${TARGETS[0]}',
@@ -52,13 +60,11 @@ def create_proposer(env, outdir, c):
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
     cmd = [
-        'python create_proposer.py',
-        '--density-parametric bernoulli',
-        '--update-engine random',
-        '--proposer-noise 0.15',
-        '--proposer-increment 0',
-        '--proposer-offset 0',
-        '--proposer-decay 0',
+        'python create_lasso_proposer.py',
+        '--density-parametric',
+        DENSITY,
+        '--proposer-cv 3',
+        '--proposer-alphas 30',
         '--num-p 1',
         '--seed',
         c['seed'],
@@ -71,7 +77,8 @@ def create_proposer(env, outdir, c):
 
 nest.add(
     'eta',
-    [1])
+    [1,10],
+    label_func=lambda c: 'eta_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
 def run_fixedshare(env, outdir, c):
@@ -85,6 +92,7 @@ def run_fixedshare(env, outdir, c):
         c['seed'],
         '--eta',
         c['eta'],
+        '--alpha 0.1',
         '--human-max-loss',
         HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
@@ -109,6 +117,10 @@ def plot_fixedshare(env, outdir, c):
         'python plot_history.py',
         '--human-max-loss',
         HUMAN_LOSS,
+        '--y-max',
+        Y_MAX,
+        '--y-min',
+        Y_MIN,
         '--policy-name FixedShare',
 	'--history-file ${SOURCES[0]}',
 	'--loss-plot ${TARGETS[0]}',
@@ -156,6 +168,10 @@ def plot_blind(env, outdir, c):
         'python plot_history.py',
         '--human-max-loss',
         HUMAN_LOSS,
+        '--y-max',
+        Y_MAX,
+        '--y-min',
+        Y_MIN,
         '--policy-name BlindApproval',
 	'--history-file ${SOURCES[0]}',
 	'--loss-plot ${TARGETS[0]}',

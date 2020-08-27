@@ -24,7 +24,7 @@ def process_params(param_str, dtype, split_str=","):
     else:
         return []
 
-def plot_loss(loss_history, fig_name, alpha):
+def plot_loss(loss_history, fig_name, alpha, ymin, ymax):
     T = loss_history.size + 1
     plt.clf()
     plt.plot(np.arange(T - 1), loss_history, "g-")
@@ -32,6 +32,7 @@ def plot_loss(loss_history, fig_name, alpha):
     plt.ylabel("loss")
     plt.xlabel("Time")
     plt.hlines(y=alpha, xmin=0, xmax=T)
+    plt.ylim(ymin, ymax)
     plt.savefig(fig_name)
 
 def plot_human_use(human_history, fig_name):

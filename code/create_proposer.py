@@ -28,13 +28,6 @@ def parse_args(args):
         default=0,
     )
     parser.add_argument(
-        "--update-engine",
-        type=str,
-        help="which model updater to use",
-        default="random",
-        choices=["random"],
-    )
-    parser.add_argument(
         "--density-parametric-form",
         type=str,
         default="bernoulli",

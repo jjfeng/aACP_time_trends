@@ -3,9 +3,9 @@ import numpy as np
 
 def linear_mu(xs):
     """
-    Just sum all the covariates to get the mean
+    Just sum first 5 covariates to get the mean
     """
-    raw_mu = np.sum(xs, axis=1) * 0.5
+    raw_mu = np.sum(xs[:,:5], axis=1) * 0.5
     return raw_mu
 
 

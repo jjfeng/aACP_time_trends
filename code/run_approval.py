@@ -15,7 +15,7 @@ from nature import Nature
 from proposer import Proposer
 from approval_history import ApprovalHistory
 from policy import *
-from common import pickle_from_file, pickle_to_file, plot_loss, plot_human_use
+from common import pickle_from_file, pickle_to_file
 
 
 def parse_args(args):
@@ -36,14 +36,13 @@ def parse_args(args):
         "--policy-name",
         type=str,
         help="name of approval policy",
-        default="OMD",
-        choices=["OMD","MD", "Optimistic", "FixedShare", "OptimisticFixedShare"],
+        default="FixedShare",
+        choices=["FixedShare", "BlindApproval"],
     )
     parser.add_argument("--eta", type=float, default=1)
+    parser.add_argument("--alpha", type=float, default=0)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
     parser.add_argument("--out-file", type=str, default="_output/approver_history.pkl")
-    parser.add_argument("--loss-plot", type=str, default="_output/approver_history_loss.png")
-    parser.add_argument("--human-plot", type=str, default="_output/approver_history_human.png")
     parser.set_defaults()
     args = parser.parse_args()
 
@@ -78,6 +77,7 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
         policy = FixedShare(
             num_experts,
             eta=args.eta,
+            alpha=args.alpha,
             human_max_loss=human_max_loss,
         )
     elif policy_name == "OptimisticFixedShare":
@@ -87,6 +87,8 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             human_max_loss=human_max_loss,
             time_trend_predictor=time_trend_predictor,
         )
+    elif policy_name == "BlindApproval":
+        policy = BlindApproval(human_max_loss=human_max_loss)
     return policy
 
 
@@ -118,6 +120,7 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy):
         approval_hist.append(human_weight, robot_weights, policy_loss_t, all_loss_t)
         prev_weights = weights
         logging.info("losses %s", all_loss_t/batch_n)
+        print("losses", all_loss_t/batch_n)
         logging.info("loss pred %s", loss_predictions)
         if loss_predictions.size > 2 and np.var(loss_predictions) > 0:
             logging.info("corr %s", scipy.stats.spearmanr(all_loss_t[1:]/batch_n, loss_predictions))
@@ -150,9 +153,6 @@ def main(args=sys.argv[1:]):
     approval_history = run_simulation(nature, proposer, policy)
     logging.info(approval_history)
     print(approval_history)
-
-    plot_loss(np.array(approval_history.policy_loss_history), args.loss_plot, alpha=args.human_max_loss)
-    plot_human_use(np.array(approval_history.human_history), args.human_plot)
 
     pickle_to_file(approval_history, args.out_file)
 

@@ -26,6 +26,8 @@ def parse_args(args):
         default=12,
     )
     parser.add_argument("--human-max-loss", type=float, default=0.9)
+    parser.add_argument("--y-max", type=float, default=0.9)
+    parser.add_argument("--y-min", type=float, default=0.1)
     parser.add_argument(
         "--policy-name",
         type=str,
@@ -49,7 +51,8 @@ def main(args=sys.argv[1:]):
     approval_history = pickle_from_file(args.history_file)
     print(approval_history)
 
-    plot_loss(np.array(approval_history.policy_loss_history), args.loss_plot, alpha=args.human_max_loss)
+    plot_loss(
+            np.array(approval_history.policy_loss_history), args.loss_plot, alpha=args.human_max_loss, ymin=args.y_min, ymax=args.y_max)
     plot_human_use(np.array(approval_history.human_history), args.human_plot)
 
 

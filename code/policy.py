@@ -4,6 +4,7 @@ import numpy as np
 class Policy:
     def __init__(self, human_max_loss: float):
         self.human_max_loss = human_max_loss
+        self.curr_num_experts = 0
 
     def add_expert(self, time_t):
         self.curr_num_experts += 1
@@ -11,8 +12,24 @@ class Policy:
     def get_predict_weights(self, time_t: int):
         raise NotImplementedError()
 
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
+        return
+
     def predict_next_losses(self, time_t: int):
         return np.zeros(self.curr_num_experts)
+
+class BlindApproval(Policy):
+    def __init__(self, human_max_loss: float):
+        self.human_max_loss = human_max_loss
+        self.curr_num_experts = 0
+
+    def add_expert(self, time_t):
+        self.curr_num_experts += 1
+
+    def get_predict_weights(self, time_t: int):
+        a = np.zeros(self.curr_num_experts)
+        a[-1] = 1
+        return a, 0
 
 class OptimisticPolicy(Policy):
     def predict_next_losses(self, time_t: int):

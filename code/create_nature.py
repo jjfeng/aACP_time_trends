@@ -32,7 +32,7 @@ def parse_args(args):
         type=str,
         default="bernoulli",
         help="The parametric form we are going to use for Y|X",
-        choices=["bounded_gaussian", "bernoulli"],
+        choices=["gaussian", "bernoulli"],
     )
     parser.add_argument(
         "--sim-func-name", type=str, default="linear", choices=["linear", "curvy"]
@@ -43,6 +43,7 @@ def parse_args(args):
     )
     parser.add_argument("--min-y", type=float, default=-1)
     parser.add_argument("--max-y", type=float, default=1)
+    parser.add_argument("--y-sigma", type=float, default=1)
     parser.add_argument("--num-batches", type=int, default=5)
     parser.add_argument("--first-batch-size", type=int, default=40)
     parser.add_argument("--batch-size", type=int, default=40)
@@ -89,6 +90,7 @@ def main(args=sys.argv[1:]):
         args.density_parametric_form,
         args.sim_func_name,
         support_sim_settings,
+        noise_sd=args.y_sigma,
         max_y=args.max_y,
         min_y=args.min_y,
     )
