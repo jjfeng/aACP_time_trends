@@ -131,7 +131,7 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
         approval_hist.append(human_weight, robot_weights, policy_loss_t, all_loss_t)
         prev_weights = weights
         logging.info("losses %s", all_loss_t/batch_n)
-        print("losses", all_loss_t/batch_n)
+        #print("losses", all_loss_t/batch_n)
         #logging.info("loss pred %s", loss_predictions)
         #if loss_predictions.size > 2 and np.var(loss_predictions) > 0:
         #    logging.info("corr %s", scipy.stats.spearmanr(all_loss_t[1:]/batch_n, loss_predictions))

@@ -208,7 +208,7 @@ class FixedShareWithBlind(Policy):
         self.weights = (1 - self.alpha) * v_weights + self.alpha * np.mean(v_weights)
         # Adding normalization to prevent numerical underflow
         #self.weights /= np.max(self.weights)
-        print("fixedshare blind wei", self.weights)
+        print("fixedshare blind wei", self.weights[0], self.weights[1], self.weights[2:].sum())
 
     def get_predict_weights(self, time_t: int):
         all_weights = self.weights / np.sum(self.weights)

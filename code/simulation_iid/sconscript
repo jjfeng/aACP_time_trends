@@ -16,7 +16,7 @@ NUM_TEST_OBS = 40000
 INIT_BATCH_SIZE = 20
 NUM_P = 50
 BATCH_SIZE = 10
-NUM_BATCHES = 20
+NUM_BATCHES = 100
 
 nest.add(
     'seed',
@@ -239,10 +239,6 @@ def plot_ttest(env, outdir, c):
     ]
     cmd = [
         'python plot_history.py',
-        #'--y-max',
-        #Y_MAX,
-        #'--y-min',
-        #Y_MIN,
         '--policy-name TTestApproval',
 	'--history-file ${SOURCES[0]}',
 	'--loss-plot ${TARGETS[0]}',
