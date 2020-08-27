@@ -37,7 +37,7 @@ def parse_args(args):
         type=str,
         help="name of approval policy",
         default="FixedShare",
-        choices=["FixedShare", "FixedShareWithBlind", "BlindApproval"],
+        choices=["FixedShare", "FixedShareWithBlind", "BlindApproval", "TTestApproval"],
     )
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
@@ -96,6 +96,10 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
         )
     elif policy_name == "BlindApproval":
         policy = BlindApproval(human_max_loss=human_max_loss)
+    elif policy_name == "TTestApproval":
+        policy = TTestApproval(num_experts, human_max_loss=human_max_loss)
+    else:
+        raise ValueError("approval not found")
     return policy
 
 
@@ -152,7 +156,7 @@ def main(args=sys.argv[1:]):
 
     model = proposer.propose_model(nature.get_trial_data(0), None, do_append=False)
     human_max_loss = np.mean(model.loss(nature.get_trial_data(1).get_start_to_end_data(1)))
-    human_max_loss = min(0.1, 1.25 * human_max_loss)
+    human_max_loss = 1.25 * human_max_loss #min(0.1, 1.25 * human_max_loss)
     print("HUMAN MAX", human_max_loss)
 
     policy = create_policy(

@@ -16,9 +16,9 @@ NUM_TEST_OBS = 40000
 HUMAN_LOSS = 0.03
 Y_MAX = 0.3
 Y_MIN = 0
-INIT_BATCH_SIZE = 20
-NUM_P = 20
-BATCH_SIZE = 20
+INIT_BATCH_SIZE = 60
+NUM_P = 10
+BATCH_SIZE = 60
 NUM_BATCHES = 20
 
 nest.add(
@@ -28,7 +28,7 @@ nest.add(
 
 nest.add(
     'drift_prob',
-    [1],
+    [0.1],
     label_func=lambda c: 'drift_pr_%.2f' % c)
 
 nest.add(
@@ -147,53 +147,53 @@ def plot_fixedshare_blind(env, outdir, c):
         ' '.join(map(str, cmd)))
 
 
-#@nest.add_target_with_env(localenv)
-#def run_fixedshare(env, outdir, c):
-#    targets = [
-#        join(outdir, 'fixedshare_approval_hist.pkl'),
-#        join(outdir, 'fixedshare_approval_hist_log.txt'),
-#    ]
-#    cmd = [
-#        'python run_approval.py',
-#        '--seed',
-#        c['seed'],
-#        '--eta',
-#        c['eta'],
-#        '--alpha',
-#        c['alpha'],
-#        '--nature-file ${SOURCES[0]}',
-#        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name FixedShare',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#
-#    sources = [c['create_nature'][0], c['create_proposer'][0]]
-#    return env.Command(
-#        targets,
-#        sources,
-#        ' '.join(map(str, cmd)))
-#
-#@nest.add_target_with_env(localenv)
-#def plot_fixedshare(env, outdir, c):
-#    targets = [
-#        join(outdir, 'fixedshare_approval_hist_loss.png'),
-#        join(outdir, 'fixedshare_approval_hist_human.png'),
-#    ]
-#    cmd = [
-#        'python plot_history.py',
-#        '--y-max',
-#        Y_MAX,
-#        '--y-min',
-#        Y_MIN,
-#        '--policy-name FixedShare',
-#	'--history-file ${SOURCES[0]}',
-#	'--loss-plot ${TARGETS[0]}',
-#	'--human-plot ${TARGETS[1]}']
-#
-#    return env.Command(
-#        targets,
-#        c['run_fixedshare'],
-#        ' '.join(map(str, cmd)))
+@nest.add_target_with_env(localenv)
+def run_fixedshare(env, outdir, c):
+    targets = [
+        join(outdir, 'fixedshare_approval_hist.pkl'),
+        join(outdir, 'fixedshare_approval_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--eta',
+        c['eta'],
+        '--alpha',
+        c['alpha'],
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name FixedShare',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def plot_fixedshare(env, outdir, c):
+    targets = [
+        join(outdir, 'fixedshare_approval_hist_loss.png'),
+        join(outdir, 'fixedshare_approval_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        '--y-max',
+        Y_MAX,
+        '--y-min',
+        Y_MIN,
+        '--policy-name FixedShare',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_fixedshare'],
+        ' '.join(map(str, cmd)))
 
 nest.pop('eta')
 
@@ -240,6 +240,52 @@ def plot_blind(env, outdir, c):
     return env.Command(
         targets,
         c['run_blind_approval'],
+        ' '.join(map(str, cmd)))
+
+
+@nest.add_target_with_env(localenv)
+def run_ttest_approval(env, outdir, c):
+    targets = [
+        join(outdir, 'ttest_approval_hist.pkl'),
+        join(outdir, 'ttest_approval_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name TTestApproval',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+
+@nest.add_target_with_env(localenv)
+def plot_ttest(env, outdir, c):
+    targets = [
+        join(outdir, 'ttest_approval_hist_loss.png'),
+        join(outdir, 'ttest_approval_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        #'--y-max',
+        #Y_MAX,
+        #'--y-min',
+        #Y_MIN,
+        '--policy-name TTestApproval',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_ttest_approval'],
         ' '.join(map(str, cmd)))
 
 
