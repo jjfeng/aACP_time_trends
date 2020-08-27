@@ -37,7 +37,7 @@ def parse_args(args):
         type=str,
         help="name of approval policy",
         default="FixedShare",
-        choices=["FixedShare", "FixedShareWithBlind", "BlindApproval", "TTestApproval"],
+        #choices=["FixedShare", "FixedShareWithBlind", "BlindApproval", "TTestApproval"],
     )
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
@@ -75,6 +75,13 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
         )
     elif policy_name == "FixedShare":
         policy = FixedShare(
+            num_experts,
+            eta=args.eta,
+            alpha=args.alpha,
+            human_max_loss=human_max_loss,
+        )
+    elif policy_name == "MonotonicFixedShare":
+        policy = MonotonicFixedShare(
             num_experts,
             eta=args.eta,
             alpha=args.alpha,

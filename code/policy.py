@@ -217,6 +217,76 @@ class FixedShareWithBlind(Policy):
         robot_weights[-1] += all_weights[1]
         return robot_weights, all_weights[0]
 
+class MonotonicFixedShare(Policy):
+    """
+    Fixed Share
+    First expert is human
+    """
+
+    def __init__(
+            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.01,
+    ):
+        assert eta > 0
+        self.human_max_loss = human_max_loss
+        self.eta = eta
+        self.alpha = alpha
+        self.baseline_alpha = baseline_alpha
+        self.num_experts = num_experts
+        self.curr_num_experts = 0
+        # initialized with only human weight
+        self.weights = np.ones(1)
+
+        self.loss_histories = np.zeros((num_experts, 1))
+        print("alpha", self.alpha)
+
+    def __str__(self):
+        return "FixedShare"
+
+    def add_expert(self, time_t):
+        self.curr_num_experts += 1
+        if self.curr_num_experts == 1:
+            self.weights = np.concatenate([self.weights, [4]])
+        else:
+            self.weights = np.concatenate([self.weights, [0]])
+
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
+        if indiv_robot_loss_t is None:
+            return
+
+        model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
+        forecaster_loss = np.sum(
+            prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
+        )
+        new_losses = np.concatenate(
+            [
+                model_losses_t,
+                [0] * (self.num_experts - self.curr_num_experts),
+            ]
+        ).reshape((-1, 1))
+        self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
+        v_weights = self.weights * np.exp(- self.eta * np.concatenate([[self.human_max_loss], model_losses_t]))
+
+        transition_matrix = np.eye(self.weights.size) * (1 - self.alpha - self.baseline_alpha)
+        print("SIZE", self.weights.size)
+        for i in range(1, self.weights.size - 1):
+            transition_matrix[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
+        transition_matrix[-1,-1] = 1-self.baseline_alpha
+        transition_matrix[0,0] = self.alpha/2
+        transition_matrix[0,1:] = (1 - self.alpha/2)/(self.weights.size - 1)
+        transition_matrix[1:,0] = self.baseline_alpha
+        #print("TRAN", transition_matrix)
+        assert not np.any(np.isnan(transition_matrix))
+        assert np.all(np.isclose(1, np.sum(transition_matrix, axis=1)))
+        self.weights = np.matmul(self.weights.reshape((1, -1)), transition_matrix).flatten()
+        # Adding normalization to prevent numerical underflow
+        #self.weights /= np.max(self.weights)
+        print("self wei", self.weights)
+
+    def get_predict_weights(self, time_t: int):
+        all_weights = self.weights / np.sum(self.weights)
+        print("weights", all_weights)
+        return all_weights[1:], all_weights[0]
+
 class FixedShare(Policy):
     """
     Fixed Share
