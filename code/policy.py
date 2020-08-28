@@ -221,8 +221,7 @@ class MonotonicFixedShare(Policy):
     """
     Fixed Share
     First expert is human
-    Try to enforce monotonicity in the expert seq. The current transition matrix IS NOT correct.
-    We need to split the baseline to indicate the minimum next expert index
+    enforce monotonicity in the expert seq
     """
 
     def __init__(
@@ -236,7 +235,7 @@ class MonotonicFixedShare(Policy):
         self.num_experts = num_experts
         self.curr_num_experts = 0
         # initialized with only human weight
-        self.weights = np.ones(1)
+        self.baseline_weights = np.ones(1)
 
         self.loss_histories = np.zeros((num_experts, 1))
         print("alpha", self.alpha)
@@ -247,8 +246,9 @@ class MonotonicFixedShare(Policy):
     def add_expert(self, time_t):
         self.curr_num_experts += 1
         if self.curr_num_experts == 1:
-            self.weights = np.concatenate([self.weights, [4]])
+            self.weights = np.ones(1)
         else:
+            self.baseline_weights = np.concatenate([self.baseline_weights, [0]])
             self.weights = np.concatenate([self.weights, [0]])
 
     def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
@@ -266,28 +266,37 @@ class MonotonicFixedShare(Policy):
             ]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
-        v_weights = self.weights * np.exp(- self.eta * np.concatenate([[self.human_max_loss], model_losses_t]))
+        v_weights = self.weights * np.exp(- self.eta * model_losses_t)
+        v_baseline_weights = self.baseline_weights * np.exp(- self.eta * self.human_max_loss * np.ones(self.baseline_weights.size))
 
-        transition_matrix = np.eye(self.weights.size) * (1 - self.alpha - self.baseline_alpha)
-        print("SIZE", self.weights.size)
-        for i in range(1, self.weights.size - 1):
-            transition_matrix[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
-        transition_matrix[-1,-1] = 1-self.baseline_alpha
-        transition_matrix[0,0] = (1 - self.alpha * 2)
-        transition_matrix[0,1:] = (2 * self.alpha)/(self.weights.size - 1)
-        transition_matrix[1:,0] = self.baseline_alpha
+        transition_matrix11 = np.eye(self.weights.size) * (1 - self.alpha)
+        for i in range(self.weights.size - 1):
+            transition_matrix11[i,i] = 1 - self.alpha - self.baseline_alpha
+            transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
+        transition_matrix12 = np.eye(self.weights.size, self.baseline_weights.size,k=1) * self.baseline_alpha
+        transition_matrix21 = np.zeros((self.baseline_weights.size, self.weights.size))
+        for i in range(self.weights.size - 1):
+            transition_matrix21[i,i + 1:] = (2 * self.alpha)/(self.weights.size - i - 1)
+        transition_matrix22 = np.eye(self.baseline_weights.size) * (1 - self.alpha * 2)
+        transition_matrix = np.block([[transition_matrix11, transition_matrix12], [transition_matrix21, transition_matrix22]])
+        transition_matrix[:,-1] = 1 - transition_matrix[:,:-1].sum(axis=1)
+
         #print("TRAN", transition_matrix)
         assert not np.any(np.isnan(transition_matrix))
         assert np.all(np.isclose(1, np.sum(transition_matrix, axis=1)))
-        self.weights = np.matmul(self.weights.reshape((1, -1)), transition_matrix).flatten()
+
+        combo_vector = np.concatenate([self.weights, self.baseline_weights])
+
+        new_combo_weights = np.matmul(combo_vector.reshape((1, -1)), transition_matrix).flatten()
+        self.weights = new_combo_weights[:self.weights.size]
+        self.baseline_weights = new_combo_weights[self.weights.size:]
         # Adding normalization to prevent numerical underflow
         #self.weights /= np.max(self.weights)
-        print("self wei", self.weights)
 
     def get_predict_weights(self, time_t: int):
-        all_weights = self.weights / np.sum(self.weights)
-        print("weights", all_weights)
-        return all_weights[1:], all_weights[0]
+        robot_weights = self.weights / (np.sum(self.weights) + np.sum(self.baseline_weights))
+        baseline_weight = 1 - np.sum(robot_weights)
+        return robot_weights, baseline_weight
 
 class FixedShare(Policy):
     """
