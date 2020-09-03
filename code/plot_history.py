@@ -29,17 +29,22 @@ def parse_args(args):
     parser.add_argument("--y-max", type=float, default=0.9)
     parser.add_argument("--y-min", type=float, default=0.1)
     parser.add_argument(
-        "--policy-name",
-        type=str,
-        help="name of approval policy",
+        "--policy-name", type=str, help="name of approval policy",
     )
-    parser.add_argument("--history-file", type=str, default="_output/approver_history.pkl")
-    parser.add_argument("--loss-plot", type=str, default="_output/approver_history_loss.png")
-    parser.add_argument("--human-plot", type=str, default="_output/approver_history_human.png")
+    parser.add_argument(
+        "--history-file", type=str, default="_output/approver_history.pkl"
+    )
+    parser.add_argument(
+        "--loss-plot", type=str, default="_output/approver_history_loss.png"
+    )
+    parser.add_argument(
+        "--human-plot", type=str, default="_output/approver_history_human.png"
+    )
     parser.set_defaults()
     args = parser.parse_args()
 
     return args
+
 
 def main(args=sys.argv[1:]):
     args = parse_args(args)
@@ -50,10 +55,14 @@ def main(args=sys.argv[1:]):
     print(approval_history)
 
     plot_loss(
-            np.array(approval_history.policy_loss_history), args.loss_plot, alpha=approval_history.human_max_loss, ymin=0, ymax=approval_history.human_max_loss * 3)
+        np.array(approval_history.policy_loss_history),
+        args.loss_plot,
+        alpha=approval_history.human_max_loss,
+        ymin=0,
+        ymax=approval_history.human_max_loss * 5,
+    )
     plot_human_use(np.array(approval_history.human_history), args.human_plot)
 
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-

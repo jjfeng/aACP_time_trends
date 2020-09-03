@@ -80,8 +80,29 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             alpha=args.alpha,
             human_max_loss=human_max_loss,
         )
+    elif policy_name == "OptimisticMonotonicFixedShare":
+        policy = OptimisticMonotonicFixedShare(
+            num_experts,
+            eta=args.eta,
+            alpha=args.alpha,
+            human_max_loss=human_max_loss,
+        )
     elif policy_name == "MonotonicFixedShare":
         policy = MonotonicFixedShare(
+            num_experts,
+            eta=args.eta,
+            alpha=args.alpha,
+            human_max_loss=human_max_loss,
+        )
+    elif policy_name == "OptimisticBaselineMonotonicFixedShare":
+        policy = OptimisticBaselineMonotonicFixedShare(
+            num_experts,
+            eta=args.eta,
+            alpha=args.alpha,
+            human_max_loss=human_max_loss,
+        )
+    elif policy_name == "MonotonicBaselineFixedShare":
+        policy = MonotonicBaselineFixedShare(
             num_experts,
             eta=args.eta,
             alpha=args.alpha,
@@ -163,7 +184,7 @@ def main(args=sys.argv[1:]):
 
     model = proposer.propose_model(nature.get_trial_data(0), None, do_append=False)
     human_max_loss = np.mean(model.loss(nature.get_trial_data(1).get_start_to_end_data(1)))
-    human_max_loss = 1.25 * human_max_loss #min(0.1, 1.25 * human_max_loss)
+    #human_max_loss = 1.25 * human_max_loss #min(0.1, 1.25 * human_max_loss)
     print("HUMAN MAX", human_max_loss)
 
     policy = create_policy(
