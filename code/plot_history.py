@@ -25,7 +25,6 @@ def parse_args(args):
         help="Random number generator seed for replicability",
         default=12,
     )
-    parser.add_argument("--human-max-loss", type=float, default=0.9)
     parser.add_argument("--y-max", type=float, default=0.9)
     parser.add_argument("--y-min", type=float, default=0.1)
     parser.add_argument(

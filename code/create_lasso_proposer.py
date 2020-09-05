@@ -34,6 +34,7 @@ def parse_args(args):
     )
     parser.add_argument("--proposer-eps", type=float, default=1e-4)
     parser.add_argument("--proposer-cv", type=int, default=3)
+    parser.add_argument("--proposer-batches", type=int, default=3)
     parser.add_argument("--proposer-alphas", type=int, default=30)
     parser.add_argument("--proposer-offset-scale", type=float, default=0)
     parser.add_argument("--min-y", type=float, default=-1)
@@ -63,6 +64,7 @@ def main(args=sys.argv[1:]):
             eps=args.proposer_eps,
             n_alphas=args.proposer_alphas,
             cv=args.proposer_cv,
+            num_back_batches=args.proposer_batches,
     )
 
     pickle_to_file(proposer, args.out_file)

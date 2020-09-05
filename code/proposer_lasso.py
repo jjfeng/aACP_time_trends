@@ -42,7 +42,7 @@ class LogisticRegressionCVWrap(LogisticRegressionCV):
 
 class LassoProposer(Proposer):
     def __init__(
-        self, sim_func_form: str, eps=1e-4, n_alphas=200, cv=5, max_val=1, min_val=0
+            self, sim_func_form: str, eps=1e-4, n_alphas=200, cv=5, max_val=1, min_val=0, num_back_batches: int=100
     ):
         self.sim_func_form = sim_func_form
         self.eps = eps
@@ -50,6 +50,7 @@ class LassoProposer(Proposer):
         self.cv = cv
         self.max_val = max_val
         self.min_val = min_val
+        self.num_back_batches = num_back_batches
         self.proposal_history = []
 
     def propose_model(self, trial_data: TrialData, curr_model_idx: int = None, do_append: bool = True):
@@ -70,7 +71,7 @@ class LassoProposer(Proposer):
                 # solver='liblinear',
                 max_iter=1000,
             )
-        cum_data = trial_data.get_start_to_end_data(0)
+        cum_data = trial_data.get_start_to_end_data(start_index=max(0, trial_data.num_batches - self.num_back_batches))
         model.fit(cum_data.x, cum_data.y.flatten())
 
         if do_append:

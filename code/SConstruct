@@ -29,5 +29,8 @@ sc.SConscript(flag + '/sconscript', exports=['flag'])
 flag = 'simulation_drift'
 sc.SConscript(flag + '/sconscript', exports=['flag'])
 
+flag = 'simulation_adversary'
+sc.SConscript(flag + '/sconscript', exports=['flag'])
+
 #flag = 'simulation_fine_control'
 #sc.SConscript(flag + '/sconscript', exports=['flag'])

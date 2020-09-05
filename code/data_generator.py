@@ -57,7 +57,6 @@ class DataGenerator:
         do_drift = np.random.binomial(1, self.prob_coef_drift)
         print("DO DRIFT", do_drift, t_idx)
         self.coefs.append(self.coefs[-1] + np.random.randn(1, self.coefs[0].size) * self.coef_drift_speed * do_drift)
-        print(self.coefs[-1])
         return self.raw_mu_func(self.coefs[-1], xs)
 
     def sigma_func(self, xs: ndarray):
@@ -120,3 +119,59 @@ class DataGenerator:
             y = np.vstack(all_ys)
 
         return Dataset(xs, y, num_classes=self.num_classes)
+
+class AdversaryDataGenerator(DataGenerator):
+    """
+    Simulation engine
+    """
+
+    def __init__(
+        self,
+        sim_func_form: str,
+        sim_func_name: str,
+        coef_drift_speed: float,
+        prob_coef_drift: float,
+        support_sim_settings: SupportSimSettings,
+        num_classes: int = 1,
+        noise_sd: float = 1,
+        std_dev_x: float = 1,
+        max_y: float = 1,
+        min_y: float = 0,
+    ):
+        self.num_p = support_sim_settings.num_p
+        self.std_dev_x = std_dev_x
+        self.num_classes = num_classes
+        self.min_y = min_y
+        self.max_y = max_y
+        self.noise_sd = noise_sd
+        self.sim_func_form = sim_func_form
+        self.coef_drift_speed = coef_drift_speed
+        self.prob_coef_drift = prob_coef_drift
+        self.support_sim_settings = support_sim_settings
+        if sim_func_form in ["gaussian", "bounded_gaussian"]:
+            self.raw_mu_func = getattr(data_gen_funcs, sim_func_name + "_mu")
+            self.raw_sigma_func = getattr(data_gen_funcs, sim_func_name + "_sigma")
+        elif sim_func_form == "bernoulli":
+            self.raw_mu_func = getattr(data_gen_funcs_bernoulli, sim_func_name + "_mu")
+        else:
+            print(sim_func_form)
+            raise ValueError("huh?")
+
+        # Create changing coefs
+        self.coefs = [np.zeros((1, self.num_p))]
+        self.coefs[0][0,:5] = 1
+        self.drift_delta = np.random.randn(1, self.coefs[0].size)
+
+    def mu_func(self, xs: ndarray, t_idx: int = 0):
+        """
+        @return sigma when Y|X is gaussian
+        """
+        assert len(self.coefs) == (t_idx + 1)
+        do_drift = np.random.binomial(1, self.prob_coef_drift)
+        do_drift = 1 if t_idx % 2 == 0 else -1
+        print("DO DRIFT", do_drift, t_idx)
+        #self.coefs.append(self.coefs[-1] + np.random.randn(1, self.coefs[0].size) * self.coef_drift_speed * do_drift)
+        self.coefs.append(self.coefs[-1] + self.drift_delta * self.coef_drift_speed * do_drift)
+        print(self.coefs[-1])
+        return self.raw_mu_func(self.coefs[-1], xs)
+

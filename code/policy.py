@@ -63,19 +63,48 @@ class TTestApproval(Policy):
             mean_improve = np.mean(loss_improvement)
             differences.append(mean_improve)
             upper_ci = mean_improve + self.factor * np.sqrt(np.var(loss_improvement)/new_model_loss.size)
-            print(mean_improve, upper_ci, new_model_loss.size)
             is_better = upper_ci < 0
             if is_better and upper_ci < best_upper_ci:
                 best_model_idx = i
                 best_upper_ci = upper_ci
 
         self.curr_approved_idx = best_model_idx
-        print("APPROVED", self.curr_approved_idx)
-        print(differences)
 
         a = np.zeros(self.curr_num_experts)
         a[best_model_idx] = 1
         return a, 0
+
+class MeanApproval(TTestApproval):
+    def __init__(self, num_experts: int, human_max_loss: float):
+        self.human_max_loss = human_max_loss
+        self.curr_num_experts = 0
+        self.num_experts = num_experts
+        self.loss_histories = [[] for i in range(self.num_experts)]
+        self.curr_approved_idx = 0
+
+    def get_predict_weights(self, time_t: int):
+        if time_t == 0:
+            return np.zeros(1), 1
+
+        best_model_idx = self.curr_approved_idx
+        baseline_model_loss = np.mean(self.loss_histories[self.curr_approved_idx][-1])
+        best_model_loss = baseline_model_loss
+
+        for i in range(self.curr_approved_idx + 1, self.curr_num_experts - 1):
+            new_model_loss = np.mean(self.loss_histories[i][-1])
+            if new_model_loss < best_model_loss:
+                best_model_idx = i
+                best_model_loss = new_model_loss
+
+        if best_model_loss < self.human_max_loss:
+            if best_model_idx != self.curr_approved_idx:
+                self.curr_approved_idx = best_model_idx
+            a = np.zeros(self.curr_num_experts)
+            a[best_model_idx] = 1
+            return a, 0
+        else:
+            a = np.zeros(self.curr_num_experts)
+            return a, 1
 
 class OptimisticPolicy(Policy):
     def predict_next_losses(self, time_t: int):
@@ -156,7 +185,7 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
     """
 
     def __init__(
-            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.05,
+            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.01,
     ):
         assert eta > 0
         self.human_max_loss = human_max_loss
@@ -166,7 +195,7 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
         self.num_experts = num_experts
         self.curr_num_experts = 0
         # initialized with only human weight
-        self.const_baseline_weight = 0.2 #np.exp(-num_experts * self.human_max_loss)
+        self.const_baseline_weight = 0.1 #np.exp(-num_experts * self.human_max_loss)
         self.const_baseline_optim_weight = self.const_baseline_weight
         self.baseline_weights = np.ones(1) * (1 - self.const_baseline_weight)
         self.baseline_optim_weights = np.ones(1) * (1 - self.const_baseline_weight)
@@ -217,6 +246,7 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
         transition_matrix21[0,-1] = self.alpha
         for i in range(1,self.weights.size - 1):
             transition_matrix21[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
+            #transition_matrix21[i,-3:] = (self.alpha)/(3)
             #transition_matrix21[i,-1] = self.alpha
         transition_matrix22 = np.eye(self.baseline_weights.size) * (1 - self.alpha)
         transition_matrix = np.block([[transition_matrix11, transition_matrix12], [transition_matrix21, transition_matrix22]])
@@ -233,7 +263,11 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
         self.baseline_weights = new_combo_weights[self.weights.size:]
         self.const_baseline_weight = self.const_baseline_weight * np.exp(- self.eta * self.human_max_loss)
         # Adding normalization to prevent numerical underflow
-        #self.weights /= np.max(self.weights)
+        normalization_factor = np.max(self.weights)
+        self.weights /= normalization_factor
+        self.baseline_weights /= normalization_factor
+        self.const_baseline_weight /= normalization_factor
+
         # Don't bother using any algorithms we predict to be worse than the human
         self.optim_weights = v_weights * np.exp(- self.eta * model_losses_t) * (model_losses_t < self.human_max_loss)
         self.baseline_optim_weights = v_baseline_weights * np.exp(- self.eta * self.human_max_loss)
@@ -347,7 +381,7 @@ class MonotonicBaselineFixedShare(Policy):
     """
 
     def __init__(
-            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.05,
+            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.01,
     ):
         assert eta > 0
         self.human_max_loss = human_max_loss
@@ -400,13 +434,14 @@ class MonotonicBaselineFixedShare(Policy):
         transition_matrix11 = np.eye(self.weights.size) * (1 - self.alpha)
         for i in range(self.weights.size - 1):
             transition_matrix11[i,i] = 1 - self.alpha - self.baseline_alpha
-            #transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
-            transition_matrix11[i,-1] = self.alpha
+            transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
+            #transition_matrix11[i,-1] = self.alpha
         transition_matrix12 = np.eye(self.weights.size, self.baseline_weights.size,k=1) * self.baseline_alpha
         transition_matrix21 = np.zeros((self.baseline_weights.size, self.weights.size))
         transition_matrix21[0,-1] = self.alpha
         for i in range(1,self.weights.size - 1):
-            transition_matrix21[i,-1] = self.alpha
+            transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
+            #transition_matrix21[i,-1] = self.alpha
         transition_matrix22 = np.eye(self.baseline_weights.size) * (1 - self.alpha)
         transition_matrix = np.block([[transition_matrix11, transition_matrix12], [transition_matrix21, transition_matrix22]])
         transition_matrix[:,-1] = 1 - transition_matrix[:,:-1].sum(axis=1)

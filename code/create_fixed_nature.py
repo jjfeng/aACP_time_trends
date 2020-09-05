@@ -10,7 +10,7 @@ from typing import List
 
 from trial_data import TrialData
 from nature import FixedNature
-from data_generator import DataGenerator
+from data_generator import *
 from support_sim_settings import *
 from dataset import Dataset
 from common import pickle_to_file
@@ -36,6 +36,9 @@ def parse_args(args):
     )
     parser.add_argument(
         "--sim-func-name", type=str, default="linear", choices=["linear", "curvy"]
+    )
+    parser.add_argument(
+        "--personality", type=str, default="unbiased", choices=["unbiased", "oscillating"]
     )
     parser.add_argument(
         "--coef-drift-speed", type=float, default=0
@@ -92,16 +95,28 @@ def main(args=sys.argv[1:]):
     else:
         raise ValueError("Asdfasdf")
 
-    data_gen = DataGenerator(
-        args.density_parametric_form,
-        args.sim_func_name,
-        args.coef_drift_speed,
-        args.prob_coef_drift,
-        support_sim_settings,
-        noise_sd=args.y_sigma,
-        max_y=args.max_y,
-        min_y=args.min_y,
-    )
+    if args.personality == "unbiased":
+        data_gen = DataGenerator(
+            args.density_parametric_form,
+            args.sim_func_name,
+            args.coef_drift_speed,
+            args.prob_coef_drift,
+            support_sim_settings,
+            noise_sd=args.y_sigma,
+            max_y=args.max_y,
+            min_y=args.min_y,
+        )
+    elif args.personality == "oscillating":
+        data_gen = AdversaryDataGenerator(
+            args.density_parametric_form,
+            args.sim_func_name,
+            args.coef_drift_speed,
+            args.prob_coef_drift,
+            support_sim_settings,
+            noise_sd=args.y_sigma,
+            max_y=args.max_y,
+            min_y=args.min_y,
+        )
     trial_data = TrialData(args.batch_sizes, data_gen)
     for batch_index in range(args.num_batches):
         trial_data.make_new_batch()

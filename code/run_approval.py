@@ -124,6 +124,8 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
         )
     elif policy_name == "BlindApproval":
         policy = BlindApproval(human_max_loss=human_max_loss)
+    elif policy_name == "MeanApproval":
+        policy = MeanApproval(num_experts, human_max_loss=human_max_loss)
     elif policy_name == "TTestApproval":
         policy = TTestApproval(num_experts, human_max_loss=human_max_loss)
     else:
