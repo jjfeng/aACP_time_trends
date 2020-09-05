@@ -210,13 +210,14 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
         transition_matrix11 = np.eye(self.weights.size) * (1 - self.alpha)
         for i in range(self.weights.size - 1):
             transition_matrix11[i,i] = 1 - self.alpha - self.baseline_alpha
-            #transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
-            transition_matrix11[i,-1] = self.alpha
+            transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
+            #transition_matrix11[i,-1] = self.alpha
         transition_matrix12 = np.eye(self.weights.size, self.baseline_weights.size,k=1) * self.baseline_alpha
         transition_matrix21 = np.zeros((self.baseline_weights.size, self.weights.size))
         transition_matrix21[0,-1] = self.alpha
         for i in range(1,self.weights.size - 1):
-            transition_matrix21[i,-1] = self.alpha
+            transition_matrix21[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
+            #transition_matrix21[i,-1] = self.alpha
         transition_matrix22 = np.eye(self.baseline_weights.size) * (1 - self.alpha)
         transition_matrix = np.block([[transition_matrix11, transition_matrix12], [transition_matrix21, transition_matrix22]])
         transition_matrix[:,-1] = 1 - transition_matrix[:,:-1].sum(axis=1)
@@ -233,7 +234,8 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
         self.const_baseline_weight = self.const_baseline_weight * np.exp(- self.eta * self.human_max_loss)
         # Adding normalization to prevent numerical underflow
         #self.weights /= np.max(self.weights)
-        self.optim_weights = v_weights * np.exp(- self.eta * model_losses_t)
+        # Don't bother using any algorithms we predict to be worse than the human
+        self.optim_weights = v_weights * np.exp(- self.eta * model_losses_t) * (model_losses_t < self.human_max_loss)
         self.baseline_optim_weights = v_baseline_weights * np.exp(- self.eta * self.human_max_loss)
         self.const_baseline_optim_weight = self.const_baseline_weight * np.exp(- self.eta * self.human_max_loss)
 
@@ -242,8 +244,8 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
         denom = (np.sum(self.optim_weights) + np.sum(self.baseline_optim_weights) + self.const_baseline_optim_weight)
         robot_optim_weights = self.optim_weights / (np.sum(self.optim_weights) + np.sum(self.baseline_optim_weights) + self.const_baseline_optim_weight)
         baseline_weight = 1 - np.sum(robot_optim_weights)
-        print("CONST", self.const_baseline_optim_weight/denom)
-        print("other", np.sum(self.baseline_optim_weights)/denom)
+        #print("CONST", self.const_baseline_optim_weight/denom)
+        #print("other", np.sum(self.baseline_optim_weights)/denom)
         return robot_optim_weights, baseline_weight
 
 class OptimisticMonotonicFixedShare(Policy):

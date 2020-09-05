@@ -141,7 +141,7 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
     indiv_loss_robot_t = None
     prev_weights = None
     for t in range(nature.total_time - 1):
-        print("TIME STEP", t)
+        #print("TIME STEP", t)
         logging.info("TIME STEP %d", t)
         policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights)
         policy.add_expert(t)

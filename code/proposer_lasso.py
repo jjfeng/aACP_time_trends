@@ -71,7 +71,6 @@ class LassoProposer(Proposer):
                 max_iter=1000,
             )
         cum_data = trial_data.get_start_to_end_data(0)
-        print("NUM OBS", cum_data.num_obs)
         model.fit(cum_data.x, cum_data.y.flatten())
 
         if do_append:

@@ -16,7 +16,7 @@ NUM_TEST_OBS = 40000
 INIT_BATCH_SIZE = 20
 NUM_P = 50
 BATCH_SIZE = 10
-NUM_BATCHES = 100
+NUM_BATCHES = 20
 
 nest.add(
     'seed',
@@ -132,10 +132,10 @@ def run_fixedshare_mono(env, outdir, c):
         c['seed'],
         '--eta',
         c['eta'],
-        '--alpha 0.4',
+        '--alpha 0.5',
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
-        '--policy-name MonotonicFixedShare',
+        '--policy-name OptimisticBaselineMonotonicFixedShare',
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
 
@@ -153,7 +153,7 @@ def plot_fixedshare_mono(env, outdir, c):
     ]
     cmd = [
         'python plot_history.py',
-        '--policy-name MonotonicFixedShare',
+        '--policy-name OptimisticBaselineMonotonicFixedShare',
 	'--history-file ${SOURCES[0]}',
 	'--loss-plot ${TARGETS[0]}',
 	'--human-plot ${TARGETS[1]}']
@@ -251,7 +251,7 @@ def plot_fixedshare_mono(env, outdir, c):
 #        c['run_fixedshare'],
 #        ' '.join(map(str, cmd)))
 #
-#nest.pop('eta')
+nest.pop('eta')
 #
 #@nest.add_target_with_env(localenv)
 #def run_blind_approval(env, outdir, c):
@@ -296,45 +296,45 @@ def plot_fixedshare_mono(env, outdir, c):
 #
 #
 #
-#@nest.add_target_with_env(localenv)
-#def run_ttest_approval(env, outdir, c):
-#    targets = [
-#        join(outdir, 'ttest_approval_hist.pkl'),
-#        join(outdir, 'ttest_approval_hist_log.txt'),
-#    ]
-#    cmd = [
-#        'python run_approval.py',
-#        '--seed',
-#        c['seed'],
-#        '--nature-file ${SOURCES[0]}',
-#        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name TTestApproval',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#
-#    sources = [c['create_nature'][0], c['create_proposer'][0]]
-#    return env.Command(
-#        targets,
-#        sources,
-#        ' '.join(map(str, cmd)))
-#
-#
-#@nest.add_target_with_env(localenv)
-#def plot_ttest(env, outdir, c):
-#    targets = [
-#        join(outdir, 'ttest_approval_hist_loss.png'),
-#        join(outdir, 'ttest_approval_hist_human.png'),
-#    ]
-#    cmd = [
-#        'python plot_history.py',
-#        '--policy-name TTestApproval',
-#	'--history-file ${SOURCES[0]}',
-#	'--loss-plot ${TARGETS[0]}',
-#	'--human-plot ${TARGETS[1]}']
-#
-#    return env.Command(
-#        targets,
-#        c['run_ttest_approval'],
-#        ' '.join(map(str, cmd)))
-#
-#
+@nest.add_target_with_env(localenv)
+def run_ttest_approval(env, outdir, c):
+    targets = [
+        join(outdir, 'ttest_approval_hist.pkl'),
+        join(outdir, 'ttest_approval_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name TTestApproval',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+
+@nest.add_target_with_env(localenv)
+def plot_ttest(env, outdir, c):
+    targets = [
+        join(outdir, 'ttest_approval_hist_loss.png'),
+        join(outdir, 'ttest_approval_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        '--policy-name TTestApproval',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_ttest_approval'],
+        ' '.join(map(str, cmd)))
+
+
