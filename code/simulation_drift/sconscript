@@ -16,14 +16,14 @@ NUM_TEST_OBS = 40000
 HUMAN_LOSS = 0.03
 Y_MAX = 0.3
 Y_MIN = 0
-INIT_BATCH_SIZE = 40
+INIT_BATCH_SIZE = 20
 NUM_P = 20
-BATCH_SIZE = 50
+BATCH_SIZE = 100
 NUM_BATCHES = 60
 
 nest.add(
     'drift_speed',
-    [0.5],
+    [0.1],
     label_func=lambda c: 'drift_speed_%.2f' % c)
 
 nest.add(
@@ -93,12 +93,12 @@ def create_proposer(env, outdir, c):
 
 nest.add(
     'eta',
-    [1],
+    [10],
     label_func=lambda c: 'eta_%.2f' % c)
 
 nest.add(
     'alpha',
-    [0.5],
+    [0.6],
     label_func=lambda c: 'alpha_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
@@ -135,10 +135,6 @@ def plot_fixedshare_optim(env, outdir, c):
     ]
     cmd = [
         'python plot_history.py',
-        '--y-max',
-        Y_MAX,
-        '--y-min',
-        Y_MIN,
         '--policy-name OptimisticBaselineMonotonicFixedShare',
 	'--history-file ${SOURCES[0]}',
 	'--loss-plot ${TARGETS[0]}',
@@ -148,6 +144,7 @@ def plot_fixedshare_optim(env, outdir, c):
         targets,
         c['run_fixedshare_optim'],
         ' '.join(map(str, cmd)))
+
 #@nest.add_target_with_env(localenv)
 #def run_fixedshare_mono(env, outdir, c):
 #    targets = [
@@ -182,10 +179,6 @@ def plot_fixedshare_optim(env, outdir, c):
 #    ]
 #    cmd = [
 #        'python plot_history.py',
-#        '--y-max',
-#        Y_MAX,
-#        '--y-min',
-#        Y_MIN,
 #        '--policy-name MonotonicBaselineFixedShare',
 #	'--history-file ${SOURCES[0]}',
 #	'--loss-plot ${TARGETS[0]}',
@@ -341,50 +334,50 @@ nest.pop('eta')
 #        ' '.join(map(str, cmd)))
 #
 #
-#@nest.add_target_with_env(localenv)
-#def run_ttest_approval(env, outdir, c):
-#    targets = [
-#        join(outdir, 'ttest_approval_hist.pkl'),
-#        join(outdir, 'ttest_approval_hist_log.txt'),
-#    ]
-#    cmd = [
-#        'python run_approval.py',
-#        '--seed',
-#        c['seed'],
-#        '--nature-file ${SOURCES[0]}',
-#        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name TTestApproval',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#
-#    sources = [c['create_nature'][0], c['create_proposer'][0]]
-#    return env.Command(
-#        targets,
-#        sources,
-#        ' '.join(map(str, cmd)))
-#
-#
-#@nest.add_target_with_env(localenv)
-#def plot_ttest(env, outdir, c):
-#    targets = [
-#        join(outdir, 'ttest_approval_hist_loss.png'),
-#        join(outdir, 'ttest_approval_hist_human.png'),
-#    ]
-#    cmd = [
-#        'python plot_history.py',
-#        #'--y-max',
-#        #Y_MAX,
-#        #'--y-min',
-#        #Y_MIN,
-#        '--policy-name TTestApproval',
-#	'--history-file ${SOURCES[0]}',
-#	'--loss-plot ${TARGETS[0]}',
-#	'--human-plot ${TARGETS[1]}']
-#
-#    return env.Command(
-#        targets,
-#        c['run_ttest_approval'],
-#        ' '.join(map(str, cmd)))
+@nest.add_target_with_env(localenv)
+def run_ttest_approval(env, outdir, c):
+    targets = [
+        join(outdir, 'ttest_approval_hist.pkl'),
+        join(outdir, 'ttest_approval_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name TTestApproval',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+
+@nest.add_target_with_env(localenv)
+def plot_ttest(env, outdir, c):
+    targets = [
+        join(outdir, 'ttest_approval_hist_loss.png'),
+        join(outdir, 'ttest_approval_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        #'--y-max',
+        #Y_MAX,
+        #'--y-min',
+        #Y_MIN,
+        '--policy-name TTestApproval',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_ttest_approval'],
+        ' '.join(map(str, cmd)))
 
 
 @nest.add_target_with_env(localenv)

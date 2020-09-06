@@ -55,7 +55,6 @@ class DataGenerator:
         """
         assert len(self.coefs) == (t_idx + 1)
         do_drift = np.random.binomial(1, self.prob_coef_drift)
-        print("DO DRIFT", do_drift, t_idx)
         self.coefs.append(self.coefs[-1] + np.random.randn(1, self.coefs[0].size) * self.coef_drift_speed * do_drift)
         return self.raw_mu_func(self.coefs[-1], xs)
 
@@ -168,10 +167,10 @@ class AdversaryDataGenerator(DataGenerator):
         """
         assert len(self.coefs) == (t_idx + 1)
         do_drift = np.random.binomial(1, self.prob_coef_drift)
-        do_drift = 1 if t_idx % 2 == 0 else -1
+        drift_type = 2 * ((t_idx % 2) - 0.5)
         print("DO DRIFT", do_drift, t_idx)
         #self.coefs.append(self.coefs[-1] + np.random.randn(1, self.coefs[0].size) * self.coef_drift_speed * do_drift)
-        self.coefs.append(self.coefs[-1] + self.drift_delta * self.coef_drift_speed * do_drift)
+        self.coefs.append(self.coefs[-1] + self.drift_delta * self.coef_drift_speed * do_drift * drift_type)
         print(self.coefs[-1])
         return self.raw_mu_func(self.coefs[-1], xs)
 

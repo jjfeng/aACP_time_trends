@@ -16,8 +16,8 @@ NUM_TEST_OBS = 40000
 HUMAN_LOSS = 0.03
 Y_MAX = 0.3
 Y_MIN = 0
-NUM_P = 20
-BATCH_SIZE = 50
+NUM_P = 15
+BATCH_SIZE = 40
 NUM_BATCHES = 60
 
 nest.add(
@@ -27,7 +27,7 @@ nest.add(
 
 nest.add(
     'drift_speed',
-    [0.2],
+    [0.3],
     label_func=lambda c: 'drift_speed_%.2f' % c)
 
 nest.add(
@@ -52,6 +52,7 @@ def create_nature(env, outdir, c):
         '--y-sigma 0.1',
         '--coef-drift',
         c['drift_speed'],
+        '--prob-coef-drift 0.4',
         '--personality oscillating',
         '--num-batches',
         NUM_BATCHES,
@@ -90,7 +91,7 @@ def create_proposer(env, outdir, c):
 
 nest.add(
     'eta',
-    [1],
+    [2],
     label_func=lambda c: 'eta_%.2f' % c)
 
 nest.add(
