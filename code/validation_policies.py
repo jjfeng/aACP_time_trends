@@ -9,11 +9,12 @@ class ValidationPolicy(Policy):
     """
 
     def __init__(
-            self, num_experts: int, eta1: float, eta2: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.01,
+            self, num_experts: int, eta1: float, eta2: float, eta3: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.01,
     ):
         self.human_max_loss = human_max_loss
         self.eta1 = eta1
         self.eta2 = eta2
+        self.eta3 = eta3
         self.alpha = alpha
         self.baseline_alpha = baseline_alpha
         self.num_experts = num_experts
@@ -94,9 +95,9 @@ class ValidationPolicy(Policy):
         self.const_baseline_weight /= normalization_factor
 
         # Don't bother using any algorithms we predict to be worse than the human
-        self.optim_weights = self.weights * np.exp(- self.eta2 * model_losses_t) #* (model_losses_t < self.human_max_loss)
-        self.baseline_optim_weights = self.baseline_weights * np.exp(- self.eta2 * self.human_max_loss)
-        self.const_baseline_optim_weight = self.const_baseline_weight * np.exp(- self.eta2 * self.human_max_loss)
+        self.optim_weights = self.weights * np.exp(- self.eta2 * model_losses_t - self.eta3 * 1.0) #* (model_losses_t < self.human_max_loss)
+        self.baseline_optim_weights = self.baseline_weights * np.exp(- self.eta2 * self.human_max_loss - self.eta3 * self.human_max_loss)
+        self.const_baseline_optim_weight = self.const_baseline_weight * np.exp(- self.eta2 * self.human_max_loss - self.eta3 * self.human_max_loss)
 
 
     def get_predict_weights(self, time_t: int):
@@ -110,24 +111,30 @@ class ValidationPolicy(Policy):
 class MetaGridSearch(Policy):
     """
     Meta grid search
+
+    eta1: empirical loss
+    eta2: prediction for future
+    eta3: smaller eta3 means stick to just baseline
     """
-    def __init__(self, eta: float, alpha: float, eta1s: np.ndarray, eta2s: np.ndarray, num_experts: int, human_max_loss: float):
+    def __init__(self, eta: float, alpha: float, eta1s: np.ndarray, eta2s: np.ndarray, eta3s: np.ndarray, num_experts: int, human_max_loss: float):
         self.eta = eta
         self.eta1s = eta1s
         self.eta2s = eta2s
+        self.eta3s = eta3s
 
-        self.regularization = np.zeros((self.eta1s.size, self.eta2s.size))
+        self.regularization = np.zeros((self.eta1s.size, self.eta2s.size, self.eta3s.size))
         self.policy_dict = {}
         for i, eta1 in enumerate(self.eta1s):
             for j, eta2 in enumerate(self.eta2s):
-                self.policy_dict[(eta1, eta2)] = ValidationPolicy(num_experts, eta1, eta2, human_max_loss, alpha=alpha)
-                self.regularization[i, j] = 0.01 * (np.abs(eta1) + np.abs(eta2))
+                for k, eta3 in enumerate(self.eta3s):
+                    self.policy_dict[(eta1, eta2, eta3)] = ValidationPolicy(num_experts, eta1, eta2, np.max(self.eta3s) - eta3, human_max_loss, alpha=alpha)
+                    self.regularization[i, j, k] = 0.01 * np.sum(np.power(np.array([eta1, eta2, eta3]), 2))
 
-        self.loss_ts = np.zeros((self.eta1s.size, self.eta2s.size))
+        self.loss_ts = np.zeros((self.eta1s.size, self.eta2s.size, self.eta3s.size))
         self.human_max_loss = human_max_loss
         self.num_experts = num_experts
 
-        self.meta_weights = np.zeros((self.eta1s.size, self.eta2s.size))
+        self.meta_weights = np.zeros((self.eta1s.size, self.eta2s.size, self.eta3s.size))
         self.meta_weights[0,0] = 1
 
     def __str__(self):
@@ -146,17 +153,18 @@ class MetaGridSearch(Policy):
         if indiv_robot_loss_t is not None:
             # Update the meta policy weights first
             model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
-            loss_t = np.zeros((self.eta1s.size, self.eta2s.size))
+            loss_t = np.zeros((self.eta1s.size, self.eta2s.size, self.eta3s.size))
             for i, eta1 in enumerate(self.eta1s):
                 for j, eta2 in enumerate(self.eta2s):
-                    loss_t[i,j] = self._get_policy_prev_loss(time_t - 1, model_losses_t, self.policy_dict[(eta1, eta2)])
+                    for k, eta3 in enumerate(self.eta3s):
+                        loss_t[i,j, k] = self._get_policy_prev_loss(time_t - 1, model_losses_t, self.policy_dict[(eta1, eta2, eta3)])
             self.loss_ts += loss_t
             regularized_loss = self.eta * self.loss_ts + self.regularization
 
             best_ind = np.unravel_index(np.argmin(regularized_loss, axis=None), regularized_loss.shape)
-            print("BEST ETA", self.eta1s[best_ind[0]], self.eta2s[best_ind[1]])
-            self.meta_weights = np.zeros((self.eta1s.size, self.eta2s.size))
-            self.meta_weights[best_ind[0], best_ind[1]] = 1
+            print("BEST ETA", time_t, self.eta1s[best_ind[0]], self.eta2s[best_ind[1]], self.eta3s[best_ind[2]])
+            self.meta_weights = np.zeros((self.eta1s.size, self.eta2s.size, self.eta3s.size))
+            self.meta_weights[best_ind[0], best_ind[1], best_ind[2]] = 1
 
         # Let each policy update their own weights
         for k, policy in self.policy_dict.items():
@@ -170,9 +178,10 @@ class MetaGridSearch(Policy):
         human_weight = 0
         for i, eta1 in enumerate(self.eta1s):
             for j, eta2 in enumerate(self.eta2s):
-                policy = self.policy_dict[(eta1, eta2)]
-                policy_robot_weights, policy_human_weight = policy.get_predict_weights(time_t)
-                #print(time_t, policy_robot_weights, policy_human_weight)
-                robot_weights += policy_robot_weights * policy_weights[i,j]
-                human_weight += policy_human_weight * policy_weights[i,j]
+                for k, eta3 in enumerate(self.eta3s):
+                    policy = self.policy_dict[(eta1, eta2, eta3)]
+                    policy_robot_weights, policy_human_weight = policy.get_predict_weights(time_t)
+                    #print(time_t, policy_robot_weights, policy_human_weight)
+                    robot_weights += policy_robot_weights * policy_weights[i,j, k]
+                    human_weight += policy_human_weight * policy_weights[i,j, k]
         return robot_weights, human_weight

@@ -107,13 +107,14 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             human_max_loss=human_max_loss,
         )
     elif policy_name == "MetaGridSearch":
-        eta1s = np.arange(0,3,0.1)
+        eta1s = np.arange(0,3.1,0.1)
         print(eta1s)
         policy = MetaGridSearch(
             eta=args.eta,
             alpha=args.alpha,
             eta1s=eta1s,
             eta2s=eta1s,
+            eta3s=eta1s,
             num_experts=num_experts,
             human_max_loss=human_max_loss,
         )
