@@ -17,18 +17,18 @@ HUMAN_LOSS = 0.03
 Y_MAX = 0.3
 Y_MIN = 0
 INIT_BATCH_SIZE = 20
-NUM_P = 20
+NUM_P = 30
 BATCH_SIZE = 100
-NUM_BATCHES = 60
+NUM_BATCHES = 100
 
 nest.add(
     'drift_speed',
-    [0.1],
+    [0.5],
     label_func=lambda c: 'drift_speed_%.2f' % c)
 
 nest.add(
     'drift_prob',
-    [0.5],
+    [0.1],
     label_func=lambda c: 'drift_pr_%.2f' % c)
 
 nest.add(
@@ -81,7 +81,7 @@ def create_proposer(env, outdir, c):
         DENSITY,
         '--proposer-cv 3',
         '--proposer-alphas 30',
-        '--proposer-batches 10',
+        '--proposer-batches 5',
         '--seed',
         c['seed'],
 	'--out-file ${TARGETS[0]}',
@@ -93,19 +93,14 @@ def create_proposer(env, outdir, c):
 
 nest.add(
     'eta',
-    [10],
+    [1],
     label_func=lambda c: 'eta_%.2f' % c)
 
-nest.add(
-    'alpha',
-    [0.6],
-    label_func=lambda c: 'alpha_%.2f' % c)
-
 @nest.add_target_with_env(localenv)
-def run_fixedshare_optim(env, outdir, c):
+def run_mirror_descent(env, outdir, c):
     targets = [
-        join(outdir, 'fixedshare_optim_approval_hist.pkl'),
-        join(outdir, 'fixedshare_optim_approval_hist_log.txt'),
+        join(outdir, 'mirror_descent_hist.pkl'),
+        join(outdir, 'mirror_descent_hist_log.txt'),
     ]
     cmd = [
         'python run_approval.py',
@@ -113,11 +108,9 @@ def run_fixedshare_optim(env, outdir, c):
         c['seed'],
         '--eta',
         c['eta'],
-        '--alpha',
-        c['alpha'],
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
-        '--policy-name OptimisticBaselineMonotonicFixedShare',
+        '--policy-name MD',
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
 
@@ -128,28 +121,34 @@ def run_fixedshare_optim(env, outdir, c):
         ' '.join(map(str, cmd)))
 
 @nest.add_target_with_env(localenv)
-def plot_fixedshare_optim(env, outdir, c):
+def plot_mirror_descent(env, outdir, c):
     targets = [
-        join(outdir, 'fixedshare_optim_approval_hist_loss.png'),
-        join(outdir, 'fixedshare_optim_approval_hist_human.png'),
+        join(outdir, 'mirror_descent_hist_loss.png'),
+        join(outdir, 'mirror_descent_hist_human.png'),
     ]
     cmd = [
         'python plot_history.py',
-        '--policy-name OptimisticBaselineMonotonicFixedShare',
+        '--policy-name MD',
 	'--history-file ${SOURCES[0]}',
 	'--loss-plot ${TARGETS[0]}',
 	'--human-plot ${TARGETS[1]}']
 
     return env.Command(
         targets,
-        c['run_fixedshare_optim'],
+        c['run_mirror_descent'],
         ' '.join(map(str, cmd)))
 
+
+nest.add(
+    'alpha',
+    [0.6],
+    label_func=lambda c: 'alpha_%.2f' % c)
+
 #@nest.add_target_with_env(localenv)
-#def run_fixedshare_mono(env, outdir, c):
+#def run_meta_fixed_share(env, outdir, c):
 #    targets = [
-#        join(outdir, 'fixedshare_mono_approval_hist.pkl'),
-#        join(outdir, 'fixedshare_mono_approval_hist_log.txt'),
+#        join(outdir, 'meta_fixed_share_approval_hist.pkl'),
+#        join(outdir, 'meta_fixed_share_approval_hist_log.txt'),
 #    ]
 #    cmd = [
 #        'python run_approval.py',
@@ -161,7 +160,7 @@ def plot_fixedshare_optim(env, outdir, c):
 #        c['alpha'],
 #        '--nature-file ${SOURCES[0]}',
 #        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name MonotonicBaselineFixedShare',
+#        '--policy-name MetaFixedShare',
 #	'--out-file ${TARGETS[0]}',
 #	'--log-file ${TARGETS[1]}']
 #
@@ -172,22 +171,162 @@ def plot_fixedshare_optim(env, outdir, c):
 #        ' '.join(map(str, cmd)))
 #
 #@nest.add_target_with_env(localenv)
-#def plot_fixedshare_mono(env, outdir, c):
+#def plot_meta_fixed_share(env, outdir, c):
 #    targets = [
-#        join(outdir, 'fixedshare_mono_approval_hist_loss.png'),
-#        join(outdir, 'fixedshare_mono_approval_hist_human.png'),
+#        join(outdir, 'meta_fixed_share_approval_hist_loss.png'),
+#        join(outdir, 'meta_fixed_share_approval_hist_human.png'),
 #    ]
 #    cmd = [
 #        'python plot_history.py',
-#        '--policy-name MonotonicBaselineFixedShare',
+#        '--y-max',
+#        Y_MAX,
+#        '--y-min',
+#        Y_MIN,
+#        '--policy-name MetaFixedShare',
 #	'--history-file ${SOURCES[0]}',
 #	'--loss-plot ${TARGETS[0]}',
 #	'--human-plot ${TARGETS[1]}']
 #
 #    return env.Command(
 #        targets,
-#        c['run_fixedshare_mono'],
+#        c['run_meta_fixed_share'],
 #        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def run_meta_exp(env, outdir, c):
+    targets = [
+        join(outdir, 'meta_exp_approval_hist.pkl'),
+        join(outdir, 'meta_exp_approval_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--eta',
+        c['eta'],
+        '--alpha',
+        c['alpha'],
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name MetaExpWeighting',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def plot_meta_exp(env, outdir, c):
+    targets = [
+        join(outdir, 'meta_exp_approval_hist_loss.png'),
+        join(outdir, 'meta_exp_approval_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        '--y-max',
+        Y_MAX,
+        '--y-min',
+        Y_MIN,
+        '--policy-name MetaExpWeighting',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_meta_exp'],
+        ' '.join(map(str, cmd)))
+
+#@nest.add_target_with_env(localenv)
+#def run_fixedshare_optim(env, outdir, c):
+#    targets = [
+#        join(outdir, 'fixedshare_optim_approval_hist.pkl'),
+#        join(outdir, 'fixedshare_optim_approval_hist_log.txt'),
+#    ]
+#    cmd = [
+#        'python run_approval.py',
+#        '--seed',
+#        c['seed'],
+#        '--eta',
+#        c['eta'],
+#        '--alpha',
+#        c['alpha'],
+#        '--nature-file ${SOURCES[0]}',
+#        '--proposer-file ${SOURCES[1]}',
+#        '--policy-name OptimisticBaselineMonotonicFixedShare',
+#	'--out-file ${TARGETS[0]}',
+#	'--log-file ${TARGETS[1]}']
+#
+#    sources = [c['create_nature'][0], c['create_proposer'][0]]
+#    return env.Command(
+#        targets,
+#        sources,
+#        ' '.join(map(str, cmd)))
+#
+#@nest.add_target_with_env(localenv)
+#def plot_fixedshare_optim(env, outdir, c):
+#    targets = [
+#        join(outdir, 'fixedshare_optim_approval_hist_loss.png'),
+#        join(outdir, 'fixedshare_optim_approval_hist_human.png'),
+#    ]
+#    cmd = [
+#        'python plot_history.py',
+#        '--policy-name OptimisticBaselineMonotonicFixedShare',
+#	'--history-file ${SOURCES[0]}',
+#	'--loss-plot ${TARGETS[0]}',
+#	'--human-plot ${TARGETS[1]}']
+#
+#    return env.Command(
+#        targets,
+#        c['run_fixedshare_optim'],
+#        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def run_fixedshare_mono(env, outdir, c):
+    targets = [
+        join(outdir, 'fixedshare_mono_approval_hist.pkl'),
+        join(outdir, 'fixedshare_mono_approval_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--eta',
+        c['eta'],
+        '--alpha',
+        c['alpha'],
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name MonotonicBaselineFixedShare',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def plot_fixedshare_mono(env, outdir, c):
+    targets = [
+        join(outdir, 'fixedshare_mono_approval_hist_loss.png'),
+        join(outdir, 'fixedshare_mono_approval_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        '--policy-name MonotonicBaselineFixedShare',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_fixedshare_mono'],
+        ' '.join(map(str, cmd)))
 
 #@nest.add_target_with_env(localenv)
 #def run_fixedshare_blind(env, outdir, c):

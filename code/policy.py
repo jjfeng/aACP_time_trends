@@ -1,4 +1,7 @@
+from typing import List, Dict
+
 import numpy as np
+
 
 
 class Policy:
@@ -17,6 +20,129 @@ class Policy:
 
     def predict_next_losses(self, time_t: int):
         return np.zeros(self.curr_num_experts)
+
+class BaselinePolicy(Policy):
+    def get_predict_weights(self, time_t: int):
+        return np.zeros(self.curr_num_experts), 1
+
+#class MetaFixedShare(Policy):
+#    """
+#    Meta fixed share
+#    """
+#    def __init__(self, alpha: float, eta: float, policy_keys: List[str], policy_dict: Dict[str, Policy], human_max_loss: float):
+#        self.policy_keys = policy_keys
+#        self.policy_dict = policy_dict
+#        self.num_policies = len(policy_dict)
+#        self.meta_weights = np.ones(len(policy_dict))
+#        self.alpha = min(0.4, alpha)
+#        self.eta = eta
+#        self.human_max_loss = human_max_loss
+#
+#    def __str__(self):
+#        return "MetaFixedShare"
+#
+#    def add_expert(self, time_t):
+#        for k, policy in self.policy_dict.items():
+#            policy.add_expert(time_t)
+#
+#    def _get_policy_prev_loss(self, time_t: int, model_losses_t: np.ndarray, policy_key: str):
+#        policy = self.policy_dict[policy_key]
+#        robot_weights, human_weight = policy.get_predict_weights(time_t)
+#        policy_loss = np.sum(model_losses_t * robot_weights) + human_weight * self.human_max_loss
+#        return policy_loss
+#
+#    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
+#        if indiv_robot_loss_t is None:
+#            return
+#
+#        # Update the meta policy weights first
+#        model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
+#        loss_t = np.array([
+#                self._get_policy_prev_loss(time_t - 1, model_losses_t, policy_key) for policy_key in self.policy_keys])
+#        print("loss", loss_t)
+#
+#        update_weight = np.exp(-self.eta * loss_t)
+#        self.meta_weights = update_weight * self.meta_weights
+#        transition_matrix = np.eye(self.meta_weights.size) * (1 - self.alpha) + np.ones((self.meta_weights.size, self.meta_weights.size)) * self.alpha/self.meta_weights.size
+#        self.meta_weights = self.meta_weights.reshape((1,-1)) @ transition_matrix
+#        self.meta_weights = self.meta_weights.flatten()
+#
+#        # Let each policy update their own weights
+#        for k, policy in self.policy_dict.items():
+#            policy.update_weights(time_t, indiv_robot_loss_t, prev_weights)
+#
+#
+#    def get_predict_weights(self, time_t):
+#        denom = np.sum(self.meta_weights)
+#        policy_weights = self.meta_weights/denom
+#        print("pocliy weights", policy_weights)
+#
+#        robot_weights = 0
+#        human_weight = 0
+#        for i, policy_key in enumerate(self.policy_keys):
+#            policy = self.policy_dict[policy_key]
+#            policy_robot_weights, policy_human_weight = policy.get_predict_weights(time_t)
+#            robot_weights += policy_robot_weights * policy_weights[i]
+#            human_weight += policy_human_weight * policy_weights[i]
+#        return robot_weights, human_weight
+
+class MetaExpWeighting(Policy):
+    """
+    Meta exponential weighting
+    """
+    def __init__(self, eta, policy_keys: List[str], policy_dict: Dict[str, Policy], human_max_loss: float):
+        self.policy_keys = policy_keys
+        self.policy_dict = policy_dict
+        self.num_policies = len(policy_dict)
+        self.meta_weights = np.ones(len(policy_dict))
+        self.eta = eta
+        self.human_max_loss = human_max_loss
+
+    def __str__(self):
+        return "MetaExp"
+
+    def add_expert(self, time_t):
+        for k, policy in self.policy_dict.items():
+            policy.add_expert(time_t)
+
+    def _get_policy_prev_loss(self, time_t: int, model_losses_t: np.ndarray, policy_key: str):
+        policy = self.policy_dict[policy_key]
+        robot_weights, human_weight = policy.get_predict_weights(time_t)
+        policy_loss = np.sum(model_losses_t * robot_weights) + human_weight * self.human_max_loss
+        return policy_loss
+
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
+        if indiv_robot_loss_t is None:
+            return
+
+        # Update the meta policy weights first
+        model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
+        loss_t = np.array([
+                self._get_policy_prev_loss(time_t - 1, model_losses_t, policy_key) for policy_key in self.policy_keys])
+        print("loss", loss_t)
+
+        update_weight = np.exp(-self.eta * loss_t)
+        self.meta_weights = update_weight * self.meta_weights
+
+        # Let each policy update their own weights
+        for k, policy in self.policy_dict.items():
+            policy.update_weights(time_t, indiv_robot_loss_t, prev_weights)
+
+
+    def get_predict_weights(self, time_t):
+        denom = np.sum(self.meta_weights)
+        policy_weights = self.meta_weights/denom
+        print("pocliy weights", policy_weights)
+
+        robot_weights = 0
+        human_weight = 0
+        for i, policy_key in enumerate(self.policy_keys):
+            policy = self.policy_dict[policy_key]
+            policy_robot_weights, policy_human_weight = policy.get_predict_weights(time_t)
+            robot_weights += policy_robot_weights * policy_weights[i]
+            human_weight += policy_human_weight * policy_weights[i]
+        return robot_weights, human_weight
+
 
 class BlindApproval(Policy):
     def __init__(self, human_max_loss: float):
@@ -730,7 +856,7 @@ class MirrorDescent(Policy):
 
     def get_predict_weights(self, time_t):
         expert_losses = np.sum(self.loss_histories[: self.curr_num_experts], axis=1)
-        human_loss = self.human_max_loss * time_t
+        human_loss = self.human_max_loss * (self.loss_histories.shape[1] - 1)
         raw_weights = np.exp(-self.eta * np.concatenate([[human_loss], expert_losses]))
         all_weights = raw_weights / np.sum(raw_weights)
         return all_weights[1:], all_weights[0]

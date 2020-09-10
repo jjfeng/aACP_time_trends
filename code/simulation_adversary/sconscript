@@ -18,7 +18,7 @@ Y_MAX = 0.3
 Y_MIN = 0
 NUM_P = 15
 BATCH_SIZE = 40
-NUM_BATCHES = 60
+NUM_BATCHES = 100
 
 nest.add(
     'init_batch_ratio',
@@ -29,6 +29,11 @@ nest.add(
     'drift_speed',
     [0.3],
     label_func=lambda c: 'drift_speed_%.2f' % c)
+
+nest.add(
+    'drift_prob',
+    [0.8],
+    label_func=lambda c: 'drift_prob_%.2f' % c)
 
 nest.add(
     'seed',
@@ -52,7 +57,8 @@ def create_nature(env, outdir, c):
         '--y-sigma 0.1',
         '--coef-drift',
         c['drift_speed'],
-        '--prob-coef-drift 0.9',
+        '--prob-coef-drift',
+        c['drift_prob'],
         '--personality oscillating',
         '--num-batches',
         NUM_BATCHES,
@@ -93,11 +99,101 @@ nest.add(
     'eta',
     [1],
     label_func=lambda c: 'eta_%.2f' % c)
+@nest.add_target_with_env(localenv)
+def run_mirror_descent(env, outdir, c):
+    targets = [
+        join(outdir, 'mirror_descent_hist.pkl'),
+        join(outdir, 'mirror_descent_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--eta',
+        c['eta'],
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name MD',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def plot_mirror_descent(env, outdir, c):
+    targets = [
+        join(outdir, 'mirror_descent_hist_loss.png'),
+        join(outdir, 'mirror_descent_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        '--policy-name MD',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_mirror_descent'],
+        ' '.join(map(str, cmd)))
+
 
 nest.add(
     'alpha',
     [0.5],
     label_func=lambda c: 'alpha_%.2f' % c)
+
+@nest.add_target_with_env(localenv)
+def run_meta_exp(env, outdir, c):
+    targets = [
+        join(outdir, 'meta_exp_approval_hist.pkl'),
+        join(outdir, 'meta_exp_approval_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--alpha',
+        c['alpha'],
+        '--eta',
+        c['eta'],
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name MetaExpWeighting',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def plot_meta_exp(env, outdir, c):
+    targets = [
+        join(outdir, 'meta_exp_approval_hist_loss.png'),
+        join(outdir, 'meta_exp_approval_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        '--y-max',
+        Y_MAX,
+        '--y-min',
+        Y_MIN,
+        '--policy-name MetaExpWeighting',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_meta_exp'],
+        ' '.join(map(str, cmd)))
 
 @nest.add_target_with_env(localenv)
 def run_fixedshare_optim(env, outdir, c):

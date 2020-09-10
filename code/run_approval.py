@@ -15,6 +15,7 @@ from nature import Nature
 from proposer import Proposer
 from approval_history import ApprovalHistory
 from policy import *
+from validation_policies import *
 from common import pickle_from_file, pickle_to_file
 
 
@@ -73,8 +74,19 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             eta=args.eta,
             human_max_loss=human_max_loss,
         )
+    elif policy_name == "BaselinePolicy":
+        policy = BaselinePolicy(
+            human_max_loss=human_max_loss,
+        )
     elif policy_name == "FixedShare":
         policy = FixedShare(
+            num_experts,
+            eta=args.eta,
+            alpha=args.alpha,
+            human_max_loss=human_max_loss,
+        )
+    elif policy_name == "MonoExpWeighting":
+        policy = MonoExpWeighting(
             num_experts,
             eta=args.eta,
             alpha=args.alpha,
@@ -92,6 +104,49 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             num_experts,
             eta=args.eta,
             alpha=args.alpha,
+            human_max_loss=human_max_loss,
+        )
+    elif policy_name == "MetaGridSearch":
+        eta1s = np.arange(0,3,0.1)
+        print(eta1s)
+        policy = MetaGridSearch(
+            eta=args.eta,
+            alpha=args.alpha,
+            eta1s=eta1s,
+            eta2s=eta1s,
+            num_experts=num_experts,
+            human_max_loss=human_max_loss,
+        )
+    elif policy_name == "MetaExpWeighting":
+        policy_keys = [
+                "MeanApproval",
+                "MonotonicFixedShare",
+                "MD",
+                "BlindApproval",
+                "TTestApproval",
+                "BaselinePolicy",
+        ]
+        policy_dict = {k: create_policy(k, args, human_max_loss, num_experts) for k in policy_keys}
+        policy = MetaExpWeighting(
+            eta=args.eta,
+            policy_keys=policy_keys,
+            policy_dict=policy_dict,
+            human_max_loss=human_max_loss,
+        )
+    elif policy_name == "MetaFixedShare":
+        policy_keys = [
+                "MeanApproval",
+                "MonotonicFixedShare",
+                #"BlindApproval",
+                "TTestApproval",
+                "BaselinePolicy",
+        ]
+        policy_dict = {k: create_policy(k, args, human_max_loss, num_experts) for k in policy_keys}
+        policy = MetaFixedShare(
+            eta=args.eta,
+            alpha=args.alpha,
+            policy_keys=policy_keys,
+            policy_dict=policy_dict,
             human_max_loss=human_max_loss,
         )
     elif policy_name == "OptimisticBaselineMonotonicFixedShare":
