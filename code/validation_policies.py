@@ -1,3 +1,4 @@
+from itertools import product
 import numpy as np
 from policy import Policy
 
@@ -9,12 +10,10 @@ class ValidationPolicy(Policy):
     """
 
     def __init__(
-            self, num_experts: int, eta1: float, eta2: float, eta3: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.01,
+            self, num_experts: int, etas: np.ndarray, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.01,
     ):
         self.human_max_loss = human_max_loss
-        self.eta1 = eta1
-        self.eta2 = eta2
-        self.eta3 = eta3
+        self.etas = etas
         self.alpha = alpha
         self.baseline_alpha = baseline_alpha
         self.num_experts = num_experts
@@ -56,9 +55,9 @@ class ValidationPolicy(Policy):
             ]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
-        v_weights = self.weights * np.exp(- self.eta1 * model_losses_t)
+        v_weights = self.weights * np.exp(- self.etas[0] * model_losses_t)
         #print(self.weights, model_losses_t)
-        v_baseline_weights = self.baseline_weights * np.exp(- self.eta1 * self.human_max_loss * np.ones(self.baseline_weights.size))
+        v_baseline_weights = self.baseline_weights * np.exp(- self.etas[0] * self.human_max_loss * np.ones(self.baseline_weights.size))
 
         # heavily weight the new models when transitioning away
         transition_matrix11 = np.eye(self.weights.size) * (1 - self.alpha)
@@ -87,7 +86,7 @@ class ValidationPolicy(Policy):
         self.weights = new_combo_weights[:self.weights.size]
         #print("after transition", self.weights)
         self.baseline_weights = new_combo_weights[self.weights.size:]
-        self.const_baseline_weight = self.const_baseline_weight * np.exp(- self.eta1 * self.human_max_loss)
+        self.const_baseline_weight = self.const_baseline_weight * np.exp(- self.etas[0] * self.human_max_loss)
         # Adding normalization to prevent numerical underflow
         normalization_factor = np.max(self.weights)
         self.weights /= normalization_factor
@@ -95,18 +94,114 @@ class ValidationPolicy(Policy):
         self.const_baseline_weight /= normalization_factor
 
         # Don't bother using any algorithms we predict to be worse than the human
-        self.optim_weights = self.weights * np.exp(- self.eta2 * model_losses_t - self.eta3 * 1.0) #* (model_losses_t < self.human_max_loss)
-        self.baseline_optim_weights = self.baseline_weights * np.exp(- self.eta2 * self.human_max_loss - self.eta3 * self.human_max_loss)
-        self.const_baseline_optim_weight = self.const_baseline_weight * np.exp(- self.eta2 * self.human_max_loss - self.eta3 * self.human_max_loss)
+        #self.optim_weights = self.weights * np.exp(- self.eta2 * model_losses_t - self.eta3 * 1.0) #* (model_losses_t < self.human_max_loss)
+        #self.baseline_optim_weights = self.baseline_weights * np.exp(- self.eta2 * self.human_max_loss - self.eta3 * self.human_max_loss)
+        #self.const_baseline_optim_weight = self.const_baseline_weight * np.exp(- self.eta2 * self.human_max_loss - self.eta3 * self.human_max_loss)
 
+        # Predictors - very optimistic
+        blind_losses = np.ones(model_losses_t.shape)
+        blind_losses[-1] = 0
+
+        # Predictors - very pessimistic
+        baseline_losses = np.ones(model_losses_t.shape)
+
+        # Predictors - mean approval
+        mean_losses = model_losses_t
+
+        all_predictors = [blind_losses, baseline_losses, mean_losses]
+
+        model_update_factors = 1
+        baseline_update_factor = 1
+        for eta, predictions in zip(self.etas[1:], all_predictors):
+            model_update_factors *= np.exp(-eta * predictions)
+            baseline_update_factor *= np.exp(-eta * self.human_max_loss)
+
+        self.optim_weights = self.weights * model_update_factors
+        self.baseline_optim_weights = self.baseline_weights * baseline_update_factor
+        self.const_baseline_optim_weight = self.const_baseline_weight * baseline_update_factor
 
     def get_predict_weights(self, time_t: int):
         denom = (np.sum(self.optim_weights) + np.sum(self.baseline_optim_weights) + self.const_baseline_optim_weight)
         robot_optim_weights = self.optim_weights / (np.sum(self.optim_weights) + np.sum(self.baseline_optim_weights) + self.const_baseline_optim_weight)
         baseline_weight = 1 - np.sum(robot_optim_weights)
-        #print("CONST", self.const_baseline_optim_weight/denom)
-        #print("other", np.sum(self.baseline_optim_weights)/denom)
         return robot_optim_weights, baseline_weight
+
+class MetaExpWeighting(Policy):
+    """
+    Meta exponential weighting
+    """
+    def __init__(self, eta: float, alpha: float, eta_grid, num_experts: int, human_max_loss: float):
+        self.eta = eta
+        self.eta_grid = eta_grid
+
+        self.eta_indexes = [list(range(s.size)) for s in self.eta_grid]
+        print("ETA INDEX", self.eta_indexes)
+
+        self.policy_dict = {}
+        #for etas in product(self.eta_grid):
+        for indexes in product(*self.eta_indexes):
+            etas = tuple([etas[i] for i, etas in zip(indexes, self.eta_grid)])
+            self.policy_dict[etas] = ValidationPolicy(num_experts, np.array(etas), human_max_loss, alpha=alpha)
+
+        self.loss_ts = np.zeros([s.size for s in self.eta_grid])
+        self.human_max_loss = human_max_loss
+        self.num_experts = num_experts
+
+        self.meta_weights = np.ones([s.size for s in self.eta_grid])
+
+    def __str__(self):
+        return "MetaExp"
+
+    def add_expert(self, time_t):
+        for k, policy in self.policy_dict.items():
+            policy.add_expert(time_t)
+
+    def _get_policy_prev_loss(self, time_t: int, model_losses_t: np.ndarray, policy: Policy):
+        robot_weights, human_weight = policy.get_predict_weights(time_t)
+        policy_loss = np.sum(model_losses_t * robot_weights) + human_weight * self.human_max_loss
+        return policy_loss
+
+
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
+        if indiv_robot_loss_t is not None:
+            # Update the meta policy weights first
+            model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
+            loss_t = np.zeros([s.size for s in self.eta_grid])
+            for indexes in product(*self.eta_indexes):
+                etas = tuple([etas[i] for i, etas in zip(indexes, self.eta_grid)])
+                loss_t[indexes] = self._get_policy_prev_loss(time_t - 1, model_losses_t, self.policy_dict[etas])
+            self.loss_ts += loss_t
+            self.meta_weights = self.meta_weights * np.exp(-self.eta * loss_t)
+
+        # Let each policy update their own weights
+        for policy in self.policy_dict.values():
+            policy.update_weights(time_t, indiv_robot_loss_t, prev_weights)
+
+    def get_predict_weights(self, time_t):
+        denom = np.sum(self.meta_weights)
+        policy_weights = self.meta_weights/denom
+        #print(policy_weights)
+
+        robot_weights = 0
+        human_weight = 0
+        biggest_weight = 0
+        biggest_eta = None
+        for indexes in product(*self.eta_indexes):
+            etas = tuple([etas[i] for i, etas in zip(indexes, self.eta_grid)])
+            policy = self.policy_dict[etas]
+            policy_weight = policy_weights[indexes]
+            policy_robot_weights, policy_human_weight = policy.get_predict_weights(time_t)
+            #print(time_t, policy_robot_weights, policy_human_weight)
+            robot_weights += policy_robot_weights * policy_weight
+            human_weight += policy_human_weight * policy_weight
+            if np.isclose(biggest_weight, policy_weight):
+                print("close", etas)
+            if biggest_weight < policy_weights[indexes]:
+                biggest_weight = policy_weights[indexes]
+                biggest_eta = etas
+        print("ETAS", biggest_eta, biggest_weight)
+        print("time", time_t, "best robot", np.argmax(robot_weights), "human", human_weight)
+        return robot_weights, human_weight
 
 class MetaGridSearch(Policy):
     """

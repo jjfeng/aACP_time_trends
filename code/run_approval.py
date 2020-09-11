@@ -106,8 +106,36 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             alpha=args.alpha,
             human_max_loss=human_max_loss,
         )
+    elif policy_name == "MetaExpWeighting":
+        policy = MetaExpWeighting(
+            eta=args.eta,
+            alpha=args.alpha,
+            eta_grid=[
+                np.array([0,1,4]), # emp loss
+                np.array([0,1,4,10]), # blind
+                np.array([0,0.5,1,4]), # baseline
+                np.array([0,1,4,10]) # mean loss (IID)
+            ],
+            num_experts=num_experts,
+            human_max_loss=human_max_loss,
+        )
+        #policy_keys = [
+        #        "MeanApproval",
+        #        "MonotonicFixedShare",
+        #        "MD",
+        #        "BlindApproval",
+        #        "TTestApproval",
+        #        "BaselinePolicy",
+        #]
+        #policy_dict = {k: create_policy(k, args, human_max_loss, num_experts) for k in policy_keys}
+        #policy = MetaExpWeightingSimple(
+        #    eta=args.eta,
+        #    policy_keys=policy_keys,
+        #    policy_dict=policy_dict,
+        #    human_max_loss=human_max_loss,
+        #)
     elif policy_name == "MetaGridSearch":
-        eta1s = np.arange(0,3.1,0.1)
+        eta1s = np.arange(0,1.1,0.3)
         print(eta1s)
         policy = MetaGridSearch(
             eta=args.eta,
@@ -116,22 +144,6 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             eta2s=eta1s,
             eta3s=eta1s,
             num_experts=num_experts,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "MetaExpWeighting":
-        policy_keys = [
-                "MeanApproval",
-                "MonotonicFixedShare",
-                "MD",
-                "BlindApproval",
-                "TTestApproval",
-                "BaselinePolicy",
-        ]
-        policy_dict = {k: create_policy(k, args, human_max_loss, num_experts) for k in policy_keys}
-        policy = MetaExpWeighting(
-            eta=args.eta,
-            policy_keys=policy_keys,
-            policy_dict=policy_dict,
             human_max_loss=human_max_loss,
         )
     elif policy_name == "MetaFixedShare":

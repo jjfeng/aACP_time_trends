@@ -85,8 +85,8 @@ class BaselinePolicy(Policy):
 #            robot_weights += policy_robot_weights * policy_weights[i]
 #            human_weight += policy_human_weight * policy_weights[i]
 #        return robot_weights, human_weight
-
-class MetaExpWeighting(Policy):
+#
+class MetaExpWeightingSimple(Policy):
     """
     Meta exponential weighting
     """
