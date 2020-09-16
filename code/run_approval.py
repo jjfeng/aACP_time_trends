@@ -109,31 +109,28 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     elif policy_name == "MetaExpWeighting":
         policy = MetaExpWeighting(
             eta=args.eta,
-            alpha=args.alpha,
             eta_grid=[
-                np.array([0,1,4]), # emp loss
-                np.array([0,1,4,10]), # blind
-                np.array([0,0.5,1,4]), # baseline
-                np.array([0,1,4,10]) # mean loss (IID)
+                np.array([0,50]), # emp loss
+                np.array([0,0.2,0.8,1]), # scaling
+                np.array([0.005,0.995]), # alpha
+                np.array([0.005]) # baseline alpha
             ],
             num_experts=num_experts,
             human_max_loss=human_max_loss,
         )
-        #policy_keys = [
-        #        "MeanApproval",
-        #        "MonotonicFixedShare",
-        #        "MD",
-        #        "BlindApproval",
-        #        "TTestApproval",
-        #        "BaselinePolicy",
-        #]
-        #policy_dict = {k: create_policy(k, args, human_max_loss, num_experts) for k in policy_keys}
-        #policy = MetaExpWeightingSimple(
-        #    eta=args.eta,
-        #    policy_keys=policy_keys,
-        #    policy_dict=policy_dict,
-        #    human_max_loss=human_max_loss,
-        #)
+    elif policy_name == "MetaExpWeightingList":
+        policy = MetaExpWeightingList(
+            eta=args.eta,
+            eta_list=[
+                (10,0,0,0,args.alpha, 0.01), # emp loss
+                (0,0,0,0, 0.9, 0.0), # blind
+                (0,0,0,0.01, 0.9), # baseline
+                (0,0,0,60,args.alpha,0.01), # mean loss
+                (0,0,0,0,args.alpha,0.01), # prior
+            ],
+            num_experts=num_experts,
+            human_max_loss=human_max_loss,
+        )
     elif policy_name == "MetaGridSearch":
         eta1s = np.arange(0,2.1,0.5)
         print(eta1s)
