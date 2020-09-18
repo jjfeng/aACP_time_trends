@@ -35,10 +35,11 @@ class LogisticRegressionCVWrap(LogisticRegressionCV):
         return super().predict(X)
 
     def loss(self, dataset):
-        p_hat = self.predict_proba(dataset.x)
+        p_hat = self.predict_proba(dataset.x)[:,1]
         #return yhat.flatten() != dataset.y.flatten()
         y = dataset.y.flatten()
-        return -(np.log(p_hat[:,0]) * y + np.log(1 - p_hat[:,1]) * (1 - y))
+        #return -(np.log(p_hat[:,0]) * y + np.log(1 - p_hat[:,1]) * (1 - y))
+        return np.power(y - p_hat, 2)
 
 class LassoProposer(Proposer):
     def __init__(
@@ -67,8 +68,8 @@ class LassoProposer(Proposer):
         elif self.sim_func_form == "bernoulli":
             model = LogisticRegressionCVWrap(
                 cv=self.cv,
-                # penalty='l1',
-                # solver='liblinear',
+                penalty='l1',
+                solver='liblinear',
                 max_iter=1000,
             )
         cum_data = trial_data.get_start_to_end_data(start_index=max(0, trial_data.num_batches - self.num_back_batches))

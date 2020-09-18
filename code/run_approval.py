@@ -110,9 +110,9 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
         policy = MetaExpWeighting(
             eta=args.eta,
             eta_grid=[
-                np.array([0,50]), # emp loss
+                np.array([0,1]), # emp loss
                 np.array([0,0.2,0.8,1]), # scaling
-                np.array([0.005,0.995]), # alpha
+                np.array([0, 0.1,1]), # alpha
                 np.array([0.005]) # baseline alpha
             ],
             num_experts=num_experts,
@@ -208,8 +208,8 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
     for t in range(nature.total_time - 1):
         #print("TIME STEP", t)
         logging.info("TIME STEP %d", t)
-        policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights)
         policy.add_expert(t)
+        policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights)
         robot_weights, human_weight = policy.get_predict_weights(t)
         #loss_predictions = policy.predict_next_losses(t)
         weights = np.concatenate([[human_weight], robot_weights])
@@ -228,7 +228,7 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
         #logging.info("loss pred %s", loss_predictions)
         #if loss_predictions.size > 2 and np.var(loss_predictions) > 0:
         #    logging.info("corr %s", scipy.stats.spearmanr(all_loss_t[1:]/batch_n, loss_predictions))
-        logging.info("weights %s", weights)
+        logging.info("weights %s (max %d)", weights, np.argmax(weights))
 
         proposer.propose_model(sub_trial_data, approval_hist)
 

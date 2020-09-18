@@ -110,12 +110,12 @@ def main(args=sys.argv[1:]):
         data_gen = AdversaryDataGenerator(
             args.density_parametric_form,
             args.sim_func_name,
-            args.coef_drift_speed,
-            args.prob_coef_drift,
             support_sim_settings,
+            drift_frequency=3,
             noise_sd=args.y_sigma,
             max_y=args.max_y,
             min_y=args.min_y,
+            num_coefs=10,
         )
     trial_data = TrialData(args.batch_sizes, data_gen)
     for batch_index in range(args.num_batches):

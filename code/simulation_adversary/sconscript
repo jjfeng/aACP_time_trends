@@ -11,29 +11,13 @@ localenv = env.Clone()
 
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
-DENSITY = "gaussian"
+DENSITY = "bernoulli"
 NUM_TEST_OBS = 40000
-HUMAN_LOSS = 0.03
 Y_MAX = 0.3
 Y_MIN = 0
-NUM_P = 50
-BATCH_SIZE = 40
-NUM_BATCHES = 50
-
-nest.add(
-    'init_batch_ratio',
-    [0.6],
-    label_func=lambda c: 'init_batch_%.2f' % c)
-
-nest.add(
-    'drift_speed',
-    [0.1],
-    label_func=lambda c: 'drift_speed_%.2f' % c)
-
-nest.add(
-    'drift_prob',
-    [0.8],
-    label_func=lambda c: 'drift_prob_%.2f' % c)
+NUM_P = 20
+BATCH_SIZE = 50
+NUM_BATCHES = 20
 
 nest.add(
     'seed',
@@ -50,15 +34,10 @@ def create_nature(env, outdir, c):
         '--density-parametric',
         DENSITY,
         '--first-batch',
-        int(BATCH_SIZE * c['init_batch_ratio']),
+        int(0.2 * BATCH_SIZE),
         '--batch-size',
         BATCH_SIZE,
         '--batch-incr 0',
-        '--y-sigma 0.1',
-        '--coef-drift',
-        c['drift_speed'],
-        '--prob-coef-drift',
-        c['drift_prob'],
         '--personality oscillating',
         '--num-batches',
         NUM_BATCHES,
@@ -83,7 +62,7 @@ def create_proposer(env, outdir, c):
         'python create_lasso_proposer.py',
         '--density-parametric',
         DENSITY,
-        '--proposer-batches 1',
+        '--proposer-batches 2',
         '--proposer-cv 3',
         '--proposer-alphas 30',
         '--seed',
@@ -101,54 +80,6 @@ nest.add(
     label_func=lambda c: 'eta_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
-def run_mirror_descent(env, outdir, c):
-    targets = [
-        join(outdir, 'mirror_descent_hist.pkl'),
-        join(outdir, 'mirror_descent_hist_log.txt'),
-    ]
-    cmd = [
-        'python run_approval.py',
-        '--seed',
-        c['seed'],
-        '--eta',
-        c['eta'],
-        '--nature-file ${SOURCES[0]}',
-        '--proposer-file ${SOURCES[1]}',
-        '--policy-name MD',
-	'--out-file ${TARGETS[0]}',
-	'--log-file ${TARGETS[1]}']
-
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
-    return env.Command(
-        targets,
-        sources,
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
-def plot_mirror_descent(env, outdir, c):
-    targets = [
-        join(outdir, 'mirror_descent_hist_loss.png'),
-        join(outdir, 'mirror_descent_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--policy-name MD',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_mirror_descent'],
-        ' '.join(map(str, cmd)))
-
-
-nest.add(
-    'alpha',
-    [0.5],
-    label_func=lambda c: 'alpha_%.2f' % c)
-
-@nest.add_target_with_env(localenv)
 def run_meta_exp(env, outdir, c):
     targets = [
         join(outdir, 'meta_exp_approval_hist.pkl'),
@@ -158,8 +89,6 @@ def run_meta_exp(env, outdir, c):
         'python run_approval.py',
         '--seed',
         c['seed'],
-        '--alpha',
-        c['alpha'],
         '--eta',
         c['eta'],
         '--nature-file ${SOURCES[0]}',
@@ -196,54 +125,11 @@ def plot_meta_exp(env, outdir, c):
         c['run_meta_exp'],
         ' '.join(map(str, cmd)))
 
-#@nest.add_target_with_env(localenv)
-#def run_fixedshare_optim(env, outdir, c):
-#    targets = [
-#        join(outdir, 'fixedshare_optim_approval_hist.pkl'),
-#        join(outdir, 'fixedshare_optim_approval_hist_log.txt'),
-#    ]
-#    cmd = [
-#        'python run_approval.py',
-#        '--seed',
-#        c['seed'],
-#        '--eta',
-#        c['eta'],
-#        '--alpha',
-#        c['alpha'],
-#        '--nature-file ${SOURCES[0]}',
-#        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name OptimisticBaselineMonotonicFixedShare',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#
-#    sources = [c['create_nature'][0], c['create_proposer'][0]]
-#    return env.Command(
-#        targets,
-#        sources,
-#        ' '.join(map(str, cmd)))
-#
-#@nest.add_target_with_env(localenv)
-#def plot_fixedshare_optim(env, outdir, c):
-#    targets = [
-#        join(outdir, 'fixedshare_optim_approval_hist_loss.png'),
-#        join(outdir, 'fixedshare_optim_approval_hist_human.png'),
-#    ]
-#    cmd = [
-#        'python plot_history.py',
-#        '--y-max',
-#        Y_MAX,
-#        '--y-min',
-#        Y_MIN,
-#        '--policy-name OptimisticBaselineMonotonicFixedShare',
-#	'--history-file ${SOURCES[0]}',
-#	'--loss-plot ${TARGETS[0]}',
-#	'--human-plot ${TARGETS[1]}']
-#
-#    return env.Command(
-#        targets,
-#        c['run_fixedshare_optim'],
-#        ' '.join(map(str, cmd)))
-#
+nest.add(
+    'alpha',
+    [0.5],
+    label_func=lambda c: 'alpha_%.2f' % c)
+
 #@nest.add_target_with_env(localenv)
 #def run_fixedshare_mono(env, outdir, c):
 #    targets = [
@@ -294,52 +180,52 @@ def plot_meta_exp(env, outdir, c):
 
 nest.pop('eta')
 
-#@nest.add_target_with_env(localenv)
-#def run_blind_approval(env, outdir, c):
-#    targets = [
-#        join(outdir, 'blind_approval_hist.pkl'),
-#        join(outdir, 'blind_approval_hist_log.txt'),
-#    ]
-#    cmd = [
-#        'python run_approval.py',
-#        '--seed',
-#        c['seed'],
-#        '--nature-file ${SOURCES[0]}',
-#        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name BlindApproval',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#
-#    sources = [c['create_nature'][0], c['create_proposer'][0]]
-#    return env.Command(
-#        targets,
-#        sources,
-#        ' '.join(map(str, cmd)))
-#
-#
-#@nest.add_target_with_env(localenv)
-#def plot_blind(env, outdir, c):
-#    targets = [
-#        join(outdir, 'blind_approval_hist_loss.png'),
-#        join(outdir, 'blind_approval_hist_human.png'),
-#    ]
-#    cmd = [
-#        'python plot_history.py',
-#        #'--y-max',
-#        #Y_MAX,
-#        #'--y-min',
-#        #Y_MIN,
-#        '--policy-name BlindApproval',
-#	'--history-file ${SOURCES[0]}',
-#	'--loss-plot ${TARGETS[0]}',
-#	'--human-plot ${TARGETS[1]}']
-#
-#    return env.Command(
-#        targets,
-#        c['run_blind_approval'],
-#        ' '.join(map(str, cmd)))
-#
-#
+@nest.add_target_with_env(localenv)
+def run_blind_approval(env, outdir, c):
+    targets = [
+        join(outdir, 'blind_approval_hist.pkl'),
+        join(outdir, 'blind_approval_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name BlindApproval',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+
+@nest.add_target_with_env(localenv)
+def plot_blind(env, outdir, c):
+    targets = [
+        join(outdir, 'blind_approval_hist_loss.png'),
+        join(outdir, 'blind_approval_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        #'--y-max',
+        #Y_MAX,
+        #'--y-min',
+        #Y_MIN,
+        '--policy-name BlindApproval',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_blind_approval'],
+        ' '.join(map(str, cmd)))
+
+
 @nest.add_target_with_env(localenv)
 def run_ttest_approval(env, outdir, c):
     targets = [
@@ -371,10 +257,6 @@ def plot_ttest(env, outdir, c):
     ]
     cmd = [
         'python plot_history.py',
-        #'--y-max',
-        #Y_MAX,
-        #'--y-min',
-        #Y_MIN,
         '--policy-name TTestApproval',
 	'--history-file ${SOURCES[0]}',
 	'--loss-plot ${TARGETS[0]}',
@@ -384,47 +266,3 @@ def plot_ttest(env, outdir, c):
         targets,
         c['run_ttest_approval'],
         ' '.join(map(str, cmd)))
-
-
-#@nest.add_target_with_env(localenv)
-#def run_mean_approval(env, outdir, c):
-#    targets = [
-#        join(outdir, 'mean_approval_hist.pkl'),
-#        join(outdir, 'mean_approval_hist_log.txt'),
-#    ]
-#    cmd = [
-#        'python run_approval.py',
-#        '--seed',
-#        c['seed'],
-#        '--nature-file ${SOURCES[0]}',
-#        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name MeanApproval',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#
-#    sources = [c['create_nature'][0], c['create_proposer'][0]]
-#    return env.Command(
-#        targets,
-#        sources,
-#        ' '.join(map(str, cmd)))
-#
-#
-#@nest.add_target_with_env(localenv)
-#def plot_mean(env, outdir, c):
-#    targets = [
-#        join(outdir, 'mean_approval_hist_loss.png'),
-#        join(outdir, 'mean_approval_hist_human.png'),
-#    ]
-#    cmd = [
-#        'python plot_history.py',
-#        '--policy-name MeanApproval',
-#	'--history-file ${SOURCES[0]}',
-#	'--loss-plot ${TARGETS[0]}',
-#	'--human-plot ${TARGETS[1]}']
-#
-#    return env.Command(
-#        targets,
-#        c['run_mean_approval'],
-#        ' '.join(map(str, cmd)))
-#
-#

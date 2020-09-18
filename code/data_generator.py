@@ -128,14 +128,14 @@ class AdversaryDataGenerator(DataGenerator):
         self,
         sim_func_form: str,
         sim_func_name: str,
-        coef_drift_speed: float,
-        prob_coef_drift: float,
         support_sim_settings: SupportSimSettings,
+        drift_frequency: int = 2,
         num_classes: int = 1,
         noise_sd: float = 1,
         std_dev_x: float = 1,
         max_y: float = 1,
         min_y: float = 0,
+        num_coefs: int = 5,
     ):
         self.num_p = support_sim_settings.num_p
         self.std_dev_x = std_dev_x
@@ -144,8 +144,8 @@ class AdversaryDataGenerator(DataGenerator):
         self.max_y = max_y
         self.noise_sd = noise_sd
         self.sim_func_form = sim_func_form
-        self.coef_drift_speed = coef_drift_speed
-        self.prob_coef_drift = prob_coef_drift
+        self.drift_frequency = drift_frequency
+        self.num_coefs = num_coefs
         self.support_sim_settings = support_sim_settings
         if sim_func_form in ["gaussian", "bounded_gaussian"]:
             self.raw_mu_func = getattr(data_gen_funcs, sim_func_name + "_mu")
@@ -157,20 +157,21 @@ class AdversaryDataGenerator(DataGenerator):
             raise ValueError("huh?")
 
         # Create changing coefs
-        self.coefs = [np.zeros((1, self.num_p))]
-        self.coefs[0][0,:5] = 1
-        self.drift_delta = np.random.randn(1, self.coefs[0].size)
+        self.coefs = []
 
     def mu_func(self, xs: ndarray, t_idx: int = 0):
         """
         @return sigma when Y|X is gaussian
         """
-        assert len(self.coefs) == (t_idx + 1)
-        do_drift = np.random.binomial(1, self.prob_coef_drift)
-        drift_type = 2 * ((t_idx % 2) - 0.5)
-        print("DO DRIFT", do_drift, t_idx)
-        #self.coefs.append(self.coefs[-1] + np.random.randn(1, self.coefs[0].size) * self.coef_drift_speed * do_drift)
-        self.coefs.append(self.coefs[-1] + self.drift_delta * self.coef_drift_speed * do_drift * drift_type)
-        print(self.coefs[-1])
-        return self.raw_mu_func(self.coefs[-1], xs)
+        assert len(self.coefs) == t_idx
+
+        if (t_idx % self.drift_frequency) == 0:
+            new_coef_idxs = np.random.choice(self.num_p, size=self.num_coefs, replace=False)
+            new_coef = np.zeros((1,self.num_p))
+            new_coef[0,new_coef_idxs] = 5
+            self.coefs.append(new_coef)
+            return self.raw_mu_func(new_coef, xs)
+        else:
+            self.coefs.append(self.coefs[-1])
+            return self.raw_mu_func(self.coefs[-1], xs)
 

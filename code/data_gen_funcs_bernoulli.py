@@ -1,11 +1,11 @@
 import numpy as np
 
 
-def linear_mu(xs):
+def linear_mu(coefs, xs):
     """
     Just sum all the covariates to get the mean
     """
-    logit = np.maximum(np.minimum(np.sum(xs, axis=1) * 5, 5), -5)
+    logit = np.sum(xs * coefs, axis=1)
     exp_logit = np.exp(logit)
     mu = exp_logit / (1 + exp_logit)
     return mu
