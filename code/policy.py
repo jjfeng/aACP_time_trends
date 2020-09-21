@@ -55,9 +55,10 @@ class TTestApproval(Policy):
         if indiv_robot_loss_t is None:
             return
 
-        for i in range(self.curr_num_experts):
+        num_updates = min(self.curr_num_experts, indiv_robot_loss_t.shape[0])
+        for i in range(num_updates):
             self.loss_histories[i].append(indiv_robot_loss_t[i,:])
-        for i in range(self.curr_num_experts, self.num_experts):
+        for i in range(num_updates, self.num_experts):
             self.loss_histories[i].append([])
 
     def get_predict_weights(self, time_t: int):
@@ -80,5 +81,6 @@ class TTestApproval(Policy):
 
         a = np.zeros(self.curr_num_experts)
         a[best_model_idx] = 1
+        print(time_t, "approved", self.curr_approved_idx)
         return a, 0
 

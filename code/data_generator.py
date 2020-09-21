@@ -25,6 +25,7 @@ class DataGenerator:
         std_dev_x: float = 1,
         max_y: float = 1,
         min_y: float = 0,
+        num_coefs: int = 5
     ):
         self.num_p = support_sim_settings.num_p
         self.std_dev_x = std_dev_x
@@ -47,15 +48,22 @@ class DataGenerator:
 
         # Create changing coefs
         self.coefs = [np.zeros((1, self.num_p))]
-        self.coefs[0][0,:5] = 1
+        self.coefs[0][0,:num_coefs] = num_coefs
 
     def mu_func(self, xs: ndarray, t_idx: int = 0):
         """
         @return sigma when Y|X is gaussian
         """
         assert len(self.coefs) == (t_idx + 1)
-        do_drift = np.random.binomial(1, self.prob_coef_drift)
-        self.coefs.append(self.coefs[-1] + np.random.randn(1, self.coefs[0].size) * self.coef_drift_speed * do_drift)
+        do_drift = np.random.binomial(1, self.prob_coef_drift) if t_idx > 1 else 0
+        coef_norm = np.sqrt(np.sum(np.power(self.coefs[-1], 2)))
+        print("norm", coef_norm)
+        if do_drift:
+            new_noise = np.random.randn(1, self.coefs[0].size)
+            new_coef = self.coefs[-1] * (1 - self.coef_drift_speed) + new_noise * self.coef_drift_speed / np.sqrt(np.sum(np.power(new_noise, 2))) * coef_norm
+        else:
+            new_coef = self.coefs[-1]
+        self.coefs.append(new_coef)
         return self.raw_mu_func(self.coefs[-1], xs)
 
     def sigma_func(self, xs: ndarray):
@@ -69,7 +77,7 @@ class DataGenerator:
         elif self.sim_func_form == "bernoulli":
             raise ValueError("sure?")
 
-    def create_data(self, num_obs: int, t_idx: int, seed: int = None):
+    def create_data(self, num_obs: int, t_idx: int, drift_speed: float = 0, seed: int = None):
         """
         @param num_obs: number of observations
         @param seed: if given, set the seed before generating data
@@ -90,6 +98,7 @@ class DataGenerator:
         """
         size_n = xs.shape[0]
         mu_true = self.mu_func(xs, t_idx)
+        print("MU TRU", np.mean(mu_true))
         if len(mu_true.shape) == 1:
             mu_true = np.reshape(mu_true, (size_n, 1))
         if self.sim_func_form == "gaussian":

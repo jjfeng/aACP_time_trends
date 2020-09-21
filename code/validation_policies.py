@@ -10,10 +10,9 @@ class ValidationPolicy(Policy):
     """
 
     def __init__(
-            self, num_experts: int, etas: np.ndarray, human_max_loss: float, drift_factor: float = 0.01
+            self, num_experts: int, etas: np.ndarray, human_max_loss: float, const_baseline_weight : float = 0
     ):
         self.human_max_loss = human_max_loss
-        self.drift_factor = drift_factor
 
         self.etas = etas[:-2]
         self.alpha = etas[-2]
@@ -23,6 +22,9 @@ class ValidationPolicy(Policy):
         # initialized with only human weight
         self.baseline_weights = np.ones(1) * (1 - self.alpha)
         self.baseline_optim_weights = np.ones(1) * (1 - self.alpha)
+        self.const_baseline_weight = np.ones(1) * const_baseline_weight
+        self.const_baseline_optim_weight = np.ones(1) * const_baseline_weight
+        #print("self.const_baseline_weight", self.const_baseline_weight)
 
         self.loss_histories = np.zeros((num_experts, 1))
 
@@ -82,24 +84,36 @@ class ValidationPolicy(Policy):
         combo_vector = np.concatenate([v_weights, v_baseline_weights])
         new_combo_weights = np.matmul(combo_vector.reshape((1, -1)), transition_matrix).flatten()
         self.weights = new_combo_weights[:self.weights.size]
-        #print("after transition", self.weights)
         self.baseline_weights = new_combo_weights[self.weights.size:]
+        self.const_baseline_weight *= np.exp(-self.etas[0] * self.human_max_loss)
+
         # Adding normalization to prevent numerical underflow
         normalization_factor = max(1, np.max(self.weights))
         self.weights /= normalization_factor
         self.baseline_weights /= normalization_factor
+        self.const_baseline_weight /= normalization_factor
 
-        predictions = model_losses_t
-        model_update_factors = np.exp(-self.etas[1] * predictions) if self.etas[0] == 0 else np.exp(-self.etas[1] * time_t * predictions)
-        baseline_update_factor = np.exp(-self.etas[1] * self.human_max_loss) if self.etas[0] == 0 else np.exp(-self.etas[1] * time_t * predictions)
+        predictions = np.array([
+            np.mean(self.loss_histories[i,i + 1:]) for i in range(model_losses_t.size)])
+        predictions[-1] = self.human_max_loss * 2
+        #print("preds", predictions)
+        #print(self.loss_histories)
+        #1/0
+        model_update_factors = np.exp(-self.etas[1] * 10 *  predictions) if self.etas[0] == 0 else np.exp(-self.etas[1] * time_t * predictions)
+        baseline_update_factor = np.exp(-self.etas[1] * 10 * self.human_max_loss) if self.etas[0] == 0 else np.exp(-self.etas[1] * time_t * self.human_max_loss)
+        model_update_factors = np.exp(-self.etas[1] * 10 *  predictions) if self.etas[0] == 0 else np.exp(-self.etas[1] * predictions)
+        baseline_update_factor = np.exp(-self.etas[1] * 10 * self.human_max_loss) if self.etas[0] == 0 else np.exp(-self.etas[1] * self.human_max_loss)
 
         self.optim_weights = self.weights * model_update_factors
         self.baseline_optim_weights = self.baseline_weights * baseline_update_factor
+        self.const_baseline_optim_weight = self.const_baseline_weight * baseline_update_factor
 
     def get_predict_weights(self, time_t: int):
-        denom = (np.sum(self.optim_weights) + np.sum(self.baseline_optim_weights))
-        robot_optim_weights = self.optim_weights / (np.sum(self.optim_weights) + np.sum(self.baseline_optim_weights))
+        denom = (np.sum(self.optim_weights) + np.sum(self.baseline_optim_weights) + self.const_baseline_optim_weight)
+        robot_optim_weights = self.optim_weights / denom
         baseline_weight = 1 - np.sum(robot_optim_weights)
+        #print("const baseline", self.const_baseline_optim_weight/denom)
+        #print(time_t, "robot", robot_optim_weights)
         return robot_optim_weights, baseline_weight
 
 class MetaExpWeightingList(Policy):
@@ -244,8 +258,8 @@ class MetaExpWeighting(Policy):
                 etas = tuple([etas[i] for i, etas in zip(indexes, self.eta_grid)])
                 policy_etas = self._get_policy_etas(etas)
                 loss_t[indexes] = self._get_policy_prev_loss(time_t - 1, model_losses_t, self.policy_dict[etas])
-                if self.meta_weights[indexes] > 0:
-                    print("policy losses", policy_etas, self.loss_ts[indexes] + loss_t[indexes])
+                #if self.meta_weights[indexes] > 0:
+                #    print("policy losses", policy_etas, self.loss_ts[indexes] + loss_t[indexes])
             self.loss_ts += loss_t
             self.meta_weights = self.meta_weights * np.exp(-self.eta * loss_t)
 

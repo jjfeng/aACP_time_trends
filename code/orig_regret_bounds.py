@@ -5,7 +5,7 @@ from scipy.stats import norm
 max_loss = 1
 m = 6
 baseline_weight = 0.5
-T = 20
+T = 50
 lambdas = np.exp(np.arange(-6, 2, 0.05))
 deltas = np.arange(0.03, 0.3, 0.03)
 for delta in deltas:

@@ -12,9 +12,9 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 DENSITY = "bernoulli"
-INIT_BATCH_SIZE = 10
-NUM_P = 50
-BATCH_SIZE = 20
+INIT_BATCH_SIZE = 20
+NUM_P = 10
+BATCH_SIZE = 50
 NUM_BATCHES = 50
 
 nest.add(
@@ -55,7 +55,7 @@ def create_proposer(env, outdir, c):
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
-    batches = [NUM_BATCHES * 2] * NUM_BATCHES
+    batches = [i if i % 5 == 1 else 1 for i in range(NUM_BATCHES)]
     cmd = [
         'python create_lasso_proposer.py',
         '--density-parametric',

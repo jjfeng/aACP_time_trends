@@ -10,7 +10,6 @@ from typing import List
 import pandas as pd
 
 # from approval_simulation_common import *
-from time_trend_predictor import ARIMAPredictor
 from nature import Nature
 from proposer import Proposer
 from approval_history import ApprovalHistory
@@ -51,140 +50,30 @@ def parse_args(args):
 
 
 def create_policy(policy_name, args, human_max_loss, num_experts):
-    time_trend_predictor = ARIMAPredictor(
-        order=(2, 1, 0), min_size=7, max_loss=human_max_loss + 0.1
-    )
-    if policy_name == "OMD":
-        policy = OptimisticMirrorDescent(
-            num_experts,
-            eta=args.eta,
+    if policy_name == "MarkovHedge":
+        policy = ValidationPolicy(
+            num_experts=num_experts,
+            etas=np.array([args.eta,0, args.alpha, 0.05]),
             human_max_loss=human_max_loss,
-            time_trend_predictor=time_trend_predictor,
-        )
-    elif policy_name == "Optimistic":
-        policy = OptimisticPolicy(
-            num_experts,
-            eta=args.eta,
-            human_max_loss=human_max_loss,
-            time_trend_predictor=time_trend_predictor,
-        )
-    elif policy_name == "MD":
-        policy = MirrorDescent(
-            num_experts,
-            eta=args.eta,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "BaselinePolicy":
-        policy = BaselinePolicy(
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "FixedShare":
-        policy = FixedShare(
-            num_experts,
-            eta=args.eta,
-            alpha=args.alpha,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "MonoExpWeighting":
-        policy = MonoExpWeighting(
-            num_experts,
-            eta=args.eta,
-            alpha=args.alpha,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "OptimisticMonotonicFixedShare":
-        policy = OptimisticMonotonicFixedShare(
-            num_experts,
-            eta=args.eta,
-            alpha=args.alpha,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "MonotonicFixedShare":
-        policy = MonotonicFixedShare(
-            num_experts,
-            eta=args.eta,
-            alpha=args.alpha,
-            human_max_loss=human_max_loss,
+            const_baseline_weight=1,
         )
     elif policy_name == "MetaExpWeighting":
         policy = MetaExpWeighting(
             eta=args.eta,
             eta_grid=[
-                np.array([0,1]), # emp loss
+                np.array([0,20]), # emp loss
                 np.array([0,0.2,0.8,1]), # scaling
-                np.array([0, 0.1,1]), # alpha
-                np.array([0.005]) # baseline alpha
+                #np.array([50]), # emp loss
+                #np.array([1]), # scaling
+                np.array([0,0.05,0.1,0.5,1]), # alpha
+                np.array([0.05]) # baseline alpha
             ],
             num_experts=num_experts,
             human_max_loss=human_max_loss,
         )
-    elif policy_name == "MetaExpWeightingList":
-        policy = MetaExpWeightingList(
-            eta=args.eta,
-            eta_list=[
-                (10,0,0,0,args.alpha, 0.01), # emp loss
-                (0,0,0,0, 0.9, 0.0), # blind
-                (0,0,0,0.01, 0.9), # baseline
-                (0,0,0,60,args.alpha,0.01), # mean loss
-                (0,0,0,0,args.alpha,0.01), # prior
-            ],
-            num_experts=num_experts,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "MetaGridSearch":
-        eta1s = np.arange(0,2.1,0.5)
-        print(eta1s)
-        policy = MetaGridSearch(
-            eta=args.eta,
-            alpha=args.alpha,
-            eta_grid=[eta1s] * 4,
-            num_experts=num_experts,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "MetaFixedShare":
-        policy_keys = [
-                "MeanApproval",
-                "MonotonicFixedShare",
-                #"BlindApproval",
-                "TTestApproval",
-                "BaselinePolicy",
-        ]
-        policy_dict = {k: create_policy(k, args, human_max_loss, num_experts) for k in policy_keys}
-        policy = MetaFixedShare(
-            eta=args.eta,
-            alpha=args.alpha,
-            policy_keys=policy_keys,
-            policy_dict=policy_dict,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "OptimisticBaselineMonotonicFixedShare":
-        policy = OptimisticBaselineMonotonicFixedShare(
-            num_experts,
-            eta=args.eta,
-            alpha=args.alpha,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "MonotonicBaselineFixedShare":
-        policy = MonotonicBaselineFixedShare(
-            num_experts,
-            eta=args.eta,
-            alpha=args.alpha,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "FixedShareWithBlind":
-        policy = FixedShareWithBlind(
-            num_experts,
-            eta=args.eta,
-            alpha=args.alpha,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "OptimisticFixedShare":
-        policy = OptimisticFixedShare(
-            num_experts,
-            eta=args.eta,
-            human_max_loss=human_max_loss,
-            time_trend_predictor=time_trend_predictor,
-        )
+    elif policy_name == "BaselinePolicy":
+        policy = BaselinePolicy(
+            human_max_loss=human_max_loss)
     elif policy_name == "BlindApproval":
         policy = BlindApproval(human_max_loss=human_max_loss)
     elif policy_name == "MeanApproval":

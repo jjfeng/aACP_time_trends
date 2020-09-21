@@ -12,10 +12,8 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 DENSITY = "bernoulli"
-NUM_TEST_OBS = 40000
-Y_MAX = 0.3
-Y_MIN = 0
 NUM_P = 20
+INIT_BATCH_SIZE = 10
 BATCH_SIZE = 50
 NUM_BATCHES = 20
 
@@ -34,7 +32,7 @@ def create_nature(env, outdir, c):
         '--density-parametric',
         DENSITY,
         '--first-batch',
-        int(0.2 * BATCH_SIZE),
+        INIT_BATCH_SIZE,
         '--batch-size',
         BATCH_SIZE,
         '--batch-incr 0',
@@ -58,11 +56,13 @@ def create_proposer(env, outdir, c):
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
+    batches = [2] * NUM_BATCHES
     cmd = [
         'python create_lasso_proposer.py',
         '--density-parametric',
         DENSITY,
-        '--proposer-batches 2',
+        '--proposer-batches',
+        ','.join([str(b) for b in batches]),
         '--proposer-cv 3',
         '--proposer-alphas 30',
         '--seed',
@@ -76,7 +76,7 @@ def create_proposer(env, outdir, c):
 
 nest.add(
     'eta',
-    [1],
+    [0.5],
     label_func=lambda c: 'eta_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
@@ -111,10 +111,6 @@ def plot_meta_exp(env, outdir, c):
     ]
     cmd = [
         'python plot_history.py',
-        '--y-max',
-        Y_MAX,
-        '--y-min',
-        Y_MIN,
         '--policy-name MetaExpWeighting',
 	'--history-file ${SOURCES[0]}',
 	'--loss-plot ${TARGETS[0]}',
@@ -125,58 +121,61 @@ def plot_meta_exp(env, outdir, c):
         c['run_meta_exp'],
         ' '.join(map(str, cmd)))
 
+nest.pop('eta')
+
+nest.add(
+    'eta',
+    [0.5],
+    label_func=lambda c: 'eta_%.2f' % c)
+
 nest.add(
     'alpha',
     [0.5],
     label_func=lambda c: 'alpha_%.2f' % c)
 
-#@nest.add_target_with_env(localenv)
-#def run_fixedshare_mono(env, outdir, c):
-#    targets = [
-#        join(outdir, 'fixedshare_mono_approval_hist.pkl'),
-#        join(outdir, 'fixedshare_mono_approval_hist_log.txt'),
-#    ]
-#    cmd = [
-#        'python run_approval.py',
-#        '--seed',
-#        c['seed'],
-#        '--eta',
-#        c['eta'],
-#        '--alpha',
-#        c['alpha'],
-#        '--nature-file ${SOURCES[0]}',
-#        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name MonotonicBaselineFixedShare',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#
-#    sources = [c['create_nature'][0], c['create_proposer'][0]]
-#    return env.Command(
-#        targets,
-#        sources,
-#        ' '.join(map(str, cmd)))
-#
-#@nest.add_target_with_env(localenv)
-#def plot_fixedshare_mono(env, outdir, c):
-#    targets = [
-#        join(outdir, 'fixedshare_mono_approval_hist_loss.png'),
-#        join(outdir, 'fixedshare_mono_approval_hist_human.png'),
-#    ]
-#    cmd = [
-#        'python plot_history.py',
-#        '--y-max',
-#        Y_MAX,
-#        '--y-min',
-#        Y_MIN,
-#        '--policy-name MonotonicBaselineFixedShare',
-#	'--history-file ${SOURCES[0]}',
-#	'--loss-plot ${TARGETS[0]}',
-#	'--human-plot ${TARGETS[1]}']
-#
-#    return env.Command(
-#        targets,
-#        c['run_fixedshare_mono'],
-#        ' '.join(map(str, cmd)))
+@nest.add_target_with_env(localenv)
+def run_online(env, outdir, c):
+    targets = [
+        join(outdir, 'online_approval_hist.pkl'),
+        join(outdir, 'online_approval_hist_log.txt'),
+    ]
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--eta',
+        c['eta'],
+        '--alpha',
+        c['alpha'],
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name MarkovHedge',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def plot_online(env, outdir, c):
+    targets = [
+        join(outdir, 'online_approval_hist_loss.png'),
+        join(outdir, 'online_approval_hist_human.png'),
+    ]
+    cmd = [
+        'python plot_history.py',
+        '--policy-name MarkovHedge',
+	'--history-file ${SOURCES[0]}',
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}']
+
+    return env.Command(
+        targets,
+        c['run_online'],
+        ' '.join(map(str, cmd)))
 
 nest.pop('eta')
 
@@ -211,10 +210,6 @@ def plot_blind(env, outdir, c):
     ]
     cmd = [
         'python plot_history.py',
-        #'--y-max',
-        #Y_MAX,
-        #'--y-min',
-        #Y_MIN,
         '--policy-name BlindApproval',
 	'--history-file ${SOURCES[0]}',
 	'--loss-plot ${TARGETS[0]}',

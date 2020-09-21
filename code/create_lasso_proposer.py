@@ -11,7 +11,7 @@ from typing import List
 from trial_data import TrialData
 from nature import FixedNature
 from proposer_lasso import LassoProposer
-from common import pickle_to_file
+from common import pickle_to_file, process_params
 
 
 def parse_args(args):
@@ -34,7 +34,7 @@ def parse_args(args):
     )
     parser.add_argument("--proposer-eps", type=float, default=1e-4)
     parser.add_argument("--proposer-cv", type=int, default=3)
-    parser.add_argument("--proposer-batches", type=int, default=3)
+    parser.add_argument("--proposer-batches", type=str, default="1")
     parser.add_argument("--proposer-alphas", type=int, default=30)
     parser.add_argument("--proposer-offset-scale", type=float, default=0)
     parser.add_argument("--min-y", type=float, default=-1)
@@ -45,6 +45,7 @@ def parse_args(args):
     args = parser.parse_args()
 
     assert args.min_y < args.max_y
+    args.proposer_batches = process_params(args.proposer_batches, int)
     return args
 
 
@@ -57,7 +58,6 @@ def main(args=sys.argv[1:]):
     logging.info(args)
 
     np.random.seed(args.seed)
-
 
     proposer = LassoProposer(
             args.density_parametric_form,

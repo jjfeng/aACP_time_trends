@@ -80,9 +80,9 @@ class TrialData:
                 cum_data = cum_data.merge(data)
         return cum_data
 
-    def make_new_batch(self):
+    def make_new_batch(self, drift_speed: float):
         new_data = self.data_generator.create_data(
-            self.batch_sizes[self.num_batches], self.num_batches
+            self.batch_sizes[self.num_batches], self.num_batches, drift_speed=drift_speed
         )
         self.batch_data.append(new_data)
 
