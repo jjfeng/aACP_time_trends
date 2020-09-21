@@ -18,8 +18,14 @@ class FixedNature(Nature):
     This nature has all the trial data preloaded
     """
 
-    def __init__(self, trial_data: TrialData):
+    def __init__(self, data_gen: DataGenerator, trial_data: TrialData, coefs: List):
         self.trial_data = trial_data
+        self.data_gen = data_gen
+        self.coefs = coefs
+
+    def next(self, approval_hist: ApprovalHistory=None):
+        # Do nothing. everything was fixed
+        return
 
     @property
     def total_time(self):

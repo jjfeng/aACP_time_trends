@@ -40,12 +40,6 @@ def parse_args(args):
     parser.add_argument(
         "--personality", type=str, default="unbiased", choices=["unbiased", "oscillating"]
     )
-    parser.add_argument(
-        "--coef-drift-speed", type=float, default=0
-    )
-    parser.add_argument(
-        "--prob-coef-drift", type=float, default=0
-    )
     parser.add_argument("--num-p", type=int, default=50)
     parser.add_argument(
         "--support-setting", type=str, default="constant", choices=["constant"]
@@ -95,32 +89,23 @@ def main(args=sys.argv[1:]):
     else:
         raise ValueError("Asdfasdf")
 
-    if args.personality == "unbiased":
-        data_gen = DataGenerator(
-            args.density_parametric_form,
-            args.sim_func_name,
-            args.coef_drift_speed,
-            args.prob_coef_drift,
-            support_sim_settings,
-            noise_sd=args.y_sigma,
-            max_y=args.max_y,
-            min_y=args.min_y,
-        )
-    elif args.personality == "oscillating":
-        data_gen = AdversaryDataGenerator(
-            args.density_parametric_form,
-            args.sim_func_name,
-            support_sim_settings,
-            drift_frequency=3,
-            noise_sd=args.y_sigma,
-            max_y=args.max_y,
-            min_y=args.min_y,
-            num_coefs=10,
-        )
-    trial_data = TrialData(args.batch_sizes, data_gen)
+    data_gen = DataGenerator(
+        args.density_parametric_form,
+        args.sim_func_name,
+        support_sim_settings,
+        noise_sd=args.y_sigma,
+        max_y=args.max_y,
+        min_y=args.min_y,
+    )
+    trial_data = TrialData(args.batch_sizes)
+    init_coef = np.zeros(args.num_p)
+    init_coef[:5] = 5
     for batch_index in range(args.num_batches):
-        trial_data.make_new_batch()
-    nature = FixedNature(trial_data)
+        new_data = data_gen.create_data(
+            args.batch_sizes[batch_index], batch_index, coef=init_coef
+        )
+        trial_data.add_batch(new_data)
+    nature = FixedNature(data_gen, trial_data, coefs=[init_coef] * trial_data.num_batches)
 
     pickle_to_file(nature, args.out_file)
 

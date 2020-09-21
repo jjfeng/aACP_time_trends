@@ -26,11 +26,11 @@ env.SConsignFile()
 flag = 'simulation_iid'
 sc.SConscript(flag + '/sconscript', exports=['flag'])
 
-flag = 'simulation_drift'
-sc.SConscript(flag + '/sconscript', exports=['flag'])
-
 flag = 'simulation_adversary'
 sc.SConscript(flag + '/sconscript', exports=['flag'])
 
-flag = 'simulation_ttest'
-sc.SConscript(flag + '/sconscript', exports=['flag'])
+#flag = 'simulation_drift'
+#sc.SConscript(flag + '/sconscript', exports=['flag'])
+#
+#flag = 'simulation_ttest'
+#sc.SConscript(flag + '/sconscript', exports=['flag'])
