@@ -62,9 +62,9 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             eta=args.eta,
             eta_list=[
                 (0,0,0,0),
-                (1,0,0.5,0.05),
+                (1,0,0.1,0.05),
                 (0,0,1.0,0.0),
-                (0,20,0.5,0.05),
+                (0,20,0.1,0.05),
             ],
             meta_weights=np.ones(4),
             num_experts=num_experts,
