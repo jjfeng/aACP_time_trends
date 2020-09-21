@@ -17,15 +17,12 @@ class DataGenerator:
         self,
         sim_func_form: str,
         sim_func_name: str,
-        coef_drift_speed: float,
-        prob_coef_drift: float,
         support_sim_settings: SupportSimSettings,
         num_classes: int = 1,
         noise_sd: float = 1,
         std_dev_x: float = 1,
         max_y: float = 1,
         min_y: float = 0,
-        num_coefs: int = 5
     ):
         self.num_p = support_sim_settings.num_p
         self.std_dev_x = std_dev_x
@@ -34,8 +31,6 @@ class DataGenerator:
         self.max_y = max_y
         self.noise_sd = noise_sd
         self.sim_func_form = sim_func_form
-        self.coef_drift_speed = coef_drift_speed
-        self.prob_coef_drift = prob_coef_drift
         self.support_sim_settings = support_sim_settings
         if sim_func_form in ["gaussian", "bounded_gaussian"]:
             self.raw_mu_func = getattr(data_gen_funcs, sim_func_name + "_mu")
@@ -46,25 +41,21 @@ class DataGenerator:
             print(sim_func_form)
             raise ValueError("huh?")
 
-        # Create changing coefs
-        self.coefs = [np.zeros((1, self.num_p))]
-        self.coefs[0][0,:num_coefs] = num_coefs
-
-    def mu_func(self, xs: ndarray, t_idx: int = 0):
-        """
-        @return sigma when Y|X is gaussian
-        """
-        assert len(self.coefs) == (t_idx + 1)
-        do_drift = np.random.binomial(1, self.prob_coef_drift) if t_idx > 1 else 0
-        coef_norm = np.sqrt(np.sum(np.power(self.coefs[-1], 2)))
-        print("norm", coef_norm)
-        if do_drift:
-            new_noise = np.random.randn(1, self.coefs[0].size)
-            new_coef = self.coefs[-1] * (1 - self.coef_drift_speed) + new_noise * self.coef_drift_speed / np.sqrt(np.sum(np.power(new_noise, 2))) * coef_norm
-        else:
-            new_coef = self.coefs[-1]
-        self.coefs.append(new_coef)
-        return self.raw_mu_func(self.coefs[-1], xs)
+    #def mu_func(self, xs: ndarray, t_idx: int = 0):
+    #    """
+    #    @return sigma when Y|X is gaussian
+    #    """
+    #    assert len(self.coefs) == (t_idx + 1)
+    #    do_drift = np.random.binomial(1, self.prob_coef_drift) if t_idx > 1 else 0
+    #    coef_norm = np.sqrt(np.sum(np.power(self.coefs[-1], 2)))
+    #    print("norm", coef_norm)
+    #    if do_drift:
+    #        new_noise = np.random.randn(1, self.coefs[0].size)
+    #        new_coef = self.coefs[-1] * (1 - self.coef_drift_speed) + new_noise * self.coef_drift_speed / np.sqrt(np.sum(np.power(new_noise, 2))) * coef_norm
+    #    else:
+    #        new_coef = self.coefs[-1]
+    #    self.coefs.append(new_coef)
+    #    return self.raw_mu_func(self.coefs[-1], xs)
 
     def sigma_func(self, xs: ndarray):
         """
@@ -77,7 +68,7 @@ class DataGenerator:
         elif self.sim_func_form == "bernoulli":
             raise ValueError("sure?")
 
-    def create_data(self, num_obs: int, t_idx: int, drift_speed: float = 0, seed: int = None):
+    def create_data(self, num_obs: int, t_idx: int, coef: np.ndarray, seed: int = None):
         """
         @param num_obs: number of observations
         @param seed: if given, set the seed before generating data
@@ -87,17 +78,17 @@ class DataGenerator:
         if seed is not None:
             np.random.seed(seed)
         data_gen_xs = self.support_sim_settings.generate_x(num_obs, t_idx)
-        dataset = self.create_data_given_x(data_gen_xs, t_idx)
+        dataset = self.create_data_given_x(data_gen_xs, coef)
         return dataset
 
-    def create_data_given_x(self, xs: ndarray, t_idx: int):
+    def create_data_given_x(self, xs: ndarray, coef):
         """
         For the given Xs, generate responses and dataset
         regression-type data only
         @return Dataset
         """
         size_n = xs.shape[0]
-        mu_true = self.mu_func(xs, t_idx)
+        mu_true = self.raw_mu_func(coef, xs)
         print("MU TRU", np.mean(mu_true))
         if len(mu_true.shape) == 1:
             mu_true = np.reshape(mu_true, (size_n, 1))

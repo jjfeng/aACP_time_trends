@@ -73,7 +73,12 @@ class TTestApproval(Policy):
             differences.append(mean_improve)
             upper_ci = mean_improve + self.factor * np.sqrt(np.var(loss_improvement)/new_model_loss.size)
             is_better = upper_ci < 0
-            if is_better and upper_ci < best_upper_ci:
+
+            upper_ci_human_diff = np.mean(new_model_loss - self.human_max_loss) + self.factor * np.sqrt(np.var(new_model_loss)/new_model_loss.size)
+            is_better_than_human = upper_ci_human_diff < 0
+
+            if is_better and is_better_than_human and upper_ci < best_upper_ci:
+                print("new model loss", np.mean(new_model_loss), self.human_max_loss)
                 best_model_idx = i
                 best_upper_ci = upper_ci
 

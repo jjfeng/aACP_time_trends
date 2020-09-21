@@ -58,16 +58,15 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             const_baseline_weight=1,
         )
     elif policy_name == "MetaExpWeighting":
-        policy = MetaExpWeighting(
+        policy = MetaExpWeightingList(
             eta=args.eta,
-            eta_grid=[
-                np.array([0,20]), # emp loss
-                np.array([0,0.2,0.8,1]), # scaling
-                #np.array([50]), # emp loss
-                #np.array([1]), # scaling
-                np.array([0,0.05,0.1,0.5,1]), # alpha
-                np.array([0.05]) # baseline alpha
+            eta_list=[
+                (0,0,0,0),
+                (1,0,0.1,0.05),
+                (0,0,1.0,0.0),
+                (0,20,0.1,0.05),
             ],
+            meta_weights=np.ones(4),
             num_experts=num_experts,
             human_max_loss=human_max_loss,
         )
@@ -90,12 +89,12 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
 
     # Create the data generated each batch
     proposer.propose_model(nature.get_trial_data(0), approval_hist)
+    #nature.next(approval_hist)
 
     # Run the platform trial
     indiv_loss_robot_t = None
     prev_weights = None
     for t in range(nature.total_time - 1):
-        #print("TIME STEP", t)
         logging.info("TIME STEP %d", t)
         policy.add_expert(t)
         policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights)
@@ -111,6 +110,9 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
         )
         policy_loss_t = np.sum(all_loss_t * weights) / batch_n
         approval_hist.append(human_weight, robot_weights, policy_loss_t, all_loss_t)
+
+        nature.next(approval_hist)
+
         prev_weights = weights
         logging.info("losses %s", all_loss_t/batch_n)
         #print("losses", all_loss_t/batch_n)
@@ -136,9 +138,10 @@ def main(args=sys.argv[1:]):
     nature = pickle_from_file(args.nature_file)
     proposer = pickle_from_file(args.proposer_file)
 
+    nature.next(None)
     model = proposer.propose_model(nature.get_trial_data(0), None, do_append=False)
-    human_max_loss = np.mean(model.loss(nature.get_trial_data(1).get_start_to_end_data(1)))
-    #human_max_loss = 1.25 * human_max_loss #min(0.1, 1.25 * human_max_loss)
+    time_0_test_data = nature.data_gen.create_data(1000, 9, nature.coefs[0])
+    human_max_loss = np.mean(model.loss(time_0_test_data))
     print("HUMAN MAX", human_max_loss)
 
     policy = create_policy(

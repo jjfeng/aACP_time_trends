@@ -56,8 +56,6 @@ class LassoProposer(Proposer):
         self.proposal_history = []
 
     def propose_model(self, trial_data: TrialData, curr_model_idx: int = None, do_append: bool = True):
-        assert trial_data.num_batches == self.num_models + 1
-
         if self.sim_func_form == "gaussian":
             model = LassoModel(
                 eps=self.eps,

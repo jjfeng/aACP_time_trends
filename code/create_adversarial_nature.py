@@ -9,7 +9,7 @@ from numpy import ndarray
 from typing import List
 
 from trial_data import TrialData
-from nature import FixedNature
+from nature import AdversarialNature
 from data_generator import *
 from support_sim_settings import *
 from dataset import Dataset
@@ -38,7 +38,7 @@ def parse_args(args):
         "--sim-func-name", type=str, default="linear", choices=["linear", "curvy"]
     )
     parser.add_argument(
-        "--personality", type=str, default="unbiased", choices=["unbiased", "oscillating"]
+        "--coef-drift-speed", type=float, default=0
     )
     parser.add_argument("--num-p", type=int, default=50)
     parser.add_argument(
@@ -97,15 +97,9 @@ def main(args=sys.argv[1:]):
         max_y=args.max_y,
         min_y=args.min_y,
     )
-    trial_data = TrialData(args.batch_sizes)
     init_coef = np.zeros(args.num_p)
     init_coef[:5] = 5
-    for batch_index in range(args.num_batches):
-        new_data = data_gen.create_data(
-            args.batch_sizes[batch_index], batch_index, coef=init_coef
-        )
-        trial_data.add_batch(new_data)
-    nature = FixedNature(data_gen, trial_data, coefs=[init_coef] * trial_data.num_batches)
+    nature = AdversarialNature(data_gen, args.coef_drift_speed, args.batch_sizes, init_coef=init_coef)
 
     pickle_to_file(nature, args.out_file)
 
