@@ -53,7 +53,7 @@ class AdversarialNature(Nature):
             # do drift
             print("time", self.curr_time, "DO DRIFT")
             coef_norm = np.sqrt(np.sum(np.power(self.coefs[-1], 2)))
-            new_noise = np.random.randn(1, self.num_p)
+            new_noise = np.random.binomial(1, np.sum(np.abs(self.init_coef) > 0)/self.num_p, size=self.num_p)
             new_coef = self.coefs[-1] * (1 - self.drift_speed) + new_noise * self.drift_speed / np.sqrt(np.sum(np.power(new_noise, 2))) * coef_norm
             self.coefs.append(new_coef)
         else:

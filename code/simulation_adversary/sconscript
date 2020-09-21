@@ -12,10 +12,10 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 DENSITY = "bernoulli"
-NUM_P = 20
-INIT_BATCH_SIZE = 20
-BATCH_SIZE = 20
-NUM_BATCHES = 20
+NUM_P = 15
+INIT_BATCH_SIZE = 50
+BATCH_SIZE = 100
+NUM_BATCHES = 30
 
 nest.add(
     'seed',
@@ -36,7 +36,7 @@ def create_nature(env, outdir, c):
         '--batch-size',
         BATCH_SIZE,
         '--batch-incr 0',
-        '--coef-drift-speed 0.4',
+        '--coef-drift-speed 0.6',
         '--num-batches',
         NUM_BATCHES,
         '--num-p',
