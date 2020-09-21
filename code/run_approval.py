@@ -141,10 +141,8 @@ def main(args=sys.argv[1:]):
 
     nature.next(None)
     model = proposer.propose_model(nature.get_trial_data(0), None, do_append=False)
-    # TODO: make a real human loss
-    human_max_loss = 0.1 #np.mean(model.loss(nature.get_trial_data(0).get_start_to_end_data(0)))
-
-    #human_max_loss = 1.25 * human_max_loss #min(0.1, 1.25 * human_max_loss)
+    time_0_test_data = nature.data_gen.create_data(1000, 9, nature.coefs[0])
+    human_max_loss = np.mean(model.loss(time_0_test_data))
     print("HUMAN MAX", human_max_loss)
 
     policy = create_policy(
