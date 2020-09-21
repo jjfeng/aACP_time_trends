@@ -58,10 +58,8 @@ class TrialData:
     def __init__(
         self,
         batch_sizes: ndarray,
-        data_generator: DataGenerator = None,
         batch_data: List[Dataset] = [],
     ):
-        self.data_generator = data_generator
         self.batch_sizes = batch_sizes
 
         self.batch_data = batch_data
@@ -80,13 +78,10 @@ class TrialData:
                 cum_data = cum_data.merge(data)
         return cum_data
 
-    def make_new_batch(self, drift_speed: float):
-        new_data = self.data_generator.create_data(
-            self.batch_sizes[self.num_batches], self.num_batches, drift_speed=drift_speed
-        )
-        self.batch_data.append(new_data)
+    def add_batch(self, data_t: Dataset):
+        self.batch_data.append(data_t)
 
     def subset(self, end_index: int):
         return TrialData(
-            self.data_generator, self.batch_sizes, self.batch_data[:end_index]
+            self.batch_sizes, self.batch_data[:end_index]
         )

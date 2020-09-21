@@ -90,12 +90,12 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
 
     # Create the data generated each batch
     proposer.propose_model(nature.get_trial_data(0), approval_hist)
+    #nature.next(approval_hist)
 
     # Run the platform trial
     indiv_loss_robot_t = None
     prev_weights = None
     for t in range(nature.total_time - 1):
-        #print("TIME STEP", t)
         logging.info("TIME STEP %d", t)
         policy.add_expert(t)
         policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights)
@@ -111,6 +111,9 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
         )
         policy_loss_t = np.sum(all_loss_t * weights) / batch_n
         approval_hist.append(human_weight, robot_weights, policy_loss_t, all_loss_t)
+
+        nature.next(approval_hist)
+
         prev_weights = weights
         logging.info("losses %s", all_loss_t/batch_n)
         #print("losses", all_loss_t/batch_n)
@@ -136,8 +139,11 @@ def main(args=sys.argv[1:]):
     nature = pickle_from_file(args.nature_file)
     proposer = pickle_from_file(args.proposer_file)
 
+    nature.next(None)
     model = proposer.propose_model(nature.get_trial_data(0), None, do_append=False)
-    human_max_loss = np.mean(model.loss(nature.get_trial_data(1).get_start_to_end_data(1)))
+    # TODO: make a real human loss
+    human_max_loss = 0.1 #np.mean(model.loss(nature.get_trial_data(0).get_start_to_end_data(0)))
+
     #human_max_loss = 1.25 * human_max_loss #min(0.1, 1.25 * human_max_loss)
     print("HUMAN MAX", human_max_loss)
 
