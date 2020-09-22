@@ -19,9 +19,7 @@ def curvy_mu(xs):
     logit = 3 * np.sum(
         (xs[:, :5]), axis=1
     )  # + 0.2 * np.power(np.sum(xs[:,5:10], axis=1), 2) + np.sum(xs[:,10:], axis=1)
-    print("log", logit)
     logit = np.maximum(np.minimum(logit, 5), -5)
     exp_logit = np.exp(logit)
     mu = exp_logit / (1 + exp_logit)
-    print("mu", mu)
     return mu

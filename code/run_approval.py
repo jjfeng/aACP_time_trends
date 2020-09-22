@@ -39,6 +39,7 @@ def parse_args(args):
     parser.add_argument("--alpha", type=float, default=0)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
     parser.add_argument("--out-file", type=str, default="_output/approver_history.pkl")
+    parser.add_argument("--out-nature-file", type=str, default=None)
     parser.set_defaults()
     args = parser.parse_args()
 
@@ -69,12 +70,12 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     elif policy_name == "MetaExpWeighting":
         eta_list = [
             (0, 0, 0, 0),
-            (1, 0, 0.3, 0.05),
+            (10, 0, 0.3, 0.05),
             (0, 0, 1.0, 0.0),
             (0, 10000, 0.5, 0.05),
         ]
         meta_weights = np.ones(len(eta_list))
-        # meta_weights[2:] = 1/(len(eta_list) - 1)
+        meta_weights[1:] = 1/(len(eta_list) - 1)
         policy = MetaExpWeightingList(
             eta=args.eta,
             eta_list=eta_list,
@@ -102,15 +103,10 @@ def run_simulation(
 ):
     approval_hist = ApprovalHistory(human_max_loss=human_max_loss)
 
-    # Create the data generated each batch
-    # proposer.propose_model(nature.get_trial_data(0), approval_hist)
-    # nature.next(approval_hist)
-
     # Run the platform trial
     indiv_loss_robot_t = None
     prev_weights = None
     for t in range(nature.total_time - 1):
-        print("TIME", t)
         logging.info("TIME STEP %d", t)
         policy.add_expert(t)
         policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights)
@@ -139,7 +135,6 @@ def run_simulation(
         logging.info("weights %s (max %d)", weights, np.argmax(weights))
 
         if t < nature.total_time - 2:
-            print("time", t, nature.total_time)
             proposer.propose_model(sub_trial_data, approval_hist)
 
     return approval_hist
@@ -160,8 +155,8 @@ def main(args=sys.argv[1:]):
     nature.next(None)
     model = proposer.propose_model(nature.get_trial_data(0), None)
     if args.human_max_loss is None:
-        args.human_max_loss = np.mean(proposer.score_models(nature.create_test_data(0))[0]) + 0.05
-        print("HUMAN MAX", human_max_loss)
+        args.human_max_loss = np.mean(proposer.score_models(nature.create_test_data(0))[0])
+        logging.info("HUMAN MAX %f", args.human_max_loss)
 
     policy = create_policy(
         args.policy_name,
@@ -175,6 +170,8 @@ def main(args=sys.argv[1:]):
     print(approval_history)
 
     pickle_to_file(approval_history, args.out_file)
+    if args.out_nature_file is not None:
+        pickle_to_file(nature.to_fixed(), args.out_nature_file)
 
 
 if __name__ == "__main__":

@@ -89,7 +89,6 @@ class DataGenerator:
         """
         size_n = xs.shape[0]
         mu_true = self.raw_mu_func(coef, xs)
-        print("MU TRU", np.mean(mu_true))
         if len(mu_true.shape) == 1:
             mu_true = np.reshape(mu_true, (size_n, 1))
         if self.sim_func_form == "gaussian":
@@ -104,6 +103,7 @@ class DataGenerator:
             raw_y = true_distribution.rvs(size=mu_true.shape)
             y = np.maximum(np.minimum(raw_y, self.max_y), self.min_y)
         elif self.sim_func_form == "bernoulli":
+            sigma_true = mu_true * (1 - mu_true)
             true_distribution = scipy.stats.bernoulli(p=mu_true)
             y = true_distribution.rvs(size=mu_true.shape)
         elif self.sim_func_form == "multinomial":

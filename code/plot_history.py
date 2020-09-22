@@ -64,7 +64,7 @@ def main(args=sys.argv[1:]):
         title=title,
         alpha=approval_history.human_max_loss,
         ymin=0,
-        ymax=approval_history.human_max_loss * 5,
+        ymax=min(approval_history.human_max_loss * 5, args.y_max),
     )
     plot_human_use(
         np.array(approval_history.human_history), args.human_plot, title=title

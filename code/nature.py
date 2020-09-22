@@ -48,6 +48,8 @@ class FixedNature(Nature):
         else:
             return self.trial_data.batch_data[time_t]
 
+    def to_fixed(self):
+        return self
 
 class AdversarialNature(Nature):
     """
@@ -69,6 +71,7 @@ class AdversarialNature(Nature):
         self.coefs = [self.init_coef]
 
     def next(self, approval_hist: ApprovalHistory = None):
+        np.random.seed(len(self.coefs))
         approval_direction = 0
         if approval_hist is not None and approval_hist.size > 2:
             curr_approv = np.sum(
@@ -80,9 +83,9 @@ class AdversarialNature(Nature):
             )
             approval_direction = curr_approv - prev_approv
 
-        if approval_direction > 0:
+        if approval_direction >= 1.0:
             # do drift
-            print("time", self.curr_time, "DO DRIFT")
+            print("time", self.curr_time, "DO DRIFT", approval_direction)
             new_coef = np.copy(self.coefs[-1])
             to0_rand_idx = np.random.choice(
                 np.where(np.abs(new_coef) > 0)[0], size=self.num_coef_drift
@@ -110,3 +113,12 @@ class AdversarialNature(Nature):
     @property
     def total_time(self):
         return len(self.batch_sizes)
+
+    def create_test_data(self, time_t: int, num_obs: int = 1000):
+        if self.data_gen is not None:
+            return self.data_gen.create_data(num_obs, time_t, self.coefs[time_t])
+        else:
+            return self.trial_data.batch_data[time_t]
+
+    def to_fixed(self):
+        return FixedNature(self.data_gen, self.trial_data, self.coefs)

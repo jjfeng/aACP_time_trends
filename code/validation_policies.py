@@ -18,6 +18,7 @@ class ValidationPolicy(Policy):
         human_max_loss: float,
         const_baseline_weight: float = 0,
         pred_t_factor: float = 0.5,
+        num_back_batches: int = 5,
     ):
         self.human_max_loss = human_max_loss
 
@@ -38,6 +39,8 @@ class ValidationPolicy(Policy):
 
         self.loss_histories = np.zeros((num_experts, 1))
         self.var_loss_histories = np.zeros((num_experts, 1))
+
+        self.weight_history = []
 
     def __str__(self):
         return "ValidationPolicy"
@@ -119,18 +122,18 @@ class ValidationPolicy(Policy):
         self.const_baseline_weight *= np.exp(-self.etas[0] * self.human_max_loss)
 
         # Adding normalization to prevent numerical underflow
-        normalization_factor = max(1, np.max(self.weights))
-        self.weights /= normalization_factor
-        self.baseline_weights /= normalization_factor
-        self.const_baseline_weight /= normalization_factor
+        normalize_weights = special.softmax(np.concatenate([np.log(self.weights), np.log(self.baseline_weights), np.log(self.const_baseline_weight)]))
+        self.weights = normalize_weights[:self.weights.size]
+        self.baseline_weights = normalize_weights[self.weights.size:self.weights.size + self.baseline_weights.size]
+        self.const_baseline_weight = normalize_weights[-1:]
 
         predictions = np.array(
             [
-                np.mean(self.loss_histories[i, max(i + 1, time_t - 5) :])
+                np.mean(self.loss_histories[i, max(i + 1, time_t - self.num_back_batches) :])
                 + self.pred_t_factor
                 * np.sqrt(
-                    np.mean(self.var_loss_histories[i, max(i + 1, time_t - 5) :])
-                    / np.sum(self.batch_sizes[max(i, time_t - 5):])
+                    np.mean(self.var_loss_histories[i, max(i + 1, time_t - self.num_back_batches) :])
+                    / np.sum(self.batch_sizes[max(i, time_t - self.num_back_batches):])
                 )
                 for i in range(model_losses_t.size)
             ]
@@ -139,15 +142,17 @@ class ValidationPolicy(Policy):
         log_model_update_factors = -self.etas[1] * predictions
         log_baseline_update_factor = -self.etas[1] * self.human_max_loss
 
-        update_factors = special.softmax(
-            np.concatenate([[log_baseline_update_factor], log_model_update_factors])
+        all_optim_weights = special.softmax(
+            np.concatenate([
+                np.log(self.weights) - self.etas[1] * predictions,
+                np.log(self.baseline_weights) - self.etas[1] * self.human_max_loss,
+                np.log(self.const_baseline_weight) - self.etas[1] * self.human_max_loss,
+            ])
         )
 
-        self.optim_weights = self.weights * update_factors[1:]
-        self.baseline_optim_weights = self.baseline_weights * update_factors[0]
-        self.const_baseline_optim_weight = (
-            self.const_baseline_weight * update_factors[0]
-        )
+        self.optim_weights = all_optim_weights[:self.optim_weights.size]
+        self.baseline_optim_weights = all_optim_weights[self.optim_weights.size: self.optim_weights.size + self.baseline_weights.size]
+        self.const_baseline_optim_weight = all_optim_weights[-1:]
 
     def get_predict_weights(self, time_t: int):
         denom = (
@@ -157,6 +162,7 @@ class ValidationPolicy(Policy):
         )
         robot_optim_weights = self.optim_weights / denom
         baseline_weight = 1 - np.sum(robot_optim_weights)
+        self.weight_history.append([robot_optim_weights, baseline_weight])
         return robot_optim_weights, baseline_weight
 
 
@@ -194,6 +200,7 @@ class MetaExpWeightingList(Policy):
         self.num_experts = num_experts
 
         self.meta_weights = meta_weights
+        self.meta_weights_history = []
 
     def __str__(self):
         return "MetaExp"
@@ -205,9 +212,10 @@ class MetaExpWeightingList(Policy):
     def _get_policy_prev_loss(
         self, time_t: int, model_losses_t: np.ndarray, policy: Policy
     ):
-        robot_weights, human_weight = policy.get_predict_weights(time_t)
+        robot_weights, human_weight = policy.weight_history[time_t]
+        assert np.isclose(robot_weights.sum() + human_weight, 1)
         policy_loss = (
-            np.sum(model_losses_t * robot_weights[: model_losses_t.size])
+            np.sum(model_losses_t * robot_weights)
             + human_weight * self.human_max_loss
         )
         return policy_loss
@@ -221,12 +229,13 @@ class MetaExpWeightingList(Policy):
                 loss_t[idx] = self._get_policy_prev_loss(
                     time_t - 1, model_losses_t, self.policy_dict[etas]
                 )
+                print("policy loss", etas, loss_t[idx])
             self.loss_ts += loss_t
             self.meta_weights = self.meta_weights * np.exp(-self.eta * loss_t)
 
         # Let each policy update their own weights
         for policy in self.policy_dict.values():
-            policy.update_weights(time_t, indiv_robot_loss_t, prev_weights)
+            policy.update_weights(time_t, indiv_robot_loss_t, prev_weights=None)
 
     def get_predict_weights(self, time_t):
         denom = np.sum(self.meta_weights)

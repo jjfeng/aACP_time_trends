@@ -60,7 +60,6 @@ class LassoProposer(Proposer):
         self.max_val = max_val
         self.min_val = min_val
         self.num_back_batches = num_back_batches
-        print("Asdfasdf", self.num_back_batches)
         self.proposal_history = []
 
     def propose_model(
