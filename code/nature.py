@@ -18,7 +18,7 @@ class FixedNature(Nature):
     This nature has all the trial data preloaded
     """
 
-    def __init__(self, data_gen: DataGenerator, trial_data: TrialData, coefs: List):
+    def __init__(self, data_gen: DataGenerator = None, trial_data: TrialData = None, coefs: List = None):
         self.trial_data = trial_data
         self.data_gen = data_gen
         self.coefs = coefs

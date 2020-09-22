@@ -35,3 +35,6 @@ sc.SConscript(flag + '/sconscript', exports=['flag'])
 flag = 'simulation_drift'
 sc.SConscript(flag + '/sconscript', exports=['flag'])
 
+flag = 'experiment_yelp'
+sc.SConscript(flag + '/sconscript', exports=['flag'])
+
