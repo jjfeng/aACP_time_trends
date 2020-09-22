@@ -11,7 +11,9 @@ class Nature:
         raise NotImplementedError()
 
     def get_trial_data(self, time_t: int):
-        return self.trial_data.subset(time_t + 1)
+        subtrial_data = self.trial_data.subset(time_t + 1)
+        subtrial_data.load()
+        return subtrial_data
 
 class FixedNature(Nature):
     """
@@ -29,7 +31,7 @@ class FixedNature(Nature):
 
     @property
     def total_time(self):
-        return len(self.trial_data.batch_data)
+        return self.trial_data.num_batches
 
 class AdversarialNature(Nature):
     """

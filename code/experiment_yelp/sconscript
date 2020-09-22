@@ -17,6 +17,50 @@ NUM_P = 15
 BATCH_SIZE = 100
 NUM_BATCHES = 50
 NUM_COEFS = 5
+NUM_YEARS = 1
+NUM_MONTHS = 3
+NUM_EPOCHS = 1
+
+nest.add(
+    'seed',
+    range(1),
+    label_func=lambda c: 'seed_%d' % c)
+
+nest.add_aggregate('proposer_list', list)
+
+nest.add(
+    'year',
+    range(2008, 2008 + NUM_YEARS),
+    label_func=lambda c: 'year_%d' % c)
+
+nest.add(
+    'month',
+    range(1,NUM_MONTHS),
+    label_func=lambda c: 'month_%d' % c)
+
+@nest.add_target_with_env(localenv)
+def fit_yelp_year_month_model(env, outdir, c):
+    # TODO: create a lasso proposer that only trains on the most recent data
+    targets = [
+        join(outdir, 'model.pkl'),
+        join(outdir, 'model_log.txt')]
+    c['proposer_list'].append(targets[0])
+    cmd = [
+        'python fit_yelp_year_month_model.py',
+	'--year',
+        c['year'],
+	'--month',
+        c['month'],
+	'--epochs',
+        NUM_EPOCHS,
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+    return env.Command(
+        targets,
+        [],
+        ' '.join(map(str, cmd)))
+
+nest.pop('year')
 
 @nest.add_target_with_env(localenv)
 def create_nature(env, outdir, c):
@@ -25,230 +69,221 @@ def create_nature(env, outdir, c):
         join(outdir, 'nature_log.txt')]
     cmd = [
         'python create_yelp_nature.py',
-        '--num-years 1',
+        '--num-years',
+        NUM_YEARS,
+        '--num-months',
+        NUM_MONTHS,
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
     return env.Command(
         targets,
         [],
         ' '.join(map(str, cmd)))
-
-nest.add(
-    'seed',
-    range(1),
-    label_func=lambda c: 'seed_%d' % c)
 
 @nest.add_target_with_env(localenv)
 def create_proposer(env, outdir, c):
-    # TODO: create a lasso proposer that only trains on the most recent data
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
-    batches = [4 if i % 4 == 1 else 2 for i in range(NUM_BATCHES)]
     cmd = [
-        'python create_lasso_proposer.py',
-        '--density-parametric',
-        DENSITY,
-        '--proposer-cv 3',
-        '--proposer-alphas 10',
-        '--proposer-batches',
-        ','.join([str(b) for b in batches]),
-        '--seed',
-        c['seed'],
-	'--out-file ${TARGETS[0]}',
-	'--log-file ${TARGETS[1]}']
+        'python create_yelp_proposer.py "experiment_yelp/_output/seed_0/year_%d/month_%d/model.pkl"',
+        '--num-years',
+        NUM_YEARS,
+        '--num-months',
+        NUM_MONTHS,
+	'--out-file ${TARGETS[0]}']
     return env.Command(
         targets,
-        [],
+        c['proposer_list'],
         ' '.join(map(str, cmd)))
 
-nest.add(
-    'eta',
-    [1],
-    label_func=lambda c: 'eta_%.2f' % c)
-
-@nest.add_target_with_env(localenv)
-def run_meta_grid(env, outdir, c):
-    targets = [
-        join(outdir, 'meta_grid_approval_hist.pkl'),
-        join(outdir, 'meta_grid_approval_hist_log.txt'),
-    ]
-    cmd = [
-        'python run_approval.py',
-        '--seed',
-        c['seed'],
-        '--eta',
-        c['eta'],
-        '--nature-file ${SOURCES[0]}',
-        '--proposer-file ${SOURCES[1]}',
-        '--policy-name MetaGridSearch',
-	'--out-file ${TARGETS[0]}',
-	'--log-file ${TARGETS[1]}']
-
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
-    return env.Command(
-        targets,
-        sources,
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
-def plot_meta_grid(env, outdir, c):
-    targets = [
-        join(outdir, 'meta_grid_approval_hist_loss.png'),
-        join(outdir, 'meta_grid_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--policy-name MetaGridSearch',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_meta_grid'],
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
-def run_meta_exp(env, outdir, c):
-    targets = [
-        join(outdir, 'meta_exp_approval_hist.pkl'),
-        join(outdir, 'meta_exp_approval_hist_log.txt'),
-    ]
-    cmd = [
-        'python run_approval.py',
-        '--seed',
-        c['seed'],
-        '--eta',
-        c['eta'],
-        '--nature-file ${SOURCES[0]}',
-        '--proposer-file ${SOURCES[1]}',
-        '--policy-name MetaExpWeighting',
-	'--out-file ${TARGETS[0]}',
-	'--log-file ${TARGETS[1]}']
-
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
-    return env.Command(
-        targets,
-        sources,
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
-def plot_meta_exp(env, outdir, c):
-    targets = [
-        join(outdir, 'meta_exp_approval_hist_loss.png'),
-        join(outdir, 'meta_exp_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--policy-name MetaExpWeighting',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_meta_exp'],
-        ' '.join(map(str, cmd)))
-
-
-nest.add(
-    'alpha',
-    [0.5],
-    label_func=lambda c: 'alpha_%.2f' % c)
-
-@nest.add_target_with_env(localenv)
-def run_online(env, outdir, c):
-    targets = [
-        join(outdir, 'online_approval_hist.pkl'),
-        join(outdir, 'online_approval_hist_log.txt'),
-    ]
-    cmd = [
-        'python run_approval.py',
-        '--seed',
-        c['seed'],
-        '--eta',
-        c['eta'],
-        '--alpha',
-        c['alpha'],
-        '--nature-file ${SOURCES[0]}',
-        '--proposer-file ${SOURCES[1]}',
-        '--policy-name MarkovHedge',
-	'--out-file ${TARGETS[0]}',
-	'--log-file ${TARGETS[1]}']
-
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
-    return env.Command(
-        targets,
-        sources,
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
-def plot_online(env, outdir, c):
-    targets = [
-        join(outdir, 'online_approval_hist_loss.png'),
-        join(outdir, 'online_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--policy-name MarkovHedge',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_online'],
-        ' '.join(map(str, cmd)))
-
-nest.pop('eta')
-
-@nest.add_target_with_env(localenv)
-def run_ttest_approval(env, outdir, c):
-    targets = [
-        join(outdir, 'ttest_approval_hist.pkl'),
-        join(outdir, 'ttest_approval_hist_log.txt'),
-    ]
-    cmd = [
-        'python run_approval.py',
-        '--seed',
-        c['seed'],
-        '--nature-file ${SOURCES[0]}',
-        '--proposer-file ${SOURCES[1]}',
-        '--policy-name TTestApproval',
-	'--out-file ${TARGETS[0]}',
-	'--log-file ${TARGETS[1]}']
-
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
-    return env.Command(
-        targets,
-        sources,
-        ' '.join(map(str, cmd)))
-
-
-@nest.add_target_with_env(localenv)
-def plot_ttest(env, outdir, c):
-    targets = [
-        join(outdir, 'ttest_approval_hist_loss.png'),
-        join(outdir, 'ttest_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        #'--y-max',
-        #Y_MAX,
-        #'--y-min',
-        #Y_MIN,
-        '--policy-name TTestApproval',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_ttest_approval'],
-        ' '.join(map(str, cmd)))
-
-
+#nest.add(
+#    'eta',
+#    [1],
+#    label_func=lambda c: 'eta_%.2f' % c)
+#
+#@nest.add_target_with_env(localenv)
+#def run_meta_grid(env, outdir, c):
+#    targets = [
+#        join(outdir, 'meta_grid_approval_hist.pkl'),
+#        join(outdir, 'meta_grid_approval_hist_log.txt'),
+#    ]
+#    cmd = [
+#        'python run_approval.py',
+#        '--seed',
+#        c['seed'],
+#        '--eta',
+#        c['eta'],
+#        '--nature-file ${SOURCES[0]}',
+#        '--proposer-file ${SOURCES[1]}',
+#        '--policy-name MetaGridSearch',
+#	'--out-file ${TARGETS[0]}',
+#	'--log-file ${TARGETS[1]}']
+#
+#    sources = [c['create_nature'][0], c['create_proposer'][0]]
+#    return env.Command(
+#        targets,
+#        sources,
+#        ' '.join(map(str, cmd)))
+#
+#@nest.add_target_with_env(localenv)
+#def plot_meta_grid(env, outdir, c):
+#    targets = [
+#        join(outdir, 'meta_grid_approval_hist_loss.png'),
+#        join(outdir, 'meta_grid_approval_hist_human.png'),
+#    ]
+#    cmd = [
+#        'python plot_history.py',
+#        '--policy-name MetaGridSearch',
+#	'--history-file ${SOURCES[0]}',
+#	'--loss-plot ${TARGETS[0]}',
+#	'--human-plot ${TARGETS[1]}']
+#
+#    return env.Command(
+#        targets,
+#        c['run_meta_grid'],
+#        ' '.join(map(str, cmd)))
+#
+#@nest.add_target_with_env(localenv)
+#def run_meta_exp(env, outdir, c):
+#    targets = [
+#        join(outdir, 'meta_exp_approval_hist.pkl'),
+#        join(outdir, 'meta_exp_approval_hist_log.txt'),
+#    ]
+#    cmd = [
+#        'python run_approval.py',
+#        '--seed',
+#        c['seed'],
+#        '--eta',
+#        c['eta'],
+#        '--nature-file ${SOURCES[0]}',
+#        '--proposer-file ${SOURCES[1]}',
+#        '--policy-name MetaExpWeighting',
+#	'--out-file ${TARGETS[0]}',
+#	'--log-file ${TARGETS[1]}']
+#
+#    sources = [c['create_nature'][0], c['create_proposer'][0]]
+#    return env.Command(
+#        targets,
+#        sources,
+#        ' '.join(map(str, cmd)))
+#
+#@nest.add_target_with_env(localenv)
+#def plot_meta_exp(env, outdir, c):
+#    targets = [
+#        join(outdir, 'meta_exp_approval_hist_loss.png'),
+#        join(outdir, 'meta_exp_approval_hist_human.png'),
+#    ]
+#    cmd = [
+#        'python plot_history.py',
+#        '--policy-name MetaExpWeighting',
+#	'--history-file ${SOURCES[0]}',
+#	'--loss-plot ${TARGETS[0]}',
+#	'--human-plot ${TARGETS[1]}']
+#
+#    return env.Command(
+#        targets,
+#        c['run_meta_exp'],
+#        ' '.join(map(str, cmd)))
+#
+#
+#nest.add(
+#    'alpha',
+#    [0.5],
+#    label_func=lambda c: 'alpha_%.2f' % c)
+#
+#@nest.add_target_with_env(localenv)
+#def run_online(env, outdir, c):
+#    targets = [
+#        join(outdir, 'online_approval_hist.pkl'),
+#        join(outdir, 'online_approval_hist_log.txt'),
+#    ]
+#    cmd = [
+#        'python run_approval.py',
+#        '--seed',
+#        c['seed'],
+#        '--eta',
+#        c['eta'],
+#        '--alpha',
+#        c['alpha'],
+#        '--nature-file ${SOURCES[0]}',
+#        '--proposer-file ${SOURCES[1]}',
+#        '--policy-name MarkovHedge',
+#	'--out-file ${TARGETS[0]}',
+#	'--log-file ${TARGETS[1]}']
+#
+#    sources = [c['create_nature'][0], c['create_proposer'][0]]
+#    return env.Command(
+#        targets,
+#        sources,
+#        ' '.join(map(str, cmd)))
+#
+#@nest.add_target_with_env(localenv)
+#def plot_online(env, outdir, c):
+#    targets = [
+#        join(outdir, 'online_approval_hist_loss.png'),
+#        join(outdir, 'online_approval_hist_human.png'),
+#    ]
+#    cmd = [
+#        'python plot_history.py',
+#        '--policy-name MarkovHedge',
+#	'--history-file ${SOURCES[0]}',
+#	'--loss-plot ${TARGETS[0]}',
+#	'--human-plot ${TARGETS[1]}']
+#
+#    return env.Command(
+#        targets,
+#        c['run_online'],
+#        ' '.join(map(str, cmd)))
+#
+#nest.pop('eta')
+#
+#@nest.add_target_with_env(localenv)
+#def run_ttest_approval(env, outdir, c):
+#    targets = [
+#        join(outdir, 'ttest_approval_hist.pkl'),
+#        join(outdir, 'ttest_approval_hist_log.txt'),
+#    ]
+#    cmd = [
+#        'python run_approval.py',
+#        '--seed',
+#        c['seed'],
+#        '--nature-file ${SOURCES[0]}',
+#        '--proposer-file ${SOURCES[1]}',
+#        '--policy-name TTestApproval',
+#	'--out-file ${TARGETS[0]}',
+#	'--log-file ${TARGETS[1]}']
+#
+#    sources = [c['create_nature'][0], c['create_proposer'][0]]
+#    return env.Command(
+#        targets,
+#        sources,
+#        ' '.join(map(str, cmd)))
+#
+#
+#@nest.add_target_with_env(localenv)
+#def plot_ttest(env, outdir, c):
+#    targets = [
+#        join(outdir, 'ttest_approval_hist_loss.png'),
+#        join(outdir, 'ttest_approval_hist_human.png'),
+#    ]
+#    cmd = [
+#        'python plot_history.py',
+#        #'--y-max',
+#        #Y_MAX,
+#        #'--y-min',
+#        #Y_MIN,
+#        '--policy-name TTestApproval',
+#	'--history-file ${SOURCES[0]}',
+#	'--loss-plot ${TARGETS[0]}',
+#	'--human-plot ${TARGETS[1]}']
+#
+#    return env.Command(
+#        targets,
+#        c['run_ttest_approval'],
+#        ' '.join(map(str, cmd)))
+#
+#
 @nest.add_target_with_env(localenv)
 def run_blind_approval(env, outdir, c):
     targets = [

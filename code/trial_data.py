@@ -2,6 +2,9 @@ from typing import List
 import numpy as np
 from numpy import ndarray
 
+import torch
+from torchtext import data
+
 from data_generator import DataGenerator
 from dataset import Dataset
 
@@ -15,11 +18,14 @@ class TrialData:
 
         self.batch_data = batch_data
 
+    def load(self):
+        return
+
     @property
     def num_batches(self):
         return len(self.batch_data)
 
-    def get_start_to_end_data(self, start_index: int, end_index: int = None):
+    def get_start_to_end_data(self, start_index: int, end_index: int = None) -> Dataset:
         cum_data = self.batch_data[start_index]
         if end_index is None:
             for data in self.batch_data[start_index + 1 :]:
@@ -37,24 +43,21 @@ class TrialData:
             self.batch_sizes, self.batch_data[:end_index]
         )
 
-class TrialDataFromDisk:
+class TrialDataFromDisk(TrialData):
     def __init__(
         self,
-        batch_data_files: List[str] = [],
+        batch_data: List[str] = [],
     ):
-        self.batch_data_files = batch_data_files
+        self.batch_data = batch_data
 
     @property
     def num_batches(self):
-        return len(self.batch_data_files)
-
-    def get_start_to_end_data(self, start_index: int, end_index: int = None) -> Dataset:
-        raise NotImplementedError("implement meeee")
+        return len(self.batch_data)
 
     def add_batch(self, file_str: str):
-        self.batch_data_files.append(file_str)
+        self.batch_data.append(file_str)
 
     def subset(self, end_index: int):
         return TrialDataFromDisk(
-            self.batch_data_files[:end_index]
+            self.batch_data[:end_index]
         )

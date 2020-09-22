@@ -22,6 +22,7 @@ def parse_args(args):
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument("--num-years", type=int, default=1)
+    parser.add_argument("--num-months", type=int, default=1)
     parser.add_argument("--log-file", type=str, default="_output/nature_log.txt")
     parser.add_argument("--out-file", type=str, default="_output/nature.pkl")
     parser.set_defaults()
@@ -40,12 +41,11 @@ def main(args=sys.argv[1:]):
     print(args)
     logging.info(args)
 
-    np.random.seed(args.seed)
     trial_data = TrialDataFromDisk()
     times = []
     models = []
     YEARS = range(2008, 2008 + args.num_years)
-    MONTHS = range(1, 13)
+    MONTHS = range(1, 1 + args.num_months)
     for year in YEARS:
         for month in MONTHS:
             times.append((year, month))

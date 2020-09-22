@@ -14,7 +14,7 @@ class Dataset:
         @param num_classes: number of classes, if a multinomial. otherwise this is None
         """
         self.x = x
-        self.num_p = x.shape[1]
+        #self.num_p = x.shape[1]
         self.y = y
         self.num_classes = num_classes
 

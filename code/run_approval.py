@@ -109,6 +109,7 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
     indiv_loss_robot_t = None
     prev_weights = None
     for t in range(nature.total_time - 1):
+        print("TIME", t)
         logging.info("TIME STEP %d", t)
         policy.add_expert(t)
         policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights)
@@ -118,6 +119,7 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
 
         sub_trial_data = nature.get_trial_data(t + 1)
         indiv_loss_robot_t = proposer.score_models(sub_trial_data.batch_data[-1])
+        print("TIME", t, "indiv loss", indiv_loss_robot_t.shape)
         batch_n = indiv_loss_robot_t.shape[1]
         all_loss_t = np.concatenate(
             [[policy.human_max_loss * batch_n], np.sum(indiv_loss_robot_t, axis=1)]
@@ -135,7 +137,9 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
         #    logging.info("corr %s", scipy.stats.spearmanr(all_loss_t[1:]/batch_n, loss_predictions))
         logging.info("weights %s (max %d)", weights, np.argmax(weights))
 
-        proposer.propose_model(sub_trial_data, approval_hist)
+        if t < nature.total_time - 2:
+            print("time", t, nature.total_time)
+            proposer.propose_model(sub_trial_data, approval_hist)
 
     return approval_hist
 
@@ -154,8 +158,9 @@ def main(args=sys.argv[1:]):
 
     nature.next(None)
     model = proposer.propose_model(nature.get_trial_data(0), None, do_append=False)
-    time_0_test_data = nature.data_gen.create_data(1000, 9, nature.coefs[0])
-    human_max_loss = np.mean(model.loss(time_0_test_data))
+    #time_0_test_data = nature.data_gen.create_data(1000, 9, nature.coefs[0])
+    #human_max_loss = np.mean(model.loss(time_0_test_data))
+    human_max_loss = 1.0
     print("HUMAN MAX", human_max_loss)
 
     policy = create_policy(
