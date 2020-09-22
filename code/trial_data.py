@@ -8,11 +8,10 @@ from torchtext import data
 from data_generator import DataGenerator
 from dataset import Dataset
 
+
 class TrialData:
     def __init__(
-        self,
-        batch_sizes: ndarray = None,
-        batch_data: List[Dataset] = [],
+        self, batch_sizes: ndarray = None, batch_data: List[Dataset] = [],
     ):
         self.batch_sizes = batch_sizes
 
@@ -39,14 +38,12 @@ class TrialData:
         self.batch_data.append(data_t)
 
     def subset(self, end_index: int):
-        return TrialData(
-            self.batch_sizes, self.batch_data[:end_index]
-        )
+        return TrialData(self.batch_sizes, self.batch_data[:end_index])
+
 
 class TrialDataFromDisk(TrialData):
     def __init__(
-        self,
-        batch_data: List[str] = [],
+        self, batch_data: List[str] = [],
     ):
         self.batch_data = batch_data
 
@@ -58,6 +55,4 @@ class TrialDataFromDisk(TrialData):
         self.batch_data.append(file_str)
 
     def subset(self, end_index: int):
-        return TrialDataFromDisk(
-            self.batch_data[:end_index]
-        )
+        return TrialDataFromDisk(self.batch_data[:end_index])

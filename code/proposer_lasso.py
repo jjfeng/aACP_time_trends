@@ -10,8 +10,8 @@ from trial_data import TrialData
 class LassoModel:
     def __init__(self, eps=1e-4, n_alphas=200, cv=5):
         self.model = LassoCV(eps=eps, n_alphas=n_alphas, cv=cv)
-        #self.max_val = max_val
-        #self.min_val = min_val
+        # self.max_val = max_val
+        # self.min_val = min_val
 
     def fit(self, X, y):
         self.model.fit(X, y)
@@ -19,31 +19,39 @@ class LassoModel:
     def predict(self, X, t=None):
         predictions = self.model.predict(X)
         return predictions
-        #trunc_predictions = np.maximum(
+        # trunc_predictions = np.maximum(
         #    np.minimum(predictions, self.max_val), self.min_val
-        #)
-        #return trunc_predictions
-
+        # )
+        # return trunc_predictions
 
     def loss(self, dataset):
         y_hat = self.predict(dataset.x).flatten()
         y = dataset.y.flatten()
         return np.power(y - y_hat, 2)
 
+
 class LogisticRegressionCVWrap(LogisticRegressionCV):
     def predict(self, X, t=None):
         return super().predict(X)
 
     def loss(self, dataset):
-        p_hat = self.predict_proba(dataset.x)[:,1]
-        #return yhat.flatten() != dataset.y.flatten()
+        p_hat = self.predict_proba(dataset.x)[:, 1]
+        # return yhat.flatten() != dataset.y.flatten()
         y = dataset.y.flatten()
-        #return -(np.log(p_hat[:,0]) * y + np.log(1 - p_hat[:,1]) * (1 - y))
+        # return -(np.log(p_hat[:,0]) * y + np.log(1 - p_hat[:,1]) * (1 - y))
         return np.power(y - p_hat, 2)
+
 
 class LassoProposer(Proposer):
     def __init__(
-            self, sim_func_form: str, eps=1e-4, n_alphas=200, cv=5, max_val=1, min_val=0, num_back_batches: int=[1]
+        self,
+        sim_func_form: str,
+        eps=1e-4,
+        n_alphas=200,
+        cv=5,
+        max_val=1,
+        min_val=0,
+        num_back_batches: int = [1],
     ):
         self.sim_func_form = sim_func_form
         self.eps = eps
@@ -55,28 +63,31 @@ class LassoProposer(Proposer):
         print("Asdfasdf", self.num_back_batches)
         self.proposal_history = []
 
-    def propose_model(self, trial_data: TrialData, curr_model_idx: int = None, do_append: bool = True):
+    def propose_model(
+        self, trial_data: TrialData, curr_model_idx: int = None, do_append: bool = True
+    ):
         if self.sim_func_form == "gaussian":
             model = LassoModel(
                 eps=self.eps,
                 n_alphas=self.n_alphas,
                 cv=self.cv,
-                #max_val=self.max_val,
-                #min_val=self.min_val,
+                # max_val=self.max_val,
+                # min_val=self.min_val,
             )
         elif self.sim_func_form == "bernoulli":
             model = LogisticRegressionCVWrap(
                 cv=self.cv,
-                #penalty='l1',
-                #solver='liblinear',
+                # penalty='l1',
+                # solver='liblinear',
                 max_iter=5000,
             )
-        #num_train_batches = np.random.choice(self.num_back_batches)
+        # num_train_batches = np.random.choice(self.num_back_batches)
         num_train_batches = self.num_back_batches[self.num_models]
-        cum_data = trial_data.get_start_to_end_data(start_index=max(0, trial_data.num_batches - num_train_batches))
+        cum_data = trial_data.get_start_to_end_data(
+            start_index=max(0, trial_data.num_batches - num_train_batches)
+        )
         model.fit(cum_data.x, cum_data.y.flatten())
 
         if do_append:
             self.proposal_history.append(model)
         return model
-

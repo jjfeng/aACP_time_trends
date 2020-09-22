@@ -1,4 +1,3 @@
-
 class MeanApproval(TTestApproval):
     def __init__(self, num_experts: int, human_max_loss: float):
         self.human_max_loss = human_max_loss
@@ -31,6 +30,7 @@ class MeanApproval(TTestApproval):
             a = np.zeros(self.curr_num_experts)
             return a, 1
 
+
 class OptimisticPolicy(Policy):
     def predict_next_losses(self, time_t: int):
         predictions = np.array(
@@ -44,6 +44,7 @@ class OptimisticPolicy(Policy):
     def fit_and_predict(self, losses):
         return self.time_trend_predictor.forecast(losses)
 
+
 class FixedShareWithBlind(Policy):
     """
     Fixed Share
@@ -52,7 +53,7 @@ class FixedShareWithBlind(Policy):
     """
 
     def __init__(
-            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1
+        self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1
     ):
         assert eta > 0
         self.human_max_loss = human_max_loss
@@ -79,21 +80,30 @@ class FixedShareWithBlind(Policy):
 
         model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
         new_losses = np.concatenate(
-            [
-                model_losses_t,
-                [0] * (self.num_experts - self.curr_num_experts),
-            ]
+            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
-        v_weights = self.weights * np.exp(- self.eta * np.concatenate([
-            [
-                self.human_max_loss,  # human loss
-                model_losses_t[-1]],  # blind loss
-            model_losses_t]))
+        v_weights = self.weights * np.exp(
+            -self.eta
+            * np.concatenate(
+                [
+                    [
+                        self.human_max_loss,  # human loss
+                        model_losses_t[-1],
+                    ],  # blind loss
+                    model_losses_t,
+                ]
+            )
+        )
         self.weights = (1 - self.alpha) * v_weights + self.alpha * np.mean(v_weights)
         # Adding normalization to prevent numerical underflow
-        #self.weights /= np.max(self.weights)
-        print("fixedshare blind wei", self.weights[0], self.weights[1], self.weights[2:].sum())
+        # self.weights /= np.max(self.weights)
+        print(
+            "fixedshare blind wei",
+            self.weights[0],
+            self.weights[1],
+            self.weights[2:].sum(),
+        )
 
     def get_predict_weights(self, time_t: int):
         all_weights = self.weights / np.sum(self.weights)
@@ -101,6 +111,7 @@ class FixedShareWithBlind(Policy):
         print("blind weight", all_weights[1])
         robot_weights[-1] += all_weights[1]
         return robot_weights, all_weights[0]
+
 
 class OptimisticBaselineMonotonicFixedShare(Policy):
     """
@@ -110,7 +121,12 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
     """
 
     def __init__(
-            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.01,
+        self,
+        num_experts: int,
+        eta: float,
+        human_max_loss: float,
+        alpha: float = 0.1,
+        baseline_alpha: float = 0.01,
     ):
         assert eta > 0
         self.human_max_loss = human_max_loss
@@ -120,7 +136,7 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
         self.num_experts = num_experts
         self.curr_num_experts = 0
         # initialized with only human weight
-        self.const_baseline_weight = 0.1 #np.exp(-num_experts * self.human_max_loss)
+        self.const_baseline_weight = 0.1  # np.exp(-num_experts * self.human_max_loss)
         self.const_baseline_optim_weight = self.const_baseline_weight
         self.baseline_weights = np.ones(1) * (1 - self.const_baseline_weight)
         self.baseline_optim_weights = np.ones(1) * (1 - self.const_baseline_weight)
@@ -139,7 +155,9 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
         else:
             self.baseline_weights = np.concatenate([self.baseline_weights, [0]])
             self.weights = np.concatenate([self.weights, [0]])
-            self.baseline_optim_weights = np.concatenate([self.baseline_optim_weights, [0]])
+            self.baseline_optim_weights = np.concatenate(
+                [self.baseline_optim_weights, [0]]
+            )
             self.optim_weights = np.concatenate([self.optim_weights, [0]])
 
     def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
@@ -151,42 +169,53 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
             prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
         )
         new_losses = np.concatenate(
-            [
-                model_losses_t,
-                [0] * (self.num_experts - self.curr_num_experts),
-            ]
+            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
-        v_weights = self.weights * np.exp(- self.eta * model_losses_t)
-        v_baseline_weights = self.baseline_weights * np.exp(- self.eta * self.human_max_loss * np.ones(self.baseline_weights.size))
+        v_weights = self.weights * np.exp(-self.eta * model_losses_t)
+        v_baseline_weights = self.baseline_weights * np.exp(
+            -self.eta * self.human_max_loss * np.ones(self.baseline_weights.size)
+        )
 
         # heavily weight the new models when transitioning away
         transition_matrix11 = np.eye(self.weights.size) * (1 - self.alpha)
         for i in range(self.weights.size - 1):
-            transition_matrix11[i,i] = 1 - self.alpha - self.baseline_alpha
-            transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
-            #transition_matrix11[i,-1] = self.alpha
-        transition_matrix12 = np.eye(self.weights.size, self.baseline_weights.size,k=1) * self.baseline_alpha
+            transition_matrix11[i, i] = 1 - self.alpha - self.baseline_alpha
+            transition_matrix11[i, i + 1 :] = (self.alpha) / (self.weights.size - i - 1)
+            # transition_matrix11[i,-1] = self.alpha
+        transition_matrix12 = (
+            np.eye(self.weights.size, self.baseline_weights.size, k=1)
+            * self.baseline_alpha
+        )
         transition_matrix21 = np.zeros((self.baseline_weights.size, self.weights.size))
-        transition_matrix21[0,-1] = self.alpha
-        for i in range(1,self.weights.size - 1):
-            transition_matrix21[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
-            #transition_matrix21[i,-3:] = (self.alpha)/(3)
-            #transition_matrix21[i,-1] = self.alpha
+        transition_matrix21[0, -1] = self.alpha
+        for i in range(1, self.weights.size - 1):
+            transition_matrix21[i, i + 1 :] = (self.alpha) / (self.weights.size - i - 1)
+            # transition_matrix21[i,-3:] = (self.alpha)/(3)
+            # transition_matrix21[i,-1] = self.alpha
         transition_matrix22 = np.eye(self.baseline_weights.size) * (1 - self.alpha)
-        transition_matrix = np.block([[transition_matrix11, transition_matrix12], [transition_matrix21, transition_matrix22]])
-        transition_matrix[:,-1] = 1 - transition_matrix[:,:-1].sum(axis=1)
+        transition_matrix = np.block(
+            [
+                [transition_matrix11, transition_matrix12],
+                [transition_matrix21, transition_matrix22],
+            ]
+        )
+        transition_matrix[:, -1] = 1 - transition_matrix[:, :-1].sum(axis=1)
 
-        #print("TRAN", transition_matrix)
+        # print("TRAN", transition_matrix)
         assert not np.any(np.isnan(transition_matrix))
         assert np.all(np.isclose(1, np.sum(transition_matrix, axis=1)))
 
         combo_vector = np.concatenate([v_weights, v_baseline_weights])
 
-        new_combo_weights = np.matmul(combo_vector.reshape((1, -1)), transition_matrix).flatten()
-        self.weights = new_combo_weights[:self.weights.size]
-        self.baseline_weights = new_combo_weights[self.weights.size:]
-        self.const_baseline_weight = self.const_baseline_weight * np.exp(- self.eta * self.human_max_loss)
+        new_combo_weights = np.matmul(
+            combo_vector.reshape((1, -1)), transition_matrix
+        ).flatten()
+        self.weights = new_combo_weights[: self.weights.size]
+        self.baseline_weights = new_combo_weights[self.weights.size :]
+        self.const_baseline_weight = self.const_baseline_weight * np.exp(
+            -self.eta * self.human_max_loss
+        )
         # Adding normalization to prevent numerical underflow
         normalization_factor = np.max(self.weights)
         self.weights /= normalization_factor
@@ -194,18 +223,34 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
         self.const_baseline_weight /= normalization_factor
 
         # Don't bother using any algorithms we predict to be worse than the human
-        self.optim_weights = v_weights * np.exp(- self.eta * model_losses_t) * (model_losses_t < self.human_max_loss)
-        self.baseline_optim_weights = v_baseline_weights * np.exp(- self.eta * self.human_max_loss)
-        self.const_baseline_optim_weight = self.const_baseline_weight * np.exp(- self.eta * self.human_max_loss)
-
+        self.optim_weights = (
+            v_weights
+            * np.exp(-self.eta * model_losses_t)
+            * (model_losses_t < self.human_max_loss)
+        )
+        self.baseline_optim_weights = v_baseline_weights * np.exp(
+            -self.eta * self.human_max_loss
+        )
+        self.const_baseline_optim_weight = self.const_baseline_weight * np.exp(
+            -self.eta * self.human_max_loss
+        )
 
     def get_predict_weights(self, time_t: int):
-        denom = (np.sum(self.optim_weights) + np.sum(self.baseline_optim_weights) + self.const_baseline_optim_weight)
-        robot_optim_weights = self.optim_weights / (np.sum(self.optim_weights) + np.sum(self.baseline_optim_weights) + self.const_baseline_optim_weight)
+        denom = (
+            np.sum(self.optim_weights)
+            + np.sum(self.baseline_optim_weights)
+            + self.const_baseline_optim_weight
+        )
+        robot_optim_weights = self.optim_weights / (
+            np.sum(self.optim_weights)
+            + np.sum(self.baseline_optim_weights)
+            + self.const_baseline_optim_weight
+        )
         baseline_weight = 1 - np.sum(robot_optim_weights)
-        #print("CONST", self.const_baseline_optim_weight/denom)
-        #print("other", np.sum(self.baseline_optim_weights)/denom)
+        # print("CONST", self.const_baseline_optim_weight/denom)
+        # print("other", np.sum(self.baseline_optim_weights)/denom)
         return robot_optim_weights, baseline_weight
+
 
 class OptimisticMonotonicFixedShare(Policy):
     """
@@ -215,7 +260,12 @@ class OptimisticMonotonicFixedShare(Policy):
     """
 
     def __init__(
-            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.05,
+        self,
+        num_experts: int,
+        eta: float,
+        human_max_loss: float,
+        alpha: float = 0.1,
+        baseline_alpha: float = 0.05,
     ):
         assert eta > 0
         self.human_max_loss = human_max_loss
@@ -242,7 +292,9 @@ class OptimisticMonotonicFixedShare(Policy):
         else:
             self.baseline_weights = np.concatenate([self.baseline_weights, [0]])
             self.weights = np.concatenate([self.weights, [0]])
-            self.baseline_optim_weights = np.concatenate([self.baseline_optim_weights, [0]])
+            self.baseline_optim_weights = np.concatenate(
+                [self.baseline_optim_weights, [0]]
+            )
             self.optim_weights = np.concatenate([self.optim_weights, [0]])
 
     def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
@@ -254,49 +306,62 @@ class OptimisticMonotonicFixedShare(Policy):
             prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
         )
         new_losses = np.concatenate(
-            [
-                model_losses_t,
-                [0] * (self.num_experts - self.curr_num_experts),
-            ]
+            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
-        v_weights = self.weights * np.exp(- self.eta * model_losses_t)
-        v_baseline_weights = self.baseline_weights * np.exp(- self.eta * self.human_max_loss * np.ones(self.baseline_weights.size))
+        v_weights = self.weights * np.exp(-self.eta * model_losses_t)
+        v_baseline_weights = self.baseline_weights * np.exp(
+            -self.eta * self.human_max_loss * np.ones(self.baseline_weights.size)
+        )
 
         # heavily weight the new models when transitioning away
         transition_matrix11 = np.eye(self.weights.size) * (1 - self.alpha)
         for i in range(self.weights.size - 1):
-            transition_matrix11[i,i] = 1 - self.alpha - self.baseline_alpha
-            #transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
-            transition_matrix11[i,-1] = self.alpha
-        transition_matrix12 = np.eye(self.weights.size, self.baseline_weights.size,k=1) * self.baseline_alpha
+            transition_matrix11[i, i] = 1 - self.alpha - self.baseline_alpha
+            # transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
+            transition_matrix11[i, -1] = self.alpha
+        transition_matrix12 = (
+            np.eye(self.weights.size, self.baseline_weights.size, k=1)
+            * self.baseline_alpha
+        )
         transition_matrix21 = np.zeros((self.baseline_weights.size, self.weights.size))
-        transition_matrix21[0,-1] = self.alpha
-        for i in range(1,self.weights.size - 1):
-            transition_matrix21[i,-1] = self.alpha
+        transition_matrix21[0, -1] = self.alpha
+        for i in range(1, self.weights.size - 1):
+            transition_matrix21[i, -1] = self.alpha
         transition_matrix22 = np.eye(self.baseline_weights.size) * (1 - self.alpha)
-        transition_matrix = np.block([[transition_matrix11, transition_matrix12], [transition_matrix21, transition_matrix22]])
-        transition_matrix[:,-1] = 1 - transition_matrix[:,:-1].sum(axis=1)
+        transition_matrix = np.block(
+            [
+                [transition_matrix11, transition_matrix12],
+                [transition_matrix21, transition_matrix22],
+            ]
+        )
+        transition_matrix[:, -1] = 1 - transition_matrix[:, :-1].sum(axis=1)
 
-        #print("TRAN", transition_matrix)
+        # print("TRAN", transition_matrix)
         assert not np.any(np.isnan(transition_matrix))
         assert np.all(np.isclose(1, np.sum(transition_matrix, axis=1)))
 
         combo_vector = np.concatenate([v_weights, v_baseline_weights])
 
-        new_combo_weights = np.matmul(combo_vector.reshape((1, -1)), transition_matrix).flatten()
-        self.weights = new_combo_weights[:self.weights.size]
-        self.baseline_weights = new_combo_weights[self.weights.size:]
+        new_combo_weights = np.matmul(
+            combo_vector.reshape((1, -1)), transition_matrix
+        ).flatten()
+        self.weights = new_combo_weights[: self.weights.size]
+        self.baseline_weights = new_combo_weights[self.weights.size :]
         # Adding normalization to prevent numerical underflow
-        #self.weights /= np.max(self.weights)
-        self.optim_weights = v_weights * np.exp(- self.eta * model_losses_t)
-        self.baseline_optim_weights = v_baseline_weights * np.exp(- self.eta * self.human_max_loss)
-
+        # self.weights /= np.max(self.weights)
+        self.optim_weights = v_weights * np.exp(-self.eta * model_losses_t)
+        self.baseline_optim_weights = v_baseline_weights * np.exp(
+            -self.eta * self.human_max_loss
+        )
 
     def get_predict_weights(self, time_t: int):
-        robot_optim_weights = self.optim_weights / (np.sum(self.optim_weights) + np.sum(self.baseline_optim_weights))
+        robot_optim_weights = self.optim_weights / (
+            np.sum(self.optim_weights) + np.sum(self.baseline_optim_weights)
+        )
         baseline_weight = 1 - np.sum(robot_optim_weights)
         return robot_optim_weights, baseline_weight
+
 
 class MonotonicBaselineFixedShare(Policy):
     """
@@ -306,7 +371,12 @@ class MonotonicBaselineFixedShare(Policy):
     """
 
     def __init__(
-            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.01,
+        self,
+        num_experts: int,
+        eta: float,
+        human_max_loss: float,
+        alpha: float = 0.1,
+        baseline_alpha: float = 0.01,
     ):
         assert eta > 0
         self.human_max_loss = human_max_loss
@@ -316,10 +386,10 @@ class MonotonicBaselineFixedShare(Policy):
         self.num_experts = num_experts
         self.curr_num_experts = 0
         # initialized with only human weight
-        print("orig", 1/num_experts)
-        print("new", np.power(1/num_experts, self.human_max_loss))
-        self.const_baseline_weight = np.exp(-num_experts * self.human_max_loss/10)
-        #self.const_baseline_weight = 1/num_experts
+        print("orig", 1 / num_experts)
+        print("new", np.power(1 / num_experts, self.human_max_loss))
+        self.const_baseline_weight = np.exp(-num_experts * self.human_max_loss / 10)
+        # self.const_baseline_weight = 1/num_experts
         print("CONST", self.const_baseline_weight)
         self.baseline_weights = np.ones(1) * (1 - self.const_baseline_weight)
 
@@ -346,46 +416,61 @@ class MonotonicBaselineFixedShare(Policy):
             prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
         )
         new_losses = np.concatenate(
-            [
-                model_losses_t,
-                [0] * (self.num_experts - self.curr_num_experts),
-            ]
+            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
-        v_weights = self.weights * np.exp(- self.eta * model_losses_t)
-        v_baseline_weights = self.baseline_weights * np.exp(- self.eta * self.human_max_loss * np.ones(self.baseline_weights.size))
+        v_weights = self.weights * np.exp(-self.eta * model_losses_t)
+        v_baseline_weights = self.baseline_weights * np.exp(
+            -self.eta * self.human_max_loss * np.ones(self.baseline_weights.size)
+        )
 
         # heavily weight the new models when transitioning away
         transition_matrix11 = np.eye(self.weights.size) * (1 - self.alpha)
         for i in range(self.weights.size - 1):
-            transition_matrix11[i,i] = 1 - self.alpha - self.baseline_alpha
-            transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
-            #transition_matrix11[i,-1] = self.alpha
-        transition_matrix12 = np.eye(self.weights.size, self.baseline_weights.size,k=1) * self.baseline_alpha
+            transition_matrix11[i, i] = 1 - self.alpha - self.baseline_alpha
+            transition_matrix11[i, i + 1 :] = (self.alpha) / (self.weights.size - i - 1)
+            # transition_matrix11[i,-1] = self.alpha
+        transition_matrix12 = (
+            np.eye(self.weights.size, self.baseline_weights.size, k=1)
+            * self.baseline_alpha
+        )
         transition_matrix21 = np.zeros((self.baseline_weights.size, self.weights.size))
-        transition_matrix21[0,-1] = self.alpha
-        for i in range(1,self.weights.size - 1):
-            transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
-            #transition_matrix21[i,-1] = self.alpha
+        transition_matrix21[0, -1] = self.alpha
+        for i in range(1, self.weights.size - 1):
+            transition_matrix11[i, i + 1 :] = (self.alpha) / (self.weights.size - i - 1)
+            # transition_matrix21[i,-1] = self.alpha
         transition_matrix22 = np.eye(self.baseline_weights.size) * (1 - self.alpha)
-        transition_matrix = np.block([[transition_matrix11, transition_matrix12], [transition_matrix21, transition_matrix22]])
-        transition_matrix[:,-1] = 1 - transition_matrix[:,:-1].sum(axis=1)
+        transition_matrix = np.block(
+            [
+                [transition_matrix11, transition_matrix12],
+                [transition_matrix21, transition_matrix22],
+            ]
+        )
+        transition_matrix[:, -1] = 1 - transition_matrix[:, :-1].sum(axis=1)
 
-        #print("TRAN", transition_matrix)
+        # print("TRAN", transition_matrix)
         assert not np.any(np.isnan(transition_matrix))
         assert np.all(np.isclose(1, np.sum(transition_matrix, axis=1)))
 
         combo_vector = np.concatenate([v_weights, v_baseline_weights])
 
-        new_combo_weights = np.matmul(combo_vector.reshape((1, -1)), transition_matrix).flatten()
-        self.weights = new_combo_weights[:self.weights.size]
-        self.baseline_weights = new_combo_weights[self.weights.size:]
-        self.const_baseline_weight = self.const_baseline_weight * np.exp(- self.eta * self.human_max_loss)
+        new_combo_weights = np.matmul(
+            combo_vector.reshape((1, -1)), transition_matrix
+        ).flatten()
+        self.weights = new_combo_weights[: self.weights.size]
+        self.baseline_weights = new_combo_weights[self.weights.size :]
+        self.const_baseline_weight = self.const_baseline_weight * np.exp(
+            -self.eta * self.human_max_loss
+        )
         # Adding normalization to prevent numerical underflow
-        #self.weights /= np.max(self.weights)
+        # self.weights /= np.max(self.weights)
 
     def get_predict_weights(self, time_t: int):
-        robot_weights = self.weights / (np.sum(self.weights) + np.sum(self.baseline_weights) + self.const_baseline_weight)
+        robot_weights = self.weights / (
+            np.sum(self.weights)
+            + np.sum(self.baseline_weights)
+            + self.const_baseline_weight
+        )
         baseline_weight = 1 - np.sum(robot_weights)
         return robot_weights, baseline_weight
 
@@ -398,7 +483,12 @@ class MonotonicFixedShare(Policy):
     """
 
     def __init__(
-            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1, baseline_alpha: float= 0.05,
+        self,
+        num_experts: int,
+        eta: float,
+        human_max_loss: float,
+        alpha: float = 0.1,
+        baseline_alpha: float = 0.05,
     ):
         assert eta > 0
         self.human_max_loss = human_max_loss
@@ -433,59 +523,71 @@ class MonotonicFixedShare(Policy):
             prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
         )
         new_losses = np.concatenate(
-            [
-                model_losses_t,
-                [0] * (self.num_experts - self.curr_num_experts),
-            ]
+            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
-        v_weights = self.weights * np.exp(- self.eta * model_losses_t)
-        v_baseline_weights = self.baseline_weights * np.exp(- self.eta * self.human_max_loss * np.ones(self.baseline_weights.size))
+        v_weights = self.weights * np.exp(-self.eta * model_losses_t)
+        v_baseline_weights = self.baseline_weights * np.exp(
+            -self.eta * self.human_max_loss * np.ones(self.baseline_weights.size)
+        )
 
         # even split transition probs across later models
-        #transition_matrix11 = np.eye(self.weights.size) * (1 - self.alpha)
-        #for i in range(self.weights.size - 1):
+        # transition_matrix11 = np.eye(self.weights.size) * (1 - self.alpha)
+        # for i in range(self.weights.size - 1):
         #    transition_matrix11[i,i] = 1 - self.alpha - self.baseline_alpha
         #    transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
-        #transition_matrix12 = np.eye(self.weights.size, self.baseline_weights.size,k=1) * self.baseline_alpha
-        #transition_matrix21 = np.zeros((self.baseline_weights.size, self.weights.size))
-        #for i in range(self.weights.size - 1):
+        # transition_matrix12 = np.eye(self.weights.size, self.baseline_weights.size,k=1) * self.baseline_alpha
+        # transition_matrix21 = np.zeros((self.baseline_weights.size, self.weights.size))
+        # for i in range(self.weights.size - 1):
         #    transition_matrix21[i,i + 1:] = (2 * self.alpha)/(self.weights.size - i - 1)
-        #transition_matrix22 = np.eye(self.baseline_weights.size) * (1 - self.alpha * 2)
-        #transition_matrix = np.block([[transition_matrix11, transition_matrix12], [transition_matrix21, transition_matrix22]])
-        #transition_matrix[:,-1] = 1 - transition_matrix[:,:-1].sum(axis=1)
+        # transition_matrix22 = np.eye(self.baseline_weights.size) * (1 - self.alpha * 2)
+        # transition_matrix = np.block([[transition_matrix11, transition_matrix12], [transition_matrix21, transition_matrix22]])
+        # transition_matrix[:,-1] = 1 - transition_matrix[:,:-1].sum(axis=1)
 
         # heavily weight the new models when transitioning away
         transition_matrix11 = np.eye(self.weights.size) * (1 - self.alpha)
         for i in range(self.weights.size - 1):
-            transition_matrix11[i,i] = 1 - self.alpha - self.baseline_alpha
-            #transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
-            transition_matrix11[i,-1] = self.alpha
-        transition_matrix12 = np.eye(self.weights.size, self.baseline_weights.size,k=1) * self.baseline_alpha
+            transition_matrix11[i, i] = 1 - self.alpha - self.baseline_alpha
+            # transition_matrix11[i,i + 1:] = (self.alpha)/(self.weights.size - i - 1)
+            transition_matrix11[i, -1] = self.alpha
+        transition_matrix12 = (
+            np.eye(self.weights.size, self.baseline_weights.size, k=1)
+            * self.baseline_alpha
+        )
         transition_matrix21 = np.zeros((self.baseline_weights.size, self.weights.size))
-        transition_matrix21[0,-1] = self.alpha
-        for i in range(1,self.weights.size - 1):
-            transition_matrix21[i,-1] = self.alpha
+        transition_matrix21[0, -1] = self.alpha
+        for i in range(1, self.weights.size - 1):
+            transition_matrix21[i, -1] = self.alpha
         transition_matrix22 = np.eye(self.baseline_weights.size) * (1 - self.alpha)
-        transition_matrix = np.block([[transition_matrix11, transition_matrix12], [transition_matrix21, transition_matrix22]])
-        transition_matrix[:,-1] = 1 - transition_matrix[:,:-1].sum(axis=1)
+        transition_matrix = np.block(
+            [
+                [transition_matrix11, transition_matrix12],
+                [transition_matrix21, transition_matrix22],
+            ]
+        )
+        transition_matrix[:, -1] = 1 - transition_matrix[:, :-1].sum(axis=1)
 
-        #print("TRAN", transition_matrix)
+        # print("TRAN", transition_matrix)
         assert not np.any(np.isnan(transition_matrix))
         assert np.all(np.isclose(1, np.sum(transition_matrix, axis=1)))
 
         combo_vector = np.concatenate([v_weights, v_baseline_weights])
 
-        new_combo_weights = np.matmul(combo_vector.reshape((1, -1)), transition_matrix).flatten()
-        self.weights = new_combo_weights[:self.weights.size]
-        self.baseline_weights = new_combo_weights[self.weights.size:]
+        new_combo_weights = np.matmul(
+            combo_vector.reshape((1, -1)), transition_matrix
+        ).flatten()
+        self.weights = new_combo_weights[: self.weights.size]
+        self.baseline_weights = new_combo_weights[self.weights.size :]
         # Adding normalization to prevent numerical underflow
-        #self.weights /= np.max(self.weights)
+        # self.weights /= np.max(self.weights)
 
     def get_predict_weights(self, time_t: int):
-        robot_weights = self.weights / (np.sum(self.weights) + np.sum(self.baseline_weights))
+        robot_weights = self.weights / (
+            np.sum(self.weights) + np.sum(self.baseline_weights)
+        )
         baseline_weight = 1 - np.sum(robot_weights)
         return robot_weights, baseline_weight
+
 
 class FixedShare(Policy):
     """
@@ -494,7 +596,7 @@ class FixedShare(Policy):
     """
 
     def __init__(
-            self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1
+        self, num_experts: int, eta: float, human_max_loss: float, alpha: float = 0.1
     ):
         assert eta > 0
         self.human_max_loss = human_max_loss
@@ -527,22 +629,22 @@ class FixedShare(Policy):
             prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
         )
         new_losses = np.concatenate(
-            [
-                model_losses_t,
-                [0] * (self.num_experts - self.curr_num_experts),
-            ]
+            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
-        v_weights = self.weights * np.exp(- self.eta * np.concatenate([[self.human_max_loss], model_losses_t]))
+        v_weights = self.weights * np.exp(
+            -self.eta * np.concatenate([[self.human_max_loss], model_losses_t])
+        )
         self.weights = (1 - self.alpha) * v_weights + self.alpha * np.mean(v_weights)
         # Adding normalization to prevent numerical underflow
-        #self.weights /= np.max(self.weights)
+        # self.weights /= np.max(self.weights)
         print("self wei", self.weights)
 
     def get_predict_weights(self, time_t: int):
         all_weights = self.weights / np.sum(self.weights)
         print("weights", all_weights)
         return all_weights[1:], all_weights[0]
+
 
 class OptimisticMirrorDescent(Policy):
     """
@@ -616,6 +718,7 @@ class OptimisticMirrorDescent(Policy):
     def fit_and_predict(self, losses):
         return self.time_trend_predictor.forecast(losses)
 
+
 class MirrorDescent(Policy):
     """
     Ordinary exponential weighting, modified to let in new experts
@@ -660,7 +763,8 @@ class MirrorDescent(Policy):
         all_weights = raw_weights / np.sum(raw_weights)
         return all_weights[1:], all_weights[0]
 
-#class OptimisticPolicy(Policy):
+
+# class OptimisticPolicy(Policy):
 #    """
 #    This just picks the expert with the smallest predicted loss.
 #    No exponential weighting. No guarantees
@@ -720,7 +824,7 @@ class MirrorDescent(Policy):
 #    def fit_and_predict(self, losses):
 #        return self.time_trend_predictor.forecast(losses)
 
-#class MetaFixedShare(Policy):
+# class MetaFixedShare(Policy):
 #    """
 #    Meta fixed share
 #    """
@@ -785,7 +889,14 @@ class MetaExpWeightingSimple(Policy):
     """
     Meta exponential weighting
     """
-    def __init__(self, eta, policy_keys: List[str], policy_dict: Dict[str, Policy], human_max_loss: float):
+
+    def __init__(
+        self,
+        eta,
+        policy_keys: List[str],
+        policy_dict: Dict[str, Policy],
+        human_max_loss: float,
+    ):
         self.policy_keys = policy_keys
         self.policy_dict = policy_dict
         self.num_policies = len(policy_dict)
@@ -800,10 +911,14 @@ class MetaExpWeightingSimple(Policy):
         for k, policy in self.policy_dict.items():
             policy.add_expert(time_t)
 
-    def _get_policy_prev_loss(self, time_t: int, model_losses_t: np.ndarray, policy_key: str):
+    def _get_policy_prev_loss(
+        self, time_t: int, model_losses_t: np.ndarray, policy_key: str
+    ):
         policy = self.policy_dict[policy_key]
         robot_weights, human_weight = policy.get_predict_weights(time_t)
-        policy_loss = np.sum(model_losses_t * robot_weights) + human_weight * self.human_max_loss
+        policy_loss = (
+            np.sum(model_losses_t * robot_weights) + human_weight * self.human_max_loss
+        )
         return policy_loss
 
     def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
@@ -812,8 +927,12 @@ class MetaExpWeightingSimple(Policy):
 
         # Update the meta policy weights first
         model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
-        loss_t = np.array([
-                self._get_policy_prev_loss(time_t - 1, model_losses_t, policy_key) for policy_key in self.policy_keys])
+        loss_t = np.array(
+            [
+                self._get_policy_prev_loss(time_t - 1, model_losses_t, policy_key)
+                for policy_key in self.policy_keys
+            ]
+        )
         print("loss", loss_t)
 
         update_weight = np.exp(-self.eta * loss_t)
@@ -823,19 +942,18 @@ class MetaExpWeightingSimple(Policy):
         for k, policy in self.policy_dict.items():
             policy.update_weights(time_t, indiv_robot_loss_t, prev_weights)
 
-
     def get_predict_weights(self, time_t):
         denom = np.sum(self.meta_weights)
-        policy_weights = self.meta_weights/denom
+        policy_weights = self.meta_weights / denom
         print("pocliy weights", policy_weights)
 
         robot_weights = 0
         human_weight = 0
         for i, policy_key in enumerate(self.policy_keys):
             policy = self.policy_dict[policy_key]
-            policy_robot_weights, policy_human_weight = policy.get_predict_weights(time_t)
+            policy_robot_weights, policy_human_weight = policy.get_predict_weights(
+                time_t
+            )
             robot_weights += policy_robot_weights * policy_weights[i]
             human_weight += policy_human_weight * policy_weights[i]
         return robot_weights, human_weight
-
-

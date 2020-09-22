@@ -41,7 +41,7 @@ class DataGenerator:
             print(sim_func_form)
             raise ValueError("huh?")
 
-    #def mu_func(self, xs: ndarray, t_idx: int = 0):
+    # def mu_func(self, xs: ndarray, t_idx: int = 0):
     #    """
     #    @return sigma when Y|X is gaussian
     #    """
@@ -119,6 +119,7 @@ class DataGenerator:
 
         return Dataset(xs, y, num_classes=self.num_classes)
 
+
 class AdversaryDataGenerator(DataGenerator):
     """
     Simulation engine
@@ -166,12 +167,13 @@ class AdversaryDataGenerator(DataGenerator):
         assert len(self.coefs) == t_idx
 
         if (t_idx % self.drift_frequency) == 0:
-            new_coef_idxs = np.random.choice(self.num_p, size=self.num_coefs, replace=False)
-            new_coef = np.zeros((1,self.num_p))
-            new_coef[0,new_coef_idxs] = 5
+            new_coef_idxs = np.random.choice(
+                self.num_p, size=self.num_coefs, replace=False
+            )
+            new_coef = np.zeros((1, self.num_p))
+            new_coef[0, new_coef_idxs] = 5
             self.coefs.append(new_coef)
             return self.raw_mu_func(new_coef, xs)
         else:
             self.coefs.append(self.coefs[-1])
             return self.raw_mu_func(self.coefs[-1], xs)
-

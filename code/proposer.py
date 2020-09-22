@@ -40,6 +40,7 @@ class FixedProposer(Proposer):
             : (self.num_models + 1)
         ]
 
+
 class FixedProposerFromFile(Proposer):
     def __init__(self, model_files: List):
         self.model_files = model_files
@@ -50,8 +51,15 @@ class FixedProposerFromFile(Proposer):
     def num_models(self):
         return len(self.proposal_history)
 
-    def propose_model(self, trial_data: TrialData, approval_hist: ApprovalHistory=None, do_append: bool = True):
-        model = torch.load(self.model_files[approval_hist.size if approval_hist is not None else 0])
+    def propose_model(
+        self,
+        trial_data: TrialData,
+        approval_hist: ApprovalHistory = None,
+        do_append: bool = True,
+    ):
+        model = torch.load(
+            self.model_files[approval_hist.size if approval_hist is not None else 0]
+        )
         if do_append:
             self.proposal_history.append(model)
         return model
@@ -91,5 +99,9 @@ class FixedProposerFromFile(Proposer):
         return test_loss
 
     def score_models(self, dataset_file: str):
-        return np.array([self._run_test(model_dict, dataset_file, criterion=self.criterion) for model_dict in self.proposal_history])
-
+        return np.array(
+            [
+                self._run_test(model_dict, dataset_file, criterion=self.criterion)
+                for model_dict in self.proposal_history
+            ]
+        )

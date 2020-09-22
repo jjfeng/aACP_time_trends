@@ -24,6 +24,7 @@ def process_params(param_str, dtype, split_str=","):
     else:
         return []
 
+
 def plot_loss(loss_history, fig_name, title: str, alpha, ymin, ymax):
     T = loss_history.size + 1
     plt.clf()
@@ -35,6 +36,7 @@ def plot_loss(loss_history, fig_name, title: str, alpha, ymin, ymax):
     plt.ylim(ymin, ymax)
     plt.title(title)
     plt.savefig(fig_name)
+
 
 def plot_human_use(human_history, fig_name, title: str):
     T = human_history.size + 1

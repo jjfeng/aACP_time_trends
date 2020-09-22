@@ -53,7 +53,11 @@ def main(args=sys.argv[1:]):
     approval_history = pickle_from_file(args.history_file)
     print(approval_history)
 
-    title = "%s: loss %.3f, human %.2f" % (args.policy_name, np.mean(approval_history.policy_loss_history), np.mean(approval_history.human_history))
+    title = "%s: loss %.3f, human %.2f" % (
+        args.policy_name,
+        np.mean(approval_history.policy_loss_history),
+        np.mean(approval_history.human_history),
+    )
     plot_loss(
         np.array(approval_history.policy_loss_history),
         args.loss_plot,
@@ -62,7 +66,9 @@ def main(args=sys.argv[1:]):
         ymin=0,
         ymax=approval_history.human_max_loss * 5,
     )
-    plot_human_use(np.array(approval_history.human_history), args.human_plot, title=title)
+    plot_human_use(
+        np.array(approval_history.human_history), args.human_plot, title=title
+    )
 
 
 if __name__ == "__main__":

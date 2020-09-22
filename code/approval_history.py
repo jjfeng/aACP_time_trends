@@ -13,7 +13,13 @@ class ApprovalHistory:
     def size(self):
         return len(self.human_history)
 
-    def append(self, human_weight: float, expert_weights: np.ndarray, loss: float, all_loss: np.ndarray):
+    def append(
+        self,
+        human_weight: float,
+        expert_weights: np.ndarray,
+        loss: float,
+        all_loss: np.ndarray,
+    ):
         self.human_history.append(human_weight)
         self.expert_weights_history.append(expert_weights)
         self.policy_loss_history.append(loss)
