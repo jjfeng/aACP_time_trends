@@ -36,8 +36,6 @@ def parse_args(args):
         "--policy-name",
         type=str,
         help="name of approval policy",
-        default="FixedShare",
-        #choices=["FixedShare", "FixedShareWithBlind", "BlindApproval", "TTestApproval"],
     )
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
@@ -55,17 +53,17 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             num_experts=num_experts,
             etas=np.array([args.eta,0, args.alpha, 0.05]),
             human_max_loss=human_max_loss,
-            const_baseline_weight=1,
+            const_baseline_weight=0,
         )
     elif policy_name == "MetaExpWeighting":
         eta_list=[
                 (0,0,0,0),
                 (1,0,0.1,0.05),
-                #(0,0,1.0,0.0),
+                (0,0,1.0,0.0),
                 (0,10000,0.5,0.05),
             ]
         meta_weights = np.ones(len(eta_list))
-        meta_weights[2:] = 1/(len(eta_list) - 1)
+        #meta_weights[2:] = 1/(len(eta_list) - 1)
         policy = MetaExpWeightingList(
             eta=args.eta,
             eta_list=eta_list,

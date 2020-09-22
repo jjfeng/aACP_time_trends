@@ -13,19 +13,15 @@ nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 DENSITY = "bernoulli"
 INIT_BATCH_SIZE = 50
-NUM_P = 20
-BATCH_SIZE = 50
+NUM_P = 15
+BATCH_SIZE = 500
 NUM_BATCHES = 50
+NUM_COEFS = 5
 
 nest.add(
     'drift_speed',
-    [0.1],
-    label_func=lambda c: 'drift_speed_%.2f' % c)
-
-nest.add(
-    'drift_prob',
-    [0.8],
-    label_func=lambda c: 'drift_pr_%.2f' % c)
+    [1],
+    label_func=lambda c: 'drift_speed_%d' % c)
 
 nest.add(
     'seed',
@@ -46,11 +42,13 @@ def create_nature(env, outdir, c):
         '--batch-size',
         BATCH_SIZE,
         '--batch-incr 0',
-        '--y-sigma 0.15',
-        '--coef-drift-speed',
+        '--drift-cycle 5',
+        '--num-coef-drift',
         c['drift_speed'],
-        '--coef-drift-prob',
-        c['drift_prob'],
+        '--num-coefs',
+        NUM_COEFS,
+        '--coef-scale',
+        NUM_COEFS * 2,
         '--num-batches',
         NUM_BATCHES,
         '--num-p',
@@ -70,7 +68,7 @@ def create_proposer(env, outdir, c):
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
-    batches = [9 if i % 5 == 1 else 2 for i in range(NUM_BATCHES)]
+    batches = [2 for i in range(NUM_BATCHES)]
     cmd = [
         'python create_lasso_proposer.py',
         '--density-parametric',
@@ -90,7 +88,7 @@ def create_proposer(env, outdir, c):
 
 nest.add(
     'eta',
-    [0.5],
+    [1],
     label_func=lambda c: 'eta_%.2f' % c)
 
 @nest.add_target_with_env(localenv)

@@ -2,12 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import norm
 
-max_loss = 1
-m = 6
-baseline_weight = 0.5
+max_loss = 0.5
+baseline_weight = 0.25
 T = 50
 lambdas = np.exp(np.arange(-6, 2, 0.05))
-deltas = np.arange(0.03, 0.3, 0.03)
+deltas = np.arange(0.03, min(max_loss, 0.3), 0.03)
 for delta in deltas:
     bounds = max_loss/(1 - np.exp(-max_loss * lambdas)) * (
         lambdas * delta * T
@@ -19,7 +18,7 @@ for delta in deltas:
     plt.plot(lambdas, bounds/T, label='d=%.2f, bound=%.2f, lam=%.3f' % (delta, best_bound, best_lambda))
 
 # Add X and y Label#
-plt.ylim(0,max_loss)
+plt.ylim(0,min(1, max_loss * 2))
 plt.xlabel('lambda')
 plt.ylabel('average loss bound')
 

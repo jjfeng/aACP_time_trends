@@ -46,6 +46,7 @@ def parse_args(args):
 
     assert args.min_y < args.max_y
     args.proposer_batches = process_params(args.proposer_batches, int)
+    assert np.all(np.array(args.proposer_batches) > 0)
     return args
 
 

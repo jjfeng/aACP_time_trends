@@ -12,12 +12,13 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 DENSITY = "bernoulli"
-NUM_P = 10
-INIT_BATCH_SIZE = 50
+NUM_P = 15
+INIT_BATCH_SIZE = 100
 BATCH_SIZE = 400
 NUM_BATCHES = 50
 
-NUM_COEF_DRIFT = 2
+NUM_COEFS = 5
+NUM_COEF_DRIFT = 5
 
 nest.add(
     'seed',
@@ -41,6 +42,10 @@ def create_nature(env, outdir, c):
         '--coef-scale 5',
         '--num-coef-drift',
         NUM_COEF_DRIFT,
+        '--num-coefs',
+        NUM_COEFS,
+        '--coef-scale',
+        NUM_COEFS * 2,
         '--num-batches',
         NUM_BATCHES,
         '--num-p',
@@ -80,7 +85,7 @@ def create_proposer(env, outdir, c):
 
 nest.add(
     'eta',
-    [0.5],
+    [1],
     label_func=lambda c: 'eta_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
@@ -129,12 +134,12 @@ nest.pop('eta')
 
 nest.add(
     'eta',
-    [0.5],
+    [1],
     label_func=lambda c: 'eta_%.2f' % c)
 
 nest.add(
     'alpha',
-    [0.5],
+    [0.1],
     label_func=lambda c: 'alpha_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
