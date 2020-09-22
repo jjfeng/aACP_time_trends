@@ -102,7 +102,7 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
     approval_hist = ApprovalHistory(human_max_loss=human_max_loss)
 
     # Create the data generated each batch
-    proposer.propose_model(nature.get_trial_data(0), approval_hist)
+    #proposer.propose_model(nature.get_trial_data(0), approval_hist)
     #nature.next(approval_hist)
 
     # Run the platform trial
@@ -157,10 +157,8 @@ def main(args=sys.argv[1:]):
     proposer = pickle_from_file(args.proposer_file)
 
     nature.next(None)
-    model = proposer.propose_model(nature.get_trial_data(0), None, do_append=False)
-    #time_0_test_data = nature.data_gen.create_data(1000, 9, nature.coefs[0])
-    #human_max_loss = np.mean(model.loss(time_0_test_data))
-    human_max_loss = 1.0
+    model = proposer.propose_model(nature.get_trial_data(0), None)
+    human_max_loss = np.mean(proposer.score_models(nature.create_test_data(0))[0]) + 0.1
     print("HUMAN MAX", human_max_loss)
 
     policy = create_policy(

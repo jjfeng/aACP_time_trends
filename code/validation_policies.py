@@ -196,8 +196,8 @@ class MetaExpWeightingList(Policy):
             human_weight += policy_human_weight * policy_weight
             if biggest_weight < policy_weights[idx]:
                 biggest_weight = policy_weights[idx]
-                biggest_eta = policy_etas
-            print("policy", policy_etas, policy_weight, policy_human_weight, np.argmax(policy_robot_weights))
+                biggest_eta = policy_eta
+            print("policy", policy_eta, policy_weight, policy_human_weight, np.argmax(policy_robot_weights))
         print("ETAS", biggest_eta, biggest_weight)
         print("time", time_t, "max weigth robot", np.argmax(robot_weights), robot_weights.max(), "human", human_weight)
         return robot_weights, human_weight

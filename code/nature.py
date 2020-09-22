@@ -15,6 +15,9 @@ class Nature:
         subtrial_data.load()
         return subtrial_data
 
+    def create_test_data(self, time_t: int):
+        raise NotImplementedError()
+
 class FixedNature(Nature):
     """
     This nature has all the trial data preloaded
@@ -26,12 +29,18 @@ class FixedNature(Nature):
         self.coefs = coefs
 
     def next(self, approval_hist: ApprovalHistory=None):
-        # Do nothing. everything was fixed
+        # Do nothing
         return
 
     @property
     def total_time(self):
         return self.trial_data.num_batches
+
+    def create_test_data(self, time_t: int, num_obs: int = 1000):
+        if self.data_gen is not None:
+            return self.data_gen.create_data(num_obs, time_t, self.coefs[time_t])
+        else:
+            return self.trial_data.batch_data[time_t]
 
 class AdversarialNature(Nature):
     """

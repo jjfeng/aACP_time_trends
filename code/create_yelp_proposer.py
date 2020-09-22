@@ -39,6 +39,7 @@ def main(args=sys.argv[1:]):
     for year in YEARS:
         for month in MONTHS:
             model_file = args.path_template % (year, month)
+            print("model", model_file)
             assert os.path.exists(model_file)
             model_paths.append(model_file)
 

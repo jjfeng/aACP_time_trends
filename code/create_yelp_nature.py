@@ -32,6 +32,7 @@ def parse_args(args):
 
 
 def main(args=sys.argv[1:]):
+    # TODO: need to check that this is valid data to use
     YELP_TEST = "data/yelp_academic_dataset_review_year_valid_%s_%s.json"
 
     args = parse_args(args)
