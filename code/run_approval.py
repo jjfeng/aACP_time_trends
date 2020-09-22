@@ -55,6 +55,19 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             human_max_loss=human_max_loss,
             const_baseline_weight=0,
         )
+    elif policy_name == "MetaGridSearch":
+        eta_grid=[
+                np.exp(np.arange(-5,1,2)),
+                np.exp(np.arange(-5,7,2)),
+                np.arange(0,1.01,0.2),
+                np.arange(0,0.2,0.05),
+            ]
+        policy = MetaGridSearch(
+            eta=args.eta,
+            eta_grid=eta_grid,
+            num_experts=num_experts,
+            human_max_loss=human_max_loss,
+        )
     elif policy_name == "MetaExpWeighting":
         eta_list=[
                 (0,0,0,0),
