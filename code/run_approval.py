@@ -29,12 +29,12 @@ def parse_args(args):
         help="Random number generator seed for replicability",
         default=12,
     )
-    parser.add_argument("--human-max-loss", type=float, default=0.9)
     parser.add_argument("--nature-file", type=str, default="_output/nature.pkl")
     parser.add_argument("--proposer-file", type=str, default="_output/proposer.pkl")
     parser.add_argument(
         "--policy-name", type=str, help="name of approval policy",
     )
+    parser.add_argument("--human-max-loss", type=float, default=None)
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
@@ -88,6 +88,8 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
         policy = BlindApproval(human_max_loss=human_max_loss)
     elif policy_name == "MeanApproval":
         policy = MeanApproval(num_experts, human_max_loss=human_max_loss)
+    elif policy_name == "FixedPolicy":
+        policy = FixedPolicy(human_max_loss)
     elif policy_name == "TTestApproval":
         policy = TTestApproval(num_experts, human_max_loss=human_max_loss)
     else:
@@ -118,7 +120,6 @@ def run_simulation(
 
         sub_trial_data = nature.get_trial_data(t + 1)
         indiv_loss_robot_t = proposer.score_models(sub_trial_data.batch_data[-1])
-        print("TIME", t, "indiv loss", indiv_loss_robot_t.shape)
         batch_n = indiv_loss_robot_t.shape[1]
         all_loss_t = np.concatenate(
             [[policy.human_max_loss * batch_n], np.sum(indiv_loss_robot_t, axis=1)]
@@ -157,17 +158,18 @@ def main(args=sys.argv[1:]):
 
     nature.next(None)
     model = proposer.propose_model(nature.get_trial_data(0), None)
-    human_max_loss = np.mean(proposer.score_models(nature.create_test_data(0))[0]) + 0.05
-    print("HUMAN MAX", human_max_loss)
+    if args.human_max_loss is None:
+        args.human_max_loss = np.mean(proposer.score_models(nature.create_test_data(0))[0]) + 0.05
+        print("HUMAN MAX", human_max_loss)
 
     policy = create_policy(
         args.policy_name,
         args,
-        human_max_loss=human_max_loss,
+        human_max_loss=args.human_max_loss,
         num_experts=nature.total_time,
     )
 
-    approval_history = run_simulation(nature, proposer, policy, human_max_loss)
+    approval_history = run_simulation(nature, proposer, policy, args.human_max_loss)
     logging.info(approval_history)
     print(approval_history)
 

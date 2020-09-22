@@ -25,6 +25,11 @@ class BaselinePolicy(Policy):
     def get_predict_weights(self, time_t: int):
         return np.zeros(self.curr_num_experts), 1
 
+class FixedPolicy(Policy):
+    def get_predict_weights(self, time_t: int):
+        a = np.zeros(self.curr_num_experts)
+        a[0] = 1
+        return a, 0
 
 class BlindApproval(Policy):
     def __init__(self, human_max_loss: float):

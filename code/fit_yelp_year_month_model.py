@@ -29,7 +29,7 @@ def parse_args(args):
     parser.add_argument("--year", type=int, default=2008)
     parser.add_argument("--month", type=int, default=1)
     parser.add_argument("--epochs", type=int, default=1)
-    parser.add_argument("--num-hidden", type=int, default=10)
+    parser.add_argument("--num-hidden", type=int, default=50)
     parser.add_argument("--log-file", type=str, default="_output/model_log.txt")
     parser.add_argument("--out-file", type=str, default="_output/model.pkl")
     parser.set_defaults()

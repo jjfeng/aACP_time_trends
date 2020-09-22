@@ -126,11 +126,11 @@ class ValidationPolicy(Policy):
 
         predictions = np.array(
             [
-                np.mean(self.loss_histories[i, i + 1 :])
+                np.mean(self.loss_histories[i, max(i + 1, time_t - 5) :])
                 + self.pred_t_factor
                 * np.sqrt(
-                    np.mean(self.var_loss_histories[i, i + 1 :])
-                    / np.sum(self.batch_sizes[i:])
+                    np.mean(self.var_loss_histories[i, max(i + 1, time_t - 5) :])
+                    / np.sum(self.batch_sizes[max(i, time_t - 5):])
                 )
                 for i in range(model_losses_t.size)
             ]

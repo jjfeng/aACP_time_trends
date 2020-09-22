@@ -187,6 +187,7 @@ def train_rating_model(
         train_loss = train(model, train_iterator, optimizer, criterion)
         if epoch % 5 == 0:
             print(f"\tTrain Loss {epoch}: {train_loss:.3f}")
+            evaluate(model, valid_iterator, criterion)
 
     evaluate(model, valid_iterator, criterion)
     return model
