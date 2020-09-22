@@ -69,7 +69,7 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     elif policy_name == "MetaExpWeighting":
         eta_list = [
             (0, 0, 0, 0),
-            (1, 0, 0.1, 0.05),
+            (1, 0, 0.3, 0.05),
             (0, 0, 1.0, 0.0),
             (0, 10000, 0.5, 0.05),
         ]
@@ -130,6 +130,7 @@ def run_simulation(
         nature.next(approval_hist)
 
         prev_weights = weights
+        print("time", t, "loss", policy_loss_t)
         logging.info("losses %s", all_loss_t / batch_n)
         # print("losses", all_loss_t/batch_n)
         # logging.info("loss pred %s", loss_predictions)

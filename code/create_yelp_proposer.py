@@ -21,6 +21,7 @@ def parse_args(args):
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument("path_template", type=str)
+    parser.add_argument("--start-year", type=int, default=2008)
     parser.add_argument("--num-years", type=int, default=1)
     parser.add_argument("--num-months", type=int, default=1)
     parser.add_argument("--out-file", type=str, default="_output/proposer.pkl")
@@ -33,7 +34,7 @@ def parse_args(args):
 def main(args=sys.argv[1:]):
     args = parse_args(args)
 
-    YEARS = range(2008, 2008 + args.num_years)
+    YEARS = range(args.start_year, args.start_year + args.num_years)
     MONTHS = range(1, 1 + args.num_months)
     model_paths = []
     for year in YEARS:
