@@ -1,3 +1,6 @@
+"""
+Assembles the yelp dataset: splits by year and month, shuffles entries, etc
+"""
 import json
 import numpy as np
 import itertools
