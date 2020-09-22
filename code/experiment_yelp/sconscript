@@ -18,7 +18,7 @@ NUM_BATCHES = 50
 NUM_COEFS = 5
 NUM_YEARS = 4
 NUM_MONTHS = 12
-NUM_EPOCHS = 70
+NUM_EPOCHS = 100
 
 nest.add(
     'seed',

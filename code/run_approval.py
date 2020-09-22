@@ -157,7 +157,7 @@ def main(args=sys.argv[1:]):
 
     nature.next(None)
     model = proposer.propose_model(nature.get_trial_data(0), None)
-    human_max_loss = np.mean(proposer.score_models(nature.create_test_data(0))[0]) + 0.1
+    human_max_loss = np.mean(proposer.score_models(nature.create_test_data(0))[0]) + 0.05
     print("HUMAN MAX", human_max_loss)
 
     policy = create_policy(

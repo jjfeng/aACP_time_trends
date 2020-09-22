@@ -116,5 +116,5 @@ class TTestApproval(Policy):
             else:
                 self.curr_approved_idx = best_model_idx
                 a[best_model_idx] = 1
-                print(time_t, "approved", self.curr_approved_idx)
+                print("TTEST", time_t, "approved", self.curr_approved_idx)
                 return a, 0

@@ -7,9 +7,12 @@ import logging
 import numpy as np
 from numpy import ndarray
 from typing import List
-import torch
 
-from yelp_online_learning import train_rating_model_year_month
+import torch
+from torch import nn
+from torchtext import data
+
+from plot_yelp_drift import train_rating_model
 
 
 def parse_args(args):
@@ -33,6 +36,22 @@ def parse_args(args):
     args = parser.parse_args()
 
     return args
+
+
+def train_rating_model_year_month(path, n_epochs, num_hidden=5):
+    TEXT = data.Field(include_lengths=True, batch_first=True)
+    LABEL = data.LabelField(use_vocab=False, dtype=torch.float, batch_first=True)
+    fields = {"stars": ("label", LABEL), "text": ("text", TEXT)}
+    criterion = nn.L1Loss()
+    model = train_rating_model(
+        path,
+        fields,
+        criterion,
+        N_EPOCHS=n_epochs,
+        split_ratio=0.9,
+        num_hidden=num_hidden,
+    )
+    return model, fields
 
 
 def main(args=sys.argv[1:]):
