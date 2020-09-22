@@ -38,7 +38,10 @@ def parse_args(args):
         "--sim-func-name", type=str, default="linear", choices=["linear", "curvy"]
     )
     parser.add_argument(
-        "--personality", type=str, default="unbiased", choices=["unbiased", "oscillating"]
+        "--coef-drift-prob", type=float, default=0
+    )
+    parser.add_argument(
+        "--coef-drift-speed", type=float, default=0
     )
     parser.add_argument("--num-p", type=int, default=50)
     parser.add_argument(
@@ -51,6 +54,7 @@ def parse_args(args):
     parser.add_argument("--first-batch-size", type=int, default=40)
     parser.add_argument("--batch-size", type=int, default=40)
     parser.add_argument("--batch-incr", type=int, default=0)
+    parser.add_argument("--coef-scale", type=float, default=5)
     parser.add_argument("--log-file", type=str, default="_output/nature_log.txt")
     parser.add_argument("--out-file", type=str, default="_output/nature.pkl")
     parser.set_defaults()
@@ -99,10 +103,16 @@ def main(args=sys.argv[1:]):
     )
     trial_data = TrialData(args.batch_sizes)
     init_coef = np.zeros(args.num_p)
-    init_coef[:5] = 5
+    init_coef[:5] = args.coef_scale
+    new_coef = init_coef
+    coef_norm = np.sqrt(np.sum(np.power(init_coef, 2)))
     for batch_index in range(args.num_batches):
+        do_drift = bool(np.random.binomial(1, args.coef_drift_prob))
+        if do_drift:
+            new_noise = np.random.binomial(1, np.sum(np.abs(init_coef) > 0)/args.num_p, size=args.num_p)
+            new_coef = new_coef * (1 - args.coef_drift_speed) + new_noise * args.coef_drift_speed / np.sqrt(np.sum(np.power(new_noise, 2))) * coef_norm
         new_data = data_gen.create_data(
-            args.batch_sizes[batch_index], batch_index, coef=init_coef
+            args.batch_sizes[batch_index], batch_index, coef=new_coef
         )
         trial_data.add_batch(new_data)
     nature = FixedNature(data_gen, trial_data, coefs=[init_coef] * trial_data.num_batches)

@@ -12,10 +12,12 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 DENSITY = "bernoulli"
-NUM_P = 15
+NUM_P = 10
 INIT_BATCH_SIZE = 50
-BATCH_SIZE = 100
-NUM_BATCHES = 30
+BATCH_SIZE = 400
+NUM_BATCHES = 50
+
+NUM_COEF_DRIFT = 2
 
 nest.add(
     'seed',
@@ -36,7 +38,9 @@ def create_nature(env, outdir, c):
         '--batch-size',
         BATCH_SIZE,
         '--batch-incr 0',
-        '--coef-drift-speed 0.6',
+        '--coef-scale 5',
+        '--num-coef-drift',
+        NUM_COEF_DRIFT,
         '--num-batches',
         NUM_BATCHES,
         '--num-p',
@@ -56,7 +60,7 @@ def create_proposer(env, outdir, c):
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
-    batches = [9] * NUM_BATCHES
+    batches = [1] * NUM_BATCHES
     cmd = [
         'python create_lasso_proposer.py',
         '--density-parametric',

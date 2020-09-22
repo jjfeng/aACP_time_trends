@@ -61,13 +61,15 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
         eta_list=[
                 (0,0,0,0),
                 (1,0,0.1,0.05),
-                (0,0,1.0,0.0),
+                #(0,0,1.0,0.0),
                 (0,10000,0.5,0.05),
             ]
+        meta_weights = np.ones(len(eta_list))
+        meta_weights[2:] = 1/(len(eta_list) - 1)
         policy = MetaExpWeightingList(
             eta=args.eta,
             eta_list=eta_list,
-            meta_weights=np.ones(len(eta_list)),
+            meta_weights=meta_weights,
             num_experts=num_experts,
             human_max_loss=human_max_loss,
         )

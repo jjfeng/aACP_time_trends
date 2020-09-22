@@ -38,7 +38,7 @@ def parse_args(args):
         "--sim-func-name", type=str, default="linear", choices=["linear", "curvy"]
     )
     parser.add_argument(
-        "--coef-drift-speed", type=float, default=0
+        "--num-coef-drift", type=int, default=2
     )
     parser.add_argument("--num-p", type=int, default=50)
     parser.add_argument(
@@ -51,6 +51,7 @@ def parse_args(args):
     parser.add_argument("--first-batch-size", type=int, default=40)
     parser.add_argument("--batch-size", type=int, default=40)
     parser.add_argument("--batch-incr", type=int, default=0)
+    parser.add_argument("--coef-scale", type=float, default=5)
     parser.add_argument("--log-file", type=str, default="_output/nature_log.txt")
     parser.add_argument("--out-file", type=str, default="_output/nature.pkl")
     parser.set_defaults()
@@ -98,8 +99,8 @@ def main(args=sys.argv[1:]):
         min_y=args.min_y,
     )
     init_coef = np.zeros(args.num_p)
-    init_coef[:5] = 5
-    nature = AdversarialNature(data_gen, args.coef_drift_speed, args.batch_sizes, init_coef=init_coef)
+    init_coef[:5] = args.coef_scale
+    nature = AdversarialNature(data_gen, args.num_coef_drift, args.batch_sizes, init_coef=init_coef)
 
     pickle_to_file(nature, args.out_file)
 

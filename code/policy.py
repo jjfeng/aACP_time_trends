@@ -82,10 +82,20 @@ class TTestApproval(Policy):
                 best_model_idx = i
                 best_upper_ci = upper_ci
 
-        self.curr_approved_idx = best_model_idx
-
         a = np.zeros(self.curr_num_experts)
-        a[best_model_idx] = 1
-        print(time_t, "approved", self.curr_approved_idx)
-        return a, 0
+        if len(self.loss_histories[0]) == 0:
+            return a, 1
+        else:
+            best_model_loss = np.concatenate(self.loss_histories[best_model_idx][best_model_idx:])
+            upper_ci_human_diff = np.mean(best_model_loss - self.human_max_loss) + self.factor * np.sqrt(np.var(best_model_loss)/best_model_loss.size)
+            print("human diff upper ci", upper_ci_human_diff, np.mean(best_model_loss), self.human_max_loss, "se", np.sqrt(np.var(best_model_loss)/best_model_loss.size))
+            is_better_than_human = upper_ci_human_diff < 0
 
+            if not is_better_than_human:
+                print("ttest human")
+                return a, 1
+            else:
+                self.curr_approved_idx = best_model_idx
+                a[best_model_idx] = 1
+                print(time_t, "approved", self.curr_approved_idx)
+                return a, 0

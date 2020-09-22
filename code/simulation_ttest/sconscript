@@ -36,7 +36,7 @@ def create_nature(env, outdir, c):
         '--batch-size',
         BATCH_SIZE,
         '--batch-incr 0',
-        '--personality unbiased',
+        '--coef-scale 5',
         '--num-batches',
         NUM_BATCHES,
         '--num-p',

@@ -35,9 +35,9 @@ class AdversarialNature(Nature):
     """
     """
 
-    def __init__(self, data_gen: DataGenerator, drift_speed: float, batch_sizes: List, init_coef: np.ndarray):
+    def __init__(self, data_gen: DataGenerator, num_coef_drift: int, batch_sizes: List, init_coef: np.ndarray):
         self.data_gen = data_gen
-        self.drift_speed = drift_speed
+        self.num_coef_drift = num_coef_drift
         self.batch_sizes = batch_sizes
         self.num_p = data_gen.num_p
         self.init_coef = init_coef
@@ -58,9 +58,12 @@ class AdversarialNature(Nature):
         if approval_direction > 0:
             # do drift
             print("time", self.curr_time, "DO DRIFT")
-            coef_norm = np.sqrt(np.sum(np.power(self.coefs[-1], 2)))
-            new_noise = np.random.binomial(1, np.sum(np.abs(self.init_coef) > 0)/self.num_p, size=self.num_p)
-            new_coef = self.coefs[-1] * (1 - self.drift_speed) + new_noise * self.drift_speed / np.sqrt(np.sum(np.power(new_noise, 2))) * coef_norm
+            new_coef = np.copy(self.coefs[-1])
+            to0_rand_idx = np.random.choice(np.where(np.abs(new_coef) > 0)[0], size=self.num_coef_drift)
+            to1_rand_idx = np.random.choice(np.where(np.abs(new_coef) <= 1e-10)[0], size=self.num_coef_drift)
+            new_coef[to0_rand_idx] = 0
+            new_coef[to1_rand_idx] = np.max(self.coefs[0])
+
             self.coefs.append(new_coef)
         else:
             # no drift
