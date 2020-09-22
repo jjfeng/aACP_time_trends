@@ -130,7 +130,12 @@ class TimeTrendForecaster(Predictor):
         self.loss_histories = np.zeros((num_experts, 1))
 
     def __str__(self):
-        return "ARIMA_%d_%d_%d_%.2f" % (self.order[0], self.order[1], self.order[2], self.eta)
+        return "ARIMA_%d_%d_%d_%.2f" % (
+            self.order[0],
+            self.order[1],
+            self.order[2],
+            self.eta,
+        )
 
     def add_expert(self, time_t):
         self.curr_num_experts += 1

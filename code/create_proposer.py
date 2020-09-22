@@ -58,11 +58,11 @@ def parse_args(args):
 
 def get_proposer(args, data_gen):
     return RandomProposer(
-            data_gen,
-            noise=args.proposer_noise,
-            increment=args.proposer_increment,
-            decay=args.proposer_decay,
-            offset_scale=args.proposer_offset_scale,
+        data_gen,
+        noise=args.proposer_noise,
+        increment=args.proposer_increment,
+        decay=args.proposer_decay,
+        offset_scale=args.proposer_offset_scale,
     )
 
 

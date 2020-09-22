@@ -33,9 +33,7 @@ def parse_args(args):
     parser.add_argument("--nature-file", type=str, default="_output/nature.pkl")
     parser.add_argument("--proposer-file", type=str, default="_output/proposer.pkl")
     parser.add_argument(
-        "--policy-name",
-        type=str,
-        help="name of approval policy",
+        "--policy-name", type=str, help="name of approval policy",
     )
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
@@ -51,17 +49,17 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     if policy_name == "MarkovHedge":
         policy = ValidationPolicy(
             num_experts=num_experts,
-            etas=np.array([args.eta,0, args.alpha, 0.05]),
+            etas=np.array([args.eta, 0, args.alpha, 0.05]),
             human_max_loss=human_max_loss,
             const_baseline_weight=0,
         )
     elif policy_name == "MetaGridSearch":
-        eta_grid=[
-                np.exp(np.arange(-5,1,2)),
-                np.exp(np.arange(-5,7,2)),
-                np.arange(0,1.01,0.2),
-                np.arange(0,0.2,0.05),
-            ]
+        eta_grid = [
+            np.exp(np.arange(-5, 1, 2)),
+            np.exp(np.arange(-5, 7, 2)),
+            np.arange(0, 1.01, 0.2),
+            np.arange(0, 0.2, 0.05),
+        ]
         policy = MetaGridSearch(
             eta=args.eta,
             eta_grid=eta_grid,
@@ -69,14 +67,14 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             human_max_loss=human_max_loss,
         )
     elif policy_name == "MetaExpWeighting":
-        eta_list=[
-                (0,0,0,0),
-                (1,0,0.1,0.05),
-                (0,0,1.0,0.0),
-                (0,10000,0.5,0.05),
-            ]
+        eta_list = [
+            (0, 0, 0, 0),
+            (1, 0, 0.1, 0.05),
+            (0, 0, 1.0, 0.0),
+            (0, 10000, 0.5, 0.05),
+        ]
         meta_weights = np.ones(len(eta_list))
-        #meta_weights[2:] = 1/(len(eta_list) - 1)
+        # meta_weights[2:] = 1/(len(eta_list) - 1)
         policy = MetaExpWeightingList(
             eta=args.eta,
             eta_list=eta_list,
@@ -85,8 +83,7 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             human_max_loss=human_max_loss,
         )
     elif policy_name == "BaselinePolicy":
-        policy = BaselinePolicy(
-            human_max_loss=human_max_loss)
+        policy = BaselinePolicy(human_max_loss=human_max_loss)
     elif policy_name == "BlindApproval":
         policy = BlindApproval(human_max_loss=human_max_loss)
     elif policy_name == "MeanApproval":
@@ -98,26 +95,30 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     return policy
 
 
-def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max_loss: float):
+def run_simulation(
+    nature: Nature, proposer: Proposer, policy: Policy, human_max_loss: float
+):
     approval_hist = ApprovalHistory(human_max_loss=human_max_loss)
 
     # Create the data generated each batch
-    proposer.propose_model(nature.get_trial_data(0), approval_hist)
-    #nature.next(approval_hist)
+    # proposer.propose_model(nature.get_trial_data(0), approval_hist)
+    # nature.next(approval_hist)
 
     # Run the platform trial
     indiv_loss_robot_t = None
     prev_weights = None
     for t in range(nature.total_time - 1):
+        print("TIME", t)
         logging.info("TIME STEP %d", t)
         policy.add_expert(t)
         policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights)
         robot_weights, human_weight = policy.get_predict_weights(t)
-        #loss_predictions = policy.predict_next_losses(t)
+        # loss_predictions = policy.predict_next_losses(t)
         weights = np.concatenate([[human_weight], robot_weights])
 
         sub_trial_data = nature.get_trial_data(t + 1)
         indiv_loss_robot_t = proposer.score_models(sub_trial_data.batch_data[-1])
+        print("TIME", t, "indiv loss", indiv_loss_robot_t.shape)
         batch_n = indiv_loss_robot_t.shape[1]
         all_loss_t = np.concatenate(
             [[policy.human_max_loss * batch_n], np.sum(indiv_loss_robot_t, axis=1)]
@@ -128,14 +129,16 @@ def run_simulation(nature: Nature, proposer: Proposer, policy: Policy, human_max
         nature.next(approval_hist)
 
         prev_weights = weights
-        logging.info("losses %s", all_loss_t/batch_n)
-        #print("losses", all_loss_t/batch_n)
-        #logging.info("loss pred %s", loss_predictions)
-        #if loss_predictions.size > 2 and np.var(loss_predictions) > 0:
+        logging.info("losses %s", all_loss_t / batch_n)
+        # print("losses", all_loss_t/batch_n)
+        # logging.info("loss pred %s", loss_predictions)
+        # if loss_predictions.size > 2 and np.var(loss_predictions) > 0:
         #    logging.info("corr %s", scipy.stats.spearmanr(all_loss_t[1:]/batch_n, loss_predictions))
         logging.info("weights %s (max %d)", weights, np.argmax(weights))
 
-        proposer.propose_model(sub_trial_data, approval_hist)
+        if t < nature.total_time - 2:
+            print("time", t, nature.total_time)
+            proposer.propose_model(sub_trial_data, approval_hist)
 
     return approval_hist
 
@@ -153,9 +156,8 @@ def main(args=sys.argv[1:]):
     proposer = pickle_from_file(args.proposer_file)
 
     nature.next(None)
-    model = proposer.propose_model(nature.get_trial_data(0), None, do_append=False)
-    time_0_test_data = nature.data_gen.create_data(1000, 9, nature.coefs[0])
-    human_max_loss = np.mean(model.loss(time_0_test_data))
+    model = proposer.propose_model(nature.get_trial_data(0), None)
+    human_max_loss = np.mean(proposer.score_models(nature.create_test_data(0))[0]) + 0.1
     print("HUMAN MAX", human_max_loss)
 
     policy = create_policy(

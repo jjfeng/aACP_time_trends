@@ -61,11 +61,11 @@ def main(args=sys.argv[1:]):
     np.random.seed(args.seed)
 
     proposer = LassoProposer(
-            args.density_parametric_form,
-            eps=args.proposer_eps,
-            n_alphas=args.proposer_alphas,
-            cv=args.proposer_cv,
-            num_back_batches=args.proposer_batches,
+        args.density_parametric_form,
+        eps=args.proposer_eps,
+        n_alphas=args.proposer_alphas,
+        cv=args.proposer_cv,
+        num_back_batches=args.proposer_batches,
     )
 
     pickle_to_file(proposer, args.out_file)

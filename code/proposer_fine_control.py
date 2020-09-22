@@ -21,7 +21,7 @@ class FakeBernoulliModel:
         new_mus1 = ((1 - eps1) * true_mus + eps1 * 0.5) * (true_mus >= 0.5)
         new_mus = new_mus0 + new_mus1
         return new_mus
-        #return scipy.stats.bernoulli.rvs(p=new_mus)
+        # return scipy.stats.bernoulli.rvs(p=new_mus)
 
     def get_eps(self, t):
         eps0 = min(1, max(0, self.eps[0] - self.decay * np.sin(t * self.offset)))
@@ -30,7 +30,7 @@ class FakeBernoulliModel:
 
     def loss(self, dataset):
         p_hat = self.predict(dataset.x, t=0).flatten()
-        #return yhat.flatten() != dataset.y.flatten()
+        # return yhat.flatten() != dataset.y.flatten()
         y = dataset.y.flatten()
         return -(np.log(p_hat) * y + np.log(1 - p_hat) * (1 - y))
 
@@ -58,7 +58,11 @@ class RandomProposer(Proposer):
         if approval_hist.size == 0:
             noise = np.ones(2) * self.noise
         else:
-            noise = np.ones(2) * max(self.noise + np.sin(-len(self.proposal_history) * self.increment) * self.increment, 0)
+            noise = np.ones(2) * max(
+                self.noise
+                + np.sin(-len(self.proposal_history) * self.increment) * self.increment,
+                0,
+            )
         model = FakeBernoulliModel(
             self.data_gen,
             noise,

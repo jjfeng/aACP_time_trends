@@ -2,73 +2,29 @@ from typing import List
 import numpy as np
 from numpy import ndarray
 
+import torch
+from torchtext import data
+
 from data_generator import DataGenerator
 from dataset import Dataset
-
-# from support_sim_settings import SupportSimSettings
-
-# class TrialMetaData:
-#    def __init__(self,
-#            batch_sizes: ndarray,
-#            sim_func_form: str,
-#            support_sim_settings: SupportSimSettings,
-#            min_y: float,
-#            max_y: float,
-#            num_classes: int =1):
-#        self.batch_sizes = batch_sizes
-#        self.sim_func_form = sim_func_form
-#        self.num_p = support_sim_settings.num_p
-#        self.support_sim_settings = support_sim_settings
-#        self.max_y = max_y
-#        self.min_y = min_y
-#        self.num_classes = num_classes
-#        self.num_batches = len(self.batch_sizes)
-#
-#    @property
-#    def num_scores(self):
-#        return 1 if self.sim_func_form == "bounded_gaussian" else 2
-#
-#    @property
-#    def score_names(self):
-#        if self.sim_func_form == "bounded_gaussian":
-#            return ["neg_sq_err"]
-#        elif self.sim_func_form == "bernoulli":
-#            return ["Specificity", "Sensitivity"]
-#
-#    def score_func(self, pred_y, true_y):
-#        """
-#        @return the score of each prediction
-#        """
-#        if self.sim_func_form == "bounded_gaussian":
-#            sq_err = np.power(pred_y.flatten() - true_y.flatten(), 2)
-#            return {"neg_sq_err": -sq_err}
-#        elif self.sim_func_form == "bernoulli":
-#            pred_y = pred_y.flatten().astype(int)
-#            true_y = true_y.flatten().astype(int)
-#            negatives = true_y == 0
-#            positives = true_y == 1
-#            true_negative = (pred_y[negatives] == 0).astype(int)
-#            true_positive = (pred_y[positives] == 1).astype(int)
-#            return {
-#                    "Specificity": true_negative,
-#                    "Sensitivity": true_positive}
 
 
 class TrialData:
     def __init__(
-        self,
-        batch_sizes: ndarray,
-        batch_data: List[Dataset] = [],
+        self, batch_sizes: ndarray = None, batch_data: List[Dataset] = [],
     ):
         self.batch_sizes = batch_sizes
 
         self.batch_data = batch_data
 
+    def load(self):
+        return
+
     @property
     def num_batches(self):
         return len(self.batch_data)
 
-    def get_start_to_end_data(self, start_index: int, end_index: int = None):
+    def get_start_to_end_data(self, start_index: int, end_index: int = None) -> Dataset:
         cum_data = self.batch_data[start_index]
         if end_index is None:
             for data in self.batch_data[start_index + 1 :]:
@@ -82,6 +38,21 @@ class TrialData:
         self.batch_data.append(data_t)
 
     def subset(self, end_index: int):
-        return TrialData(
-            self.batch_sizes, self.batch_data[:end_index]
-        )
+        return TrialData(self.batch_sizes, self.batch_data[:end_index])
+
+
+class TrialDataFromDisk(TrialData):
+    def __init__(
+        self, batch_data: List[str] = [],
+    ):
+        self.batch_data = batch_data
+
+    @property
+    def num_batches(self):
+        return len(self.batch_data)
+
+    def add_batch(self, file_str: str):
+        self.batch_data.append(file_str)
+
+    def subset(self, end_index: int):
+        return TrialDataFromDisk(self.batch_data[:end_index])

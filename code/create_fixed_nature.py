@@ -37,12 +37,8 @@ def parse_args(args):
     parser.add_argument(
         "--sim-func-name", type=str, default="linear", choices=["linear", "curvy"]
     )
-    parser.add_argument(
-        "--drift-cycle", type=int, default=0
-    )
-    parser.add_argument(
-        "--num-coef-drift", type=int, default=0
-    )
+    parser.add_argument("--drift-cycle", type=int, default=0)
+    parser.add_argument("--num-coef-drift", type=int, default=0)
     parser.add_argument("--num-p", type=int, default=50)
     parser.add_argument(
         "--support-setting", type=str, default="constant", choices=["constant"]
@@ -104,22 +100,30 @@ def main(args=sys.argv[1:]):
     )
     trial_data = TrialData(args.batch_sizes)
     init_coef = np.zeros(args.num_p)
-    init_coef[:args.num_coefs] = args.coef_scale
+    init_coef[: args.num_coefs] = args.coef_scale
     new_coef = init_coef
     coef_norm = np.sqrt(np.sum(np.power(init_coef, 2)))
     for batch_index in range(args.num_batches):
-        do_drift = batch_index % args.drift_cycle == 1 if args.drift_cycle > 0 else False
+        do_drift = (
+            batch_index % args.drift_cycle == 1 if args.drift_cycle > 0 else False
+        )
         if do_drift:
             new_coef = np.copy(new_coef)
-            to0_rand_idx = np.random.choice(np.where(np.abs(new_coef) > 0)[0], size=args.num_coef_drift)
-            to1_rand_idx = np.random.choice(np.where(np.abs(new_coef) <= 1e-10)[0], size=args.num_coef_drift)
+            to0_rand_idx = np.random.choice(
+                np.where(np.abs(new_coef) > 0)[0], size=args.num_coef_drift
+            )
+            to1_rand_idx = np.random.choice(
+                np.where(np.abs(new_coef) <= 1e-10)[0], size=args.num_coef_drift
+            )
             new_coef[to0_rand_idx] = 0
             new_coef[to1_rand_idx] = np.max(init_coef)
         new_data = data_gen.create_data(
             args.batch_sizes[batch_index], batch_index, coef=new_coef
         )
         trial_data.add_batch(new_data)
-    nature = FixedNature(data_gen, trial_data, coefs=[init_coef] * trial_data.num_batches)
+    nature = FixedNature(
+        data_gen, trial_data, coefs=[init_coef] * trial_data.num_batches
+    )
 
     pickle_to_file(nature, args.out_file)
 
