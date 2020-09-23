@@ -186,7 +186,7 @@ nest.add(
 
 nest.add(
     'alpha',
-    [0.1],
+    [0.3],
     label_func=lambda c: 'alpha_%.2f' % c)
 
 @nest.add_target_with_env(localenv)

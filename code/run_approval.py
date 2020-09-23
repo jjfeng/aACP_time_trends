@@ -52,7 +52,7 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             num_experts=num_experts,
             etas=np.array([args.eta, 0, args.alpha, 0.05]),
             human_max_loss=human_max_loss,
-            const_baseline_weight=0,
+            const_baseline_weight=0.5,
         )
     elif policy_name == "MetaGridSearch":
         eta_grid = [

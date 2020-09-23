@@ -40,6 +40,8 @@ class ValidationPolicy(Policy):
         self.loss_histories = np.zeros((num_experts, 1))
         self.var_loss_histories = np.zeros((num_experts, 1))
 
+        self.num_back_batches = num_back_batches
+
         self.weight_history = []
 
     def __str__(self):
