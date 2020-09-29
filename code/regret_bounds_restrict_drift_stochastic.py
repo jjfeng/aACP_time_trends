@@ -19,7 +19,7 @@ for delta in deltas:
     c = min(delta + drift + 2 * inflation, 1)
     bounds = (
         c/ (1 - np.exp(-lambdas * c))
-        * (np.log(np.exp(-lambdas * delta * T) + (m - 1) * np.exp(-lambdas * c * T)) + np.log(m) + lambdas * inflation * T)
+        * (-np.log(np.exp(-lambdas * delta * T) + (m - 1) * np.exp(-lambdas * c * T)) + np.log(m) + lambdas * inflation * T)
     )/T
     best_bound = np.min(bounds)
     best_lambda = lambdas[np.argmin(bounds)]
