@@ -2,27 +2,32 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import norm
 
-drift = 0.1
-
 max_loss = 1
-n = 100
+n = 50
+alpha = 0.05
 m = 10
-baseline_weight = 1/m
 T = 50
-tau = np.sqrt(np.log(T))
+tau = np.sqrt(np.log(m))
 sigma_max = 0.5
 inflation = tau * sigma_max/np.sqrt(n)
 print("inflation", inflation)
 lambdas = np.exp(np.arange(-6, 2, 0.05))
 deltas = np.arange(0.03, min(max_loss, 0.3), 0.03)
+index = 130
 for delta in deltas:
-    c = min(delta + drift + 2 * inflation, 1)
+    drift = delta
+    c = min(delta + drift + 1 * inflation, 1)
+    multiplier = 1/((1 - np.exp(-lambdas * c))/c * (1 - alpha) + (1 - np.exp(-lambdas)) * alpha)
+    raw_bound = (-np.log(np.exp(-lambdas * delta * T) + (m - 1) * np.exp(-lambdas * c * T)) + np.log(m))
     bounds = (
-        c/ (1 - np.exp(-lambdas * c))
-        * (-np.log(np.exp(-lambdas * delta * T) + (m - 1) * np.exp(-lambdas * c * T)) + np.log(m) + lambdas * inflation * T)
+        multiplier * raw_bound
     )/T
     best_bound = np.min(bounds)
-    best_lambda = lambdas[np.argmin(bounds)]
+    best_idx = np.argmin(bounds)
+    best_lambda = lambdas[best_idx]
+    #print(delta, lambdas[index], bounds[index])
+    print(delta, "c", c, (1 - np.exp(-lambdas[best_idx] * c)))
+    print(delta, multiplier[best_idx], raw_bound[best_idx]/T, 1/(1 - np.exp(-lambdas[best_idx])), c/(1 - np.exp(-lambdas[best_idx] * c)))
     # Create the plot
     plt.plot(
         lambdas,

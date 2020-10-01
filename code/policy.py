@@ -1,3 +1,4 @@
+import logging
 from typing import List, Dict
 
 import numpy as np
@@ -22,16 +23,25 @@ class Policy:
 
 
 class BaselinePolicy(Policy):
+    def __str__(self):
+        return "Baseline"
+
     def get_predict_weights(self, time_t: int):
         return np.zeros(self.curr_num_experts), 1
 
 class FixedPolicy(Policy):
+    def __str__(self):
+        return "Fixed"
+
     def get_predict_weights(self, time_t: int):
         a = np.zeros(self.curr_num_experts)
         a[0] = 1
         return a, 0
 
 class BlindApproval(Policy):
+    def __str__(self):
+        return "Blind"
+
     def __init__(self, human_max_loss: float):
         self.human_max_loss = human_max_loss
         self.curr_num_experts = 0
@@ -41,12 +51,18 @@ class BlindApproval(Policy):
 
     def get_predict_weights(self, time_t: int):
         a = np.zeros(self.curr_num_experts)
-        a[-1] = 1
+        if a.size > 2:
+            a[-2] = 1
+        else:
+            a[-1] = 1
         print(time_t, "chosen robot", np.where(a))
         return a, 0
 
 
 class TTestApproval(Policy):
+    def __str__(self):
+        return "T-Test"
+
     def __init__(self, num_experts: int, human_max_loss: float, factor: float = 1.96):
         self.human_max_loss = human_max_loss
         self.curr_num_experts = 0
@@ -85,12 +101,12 @@ class TTestApproval(Policy):
             )
             is_better = upper_ci < 0
 
-            upper_ci_human_diff = np.mean(
+            lower_ci_human_diff = np.mean(
                 new_model_loss - self.human_max_loss
-            ) + self.factor * np.sqrt(np.var(new_model_loss) / new_model_loss.size)
-            is_better_than_human = upper_ci_human_diff < 0
+            ) - self.factor * np.sqrt(np.var(new_model_loss) / new_model_loss.size)
+            is_worse_than_human = lower_ci_human_diff > 0
 
-            if is_better and is_better_than_human and upper_ci < best_upper_ci:
+            if is_better and not is_worse_than_human and upper_ci < best_upper_ci:
                 print("new model loss", np.mean(new_model_loss), self.human_max_loss)
                 best_model_idx = i
                 best_upper_ci = upper_ci
@@ -102,24 +118,24 @@ class TTestApproval(Policy):
             best_model_loss = np.concatenate(
                 self.loss_histories[best_model_idx][best_model_idx:]
             )
-            upper_ci_human_diff = np.mean(
+            lower_ci_human_diff = np.mean(
                 best_model_loss - self.human_max_loss
-            ) + self.factor * np.sqrt(np.var(best_model_loss) / best_model_loss.size)
+            ) - self.factor * np.sqrt(np.var(best_model_loss) / best_model_loss.size)
             print(
-                "human diff upper ci",
-                upper_ci_human_diff,
+                "human diff lower ci",
+                lower_ci_human_diff,
                 np.mean(best_model_loss),
                 self.human_max_loss,
                 "se",
                 np.sqrt(np.var(best_model_loss) / best_model_loss.size),
             )
-            is_better_than_human = upper_ci_human_diff < 0
+            is_worse_than_human = lower_ci_human_diff > 0
 
-            if not is_better_than_human:
+            if is_worse_than_human:
                 print("ttest human")
                 return a, 1
             else:
                 self.curr_approved_idx = best_model_idx
                 a[best_model_idx] = 1
-                print("TTEST", time_t, "approved", self.curr_approved_idx)
+                logging.info("TTEST %d approved %d", time_t, self.curr_approved_idx)
                 return a, 0

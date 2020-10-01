@@ -57,33 +57,33 @@ class FixedProposerFromFile(Proposer):
         approval_hist: ApprovalHistory = None,
         do_append: bool = True,
     ):
-        model = torch.load(
+        model_dict = torch.load(
             self.model_files[approval_hist.size if approval_hist is not None else 0]
         )
         if do_append:
-            self.proposal_history.append(model)
+            fields = model_dict["fields"]
+            TEXT = fields["text"][1]
+            model = TextSentiment(
+                vocab_size=len(TEXT.vocab),
+                vocab=TEXT.vocab,
+                embed_dim=50,
+                num_class=1,
+                num_hidden=model_dict["num_hidden"],
+            )
+            model.load_state_dict(model_dict["state_dict"])
+            self.proposal_history.append({"model": model, "fields": fields})
         return model
 
     def _run_test(self, model_dict, path, criterion, target_func=None):
-
-        fields = model_dict["fields"]
-        TEXT = fields["text"][1]
-        test_data = data.TabularDataset(path=path, format="json", fields=fields)
+        test_data = data.TabularDataset(path=path, format="json", fields=model_dict["fields"])
         test_iterator = data.Iterator(
             test_data,
             batch_size=len(test_data),
             sort_key=lambda x: len(x.text),
-            sort_within_batch=True,
-            shuffle=True,
+            sort_within_batch=False,
+            shuffle=False,
         )
-        model = TextSentiment(
-            vocab_size=len(TEXT.vocab),
-            vocab=TEXT.vocab,
-            embed_dim=50,
-            num_class=1,
-            num_hidden=model_dict["num_hidden"],
-        )
-        model.load_state_dict(model_dict["state_dict"])
+        model = model_dict["model"]
 
         for batch in test_iterator:
             # retrieve text and no. of words
