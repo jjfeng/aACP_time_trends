@@ -16,7 +16,7 @@ NUM_EPOCHS = 500
 
 START_YEAR = 2008
 NUM_YEARS = 11
-NUM_MONTHS = 12
+NUM_MONTHS = 4
 HUMAN_LOSS = 1.1
 
 nest.add(
@@ -102,7 +102,7 @@ def create_proposer(env, outdir, c):
 
 nest.add(
     'eta',
-    [1],
+    [1.5],
     label_func=lambda c: 'eta_%.2f' % c)
 
 
@@ -153,7 +153,7 @@ def plot_meta_exp(env, outdir, c):
 
 nest.add(
     'alpha',
-    [0.1],
+    [],
     label_func=lambda c: 'alpha_%.2f' % c)
 
 @nest.add_target_with_env(localenv)

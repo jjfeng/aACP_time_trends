@@ -14,14 +14,20 @@ nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 DENSITY = "bernoulli"
 NUM_P = 20
 INIT_BATCH_SIZE = 50
-BATCH_SIZE = 300
+BATCH_SIZE = 50
 NUM_BATCHES = 50
+TRAIN_NUM_BATCHES = 4
 
 NUM_COEFS = 10
 COEF_SCALE = 10
-NUM_COEF_DRIFT = 2
+NUM_COEF_DRIFT = 1
 
 YMAX = 0.35
+
+nest.add(
+    'num_drift',
+    [2],
+    label_func=lambda c: 'num_drift_%d' % c)
 
 nest.add(
     'seed',
@@ -43,7 +49,7 @@ def create_nature(env, outdir, c):
         BATCH_SIZE,
         '--batch-incr 0',
         '--num-coef-drift',
-        NUM_COEF_DRIFT,
+        c['num_drift'],
         '--num-coefs',
         NUM_COEFS,
         '--coef-scale',
@@ -67,7 +73,7 @@ def create_proposer(env, outdir, c):
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
-    batches = [2] * NUM_BATCHES
+    batches = [TRAIN_NUM_BATCHES] * NUM_BATCHES
     cmd = [
         'python create_lasso_proposer.py',
         '--density-parametric',
@@ -85,6 +91,8 @@ def create_proposer(env, outdir, c):
         [],
         ' '.join(map(str, cmd)))
 
+nest.add_aggregate('approval_hists', list)
+
 @nest.add_target_with_env(localenv)
 def run_ttest_approval(env, outdir, c):
     targets = [
@@ -92,6 +100,7 @@ def run_ttest_approval(env, outdir, c):
         join(outdir, 'ttest_adversarial_nature.pkl'),
         join(outdir, 'ttest_approval_hist_log.txt'),
     ]
+    c['approval_hists'].append(targets[0])
     cmd = [
         'python run_approval.py',
         '--seed',
@@ -128,9 +137,10 @@ def plot_ttest(env, outdir, c):
         targets,
         c['run_ttest_approval'],
         ' '.join(map(str, cmd)))
+
 nest.add(
     'eta',
-    [1],
+    [1.5],
     label_func=lambda c: 'eta_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
@@ -139,6 +149,7 @@ def run_meta_exp(env, outdir, c):
         join(outdir, 'meta_exp_approval_hist.pkl'),
         join(outdir, 'meta_exp_approval_hist_log.txt'),
     ]
+    c['approval_hists'].append(targets[0])
     cmd = [
         'python run_approval.py',
         '--seed',
@@ -195,6 +206,7 @@ def run_online(env, outdir, c):
         join(outdir, 'online_approval_hist.pkl'),
         join(outdir, 'online_approval_hist_log.txt'),
     ]
+    c['approval_hists'].append(targets[0])
     cmd = [
         'python run_approval.py',
         '--seed',
@@ -243,6 +255,7 @@ def run_blind_approval(env, outdir, c):
         join(outdir, 'blind_approval_hist.pkl'),
         join(outdir, 'blind_approval_hist_log.txt'),
     ]
+    c['approval_hists'].append(targets[0])
     cmd = [
         'python run_approval.py',
         '--seed',
@@ -278,4 +291,28 @@ def plot_blind(env, outdir, c):
     return env.Command(
         targets,
         c['run_blind_approval'],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def plot_all_hists(env, outdir, c):
+    targets = [
+        join(outdir, 'approval_hist_loss.png'),
+        join(outdir, 'approval_hist_human.png'),
+    ]
+    history_files = ",".join(["simulation_adversary/%s" % s for s in c['approval_hists']])
+    cmd = [
+        'python plot_policies.py',
+	'--y-min',
+        0.1,
+	'--y-max',
+        0.18,
+	'--history-files',
+        history_files,
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}',
+    ]
+
+    return env.Command(
+        targets,
+        c['approval_hists'],
         ' '.join(map(str, cmd)))

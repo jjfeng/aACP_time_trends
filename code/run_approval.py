@@ -54,28 +54,29 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             human_max_loss=human_max_loss,
             const_baseline_weight=0.5,
         )
-    elif policy_name == "MetaGridSearch":
-        eta_grid = [
-            np.exp(np.arange(-5, 1, 2)),
-            np.exp(np.arange(-5, 7, 2)),
-            np.arange(0, 1.01, 0.2),
-            np.arange(0, 0.2, 0.05),
-        ]
-        policy = MetaGridSearch(
-            eta=args.eta,
-            eta_grid=eta_grid,
-            num_experts=num_experts,
-            human_max_loss=human_max_loss,
-        )
+    #elif policy_name == "MetaGridSearch":
+    #    eta_grid = [
+    #        np.exp(np.arange(-5, 1, 2)),
+    #        np.exp(np.arange(-5, 7, 2)),
+    #        np.arange(0, 1.01, 0.2),
+    #        np.arange(0, 0.2, 0.05),
+    #    ]
+    #    policy = MetaGridSearch(
+    #        eta=args.eta,
+    #        eta_grid=eta_grid,
+    #        num_experts=num_experts,
+    #        human_max_loss=human_max_loss,
+    #    )
     elif policy_name == "MetaExpWeighting":
         eta_list = [
-            (0, 0, 0, 0),
-            (10, 0, 0.3, 0.05),
-            (0, 0, 1.0, 0.0),
-            (0, 10000, 0.5, 0.05),
+            (0, 0, 0, 1),
+            (10, 0, 0.2, 0),
+            (10, 0, 0.5, 0),
+            (0, 0, 0.8, 0.0),
+            (0, 10000, 0.5, 0),
         ]
         meta_weights = np.ones(len(eta_list))
-        meta_weights[1:] = 1/(len(eta_list) - 1)
+        #meta_weights[1:] = 1/(len(eta_list) - 1)
         policy = MetaExpWeightingList(
             eta=args.eta,
             eta_list=eta_list,
@@ -101,7 +102,7 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
 def run_simulation(
     nature: Nature, proposer: Proposer, policy: Policy, human_max_loss: float
 ):
-    approval_hist = ApprovalHistory(human_max_loss=human_max_loss)
+    approval_hist = ApprovalHistory(human_max_loss=human_max_loss, policy_name=str(policy))
 
     # Run the platform trial
     indiv_loss_robot_t = None
