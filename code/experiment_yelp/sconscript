@@ -100,6 +100,8 @@ def create_proposer(env, outdir, c):
         c['proposer_list'],
         ' '.join(map(str, cmd)))
 
+nest.add_aggregate('approval_hists', list)
+
 nest.add(
     'eta',
     [1.5],
@@ -112,6 +114,7 @@ def run_meta_exp(env, outdir, c):
         join(outdir, 'meta_exp_approval_hist.pkl'),
         join(outdir, 'meta_exp_approval_hist_log.txt'),
     ]
+    c['approval_hists'].append(targets[0])
     cmd = [
         'python run_approval.py',
         '--seed',
@@ -162,6 +165,7 @@ def run_online(env, outdir, c):
         join(outdir, 'online_approval_hist.pkl'),
         join(outdir, 'online_approval_hist_log.txt'),
     ]
+    c['approval_hists'].append(targets[0])
     cmd = [
         'python run_approval.py',
         '--seed',
@@ -210,6 +214,7 @@ def run_ttest_approval(env, outdir, c):
         join(outdir, 'ttest_approval_hist.pkl'),
         join(outdir, 'ttest_approval_hist_log.txt'),
     ]
+    c['approval_hists'].append(targets[0])
     cmd = [
         'python run_approval.py',
         '--seed',
@@ -254,6 +259,7 @@ def run_blind_approval(env, outdir, c):
         join(outdir, 'blind_approval_hist.pkl'),
         join(outdir, 'blind_approval_hist_log.txt'),
     ]
+    c['approval_hists'].append(targets[0])
     cmd = [
         'python run_approval.py',
         '--seed',
@@ -297,6 +303,7 @@ def run_fixed_approval(env, outdir, c):
         join(outdir, 'fixed_approval_hist.pkl'),
         join(outdir, 'fixed_approval_hist_log.txt'),
     ]
+    c['approval_hists'].append(targets[0])
     cmd = [
         'python run_approval.py',
         '--seed',
@@ -334,3 +341,26 @@ def plot_fixed(env, outdir, c):
         c['run_fixed_approval'],
         ' '.join(map(str, cmd)))
 
+@nest.add_target_with_env(localenv)
+def plot_all_hists(env, outdir, c):
+    targets = [
+        join(outdir, 'approval_hist_loss.png'),
+        join(outdir, 'approval_hist_human.png'),
+    ]
+    history_files = ",".join(["experiment_yelp/%s" % s for s in c['approval_hists']])
+    cmd = [
+        'python plot_policies.py',
+	'--y-min',
+        0.8,
+	'--y-max',
+        1.22,
+	'--history-files',
+        history_files,
+	'--loss-plot ${TARGETS[0]}',
+	'--human-plot ${TARGETS[1]}',
+    ]
+
+    return env.Command(
+        targets,
+        c['approval_hists'],
+        ' '.join(map(str, cmd)))
