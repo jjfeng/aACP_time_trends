@@ -47,7 +47,7 @@ def plot_losses(approval_histories, fig_name, alpha, ymin, ymax):
         loss_history = np.array(approval_history.policy_loss_history)
         T = loss_history.size + 1
         running_avg = np.cumsum(loss_history) / np.arange(1, T)
-        plt.plot(np.arange(T - 1), running_avg, label=approval_history.policy_name if approval_history.policy_name != "ValidationPolicy" else "Online Learning")
+        plt.plot(np.arange(T - 1), running_avg, label=approval_history.policy_name if approval_history.policy_name != "ValidationPolicy" else "MarkovHedge")
         raw_ymin = min(np.min(running_avg), raw_ymin)
     plt.ylabel("Loss")
     plt.xlabel("Time")
@@ -62,7 +62,7 @@ def plot_human_uses(approval_histories, fig_name):
     for approval_history in approval_histories:
         human_history = np.array(approval_history.human_history)
         T = human_history.size + 1
-        plt.plot(np.arange(T - 1), np.cumsum(human_history) / np.arange(1, T), label=approval_history.policy_name if approval_history.policy_name != "ValidationPolicy" else "Online Learning")
+        plt.plot(np.arange(T - 1), np.cumsum(human_history) / np.arange(1, T), label=approval_history.policy_name if approval_history.policy_name != "ValidationPolicy" else "MarkovHedge")
     plt.ylim(0, 1)
     plt.ylabel("Fail-safe prob")
     plt.xlabel("Time")
