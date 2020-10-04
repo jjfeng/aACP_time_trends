@@ -52,7 +52,7 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             num_experts=num_experts,
             etas=np.array([args.eta, 0, args.alpha, 0.05]),
             human_max_loss=human_max_loss,
-            const_baseline_weight=0.5,
+            #const_baseline_weight=0.5,
         )
     #elif policy_name == "MetaGridSearch":
     #    eta_grid = [
@@ -69,11 +69,11 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     #    )
     elif policy_name == "MetaExpWeighting":
         eta_list = [
-            (0, 0, 0, 1),
-            (10, 0, 0.2, 0),
-            (10, 0, 0.5, 0),
-            (0, 0, 0.8, 0.0),
-            (0, 10000, 0.5, 0),
+            (0, 0, 0, 1), # baseline
+            (10, 0, 0.2, 0), # online
+            (10, 0, 0.5, 0), # online
+            (0, 0, 0.8, 0.0), # blind
+            (0, 10000, 0.5, 0), # t-test
         ]
         meta_weights = np.ones(len(eta_list))
         #meta_weights[1:] = 1/(len(eta_list) - 1)
@@ -100,7 +100,7 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
 
 
 def run_simulation(
-    nature: Nature, proposer: Proposer, policy: Policy, human_max_loss: float
+        nature: Nature, proposer: Proposer, policy: Policy, human_max_loss: float, do_convex_mixture: bool = True
 ):
     approval_hist = ApprovalHistory(human_max_loss=human_max_loss, policy_name=str(policy))
 
@@ -116,19 +116,28 @@ def run_simulation(
         weights = np.concatenate([[human_weight], robot_weights])
 
         sub_trial_data = nature.get_trial_data(t + 1)
+        if np.sum(robot_weights) > 0:
+            mixture_loss_t = proposer.score_mixture_model(robot_weights/np.sum(robot_weights), sub_trial_data.batch_data[-1])
+        else:
+            mixture_loss_t = 1
         indiv_loss_robot_t = proposer.score_models(sub_trial_data.batch_data[-1])
         batch_n = indiv_loss_robot_t.shape[1]
         all_loss_t = np.concatenate(
             [[policy.human_max_loss * batch_n], np.sum(indiv_loss_robot_t, axis=1)]
         )
-        policy_loss_t = np.sum(all_loss_t * weights) / batch_n
+        if do_convex_mixture:
+            # Take a weighted average of the predictions and then apply the loss
+            policy_loss_t = policy.human_max_loss * human_weight + np.mean(mixture_loss_t) * (1 - human_weight)
+        else:
+            # Take a weighted average of the losses
+            policy_loss_t = np.sum(all_loss_t * weights) / batch_n
         approval_hist.append(human_weight, robot_weights, policy_loss_t, all_loss_t)
 
         nature.next(approval_hist)
 
         prev_weights = weights
         print("time", t, "loss", policy_loss_t)
-        logging.info("losses %s", all_loss_t / batch_n)
+        logging.info("losses %s", policy_loss_t)
         # print("losses", all_loss_t/batch_n)
         # logging.info("loss pred %s", loss_predictions)
         # if loss_predictions.size > 2 and np.var(loss_predictions) > 0:

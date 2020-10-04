@@ -118,26 +118,6 @@ def run_ttest_approval(env, outdir, c):
         sources,
         ' '.join(map(str, cmd)))
 
-@nest.add_target_with_env(localenv)
-def plot_ttest(env, outdir, c):
-    targets = [
-        join(outdir, 'ttest_approval_hist_loss.png'),
-        join(outdir, 'ttest_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--y-max',
-         YMAX,
-        '--policy-name TTestApproval',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_ttest_approval'],
-        ' '.join(map(str, cmd)))
-
 nest.add(
     'eta',
     [1.5],
@@ -166,26 +146,6 @@ def run_meta_exp(env, outdir, c):
     return env.Command(
         targets,
         sources,
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
-def plot_meta_exp(env, outdir, c):
-    targets = [
-        join(outdir, 'meta_exp_approval_hist_loss.png'),
-        join(outdir, 'meta_exp_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--y-max',
-         YMAX,
-        '--policy-name MetaExpWeighting',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_meta_exp'],
         ' '.join(map(str, cmd)))
 
 nest.pop('eta')
@@ -227,26 +187,6 @@ def run_online(env, outdir, c):
         sources,
         ' '.join(map(str, cmd)))
 
-@nest.add_target_with_env(localenv)
-def plot_online(env, outdir, c):
-    targets = [
-        join(outdir, 'online_approval_hist_loss.png'),
-        join(outdir, 'online_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--y-max',
-         YMAX,
-        '--policy-name MarkovHedge',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_online'],
-        ' '.join(map(str, cmd)))
-
 nest.pop('eta')
 
 @nest.add_target_with_env(localenv)
@@ -274,26 +214,6 @@ def run_blind_approval(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def plot_blind(env, outdir, c):
-    targets = [
-        join(outdir, 'blind_approval_hist_loss.png'),
-        join(outdir, 'blind_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--y-max',
-         YMAX,
-        '--policy-name BlindApproval',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_blind_approval'],
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
 def plot_all_hists(env, outdir, c):
     targets = [
         join(outdir, 'approval_hist_loss.png'),
@@ -305,7 +225,7 @@ def plot_all_hists(env, outdir, c):
 	'--y-min',
         0.1,
 	'--y-max',
-        0.18,
+        0.22,
 	'--history-files',
         history_files,
 	'--loss-plot ${TARGETS[0]}',

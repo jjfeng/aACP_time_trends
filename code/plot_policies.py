@@ -75,6 +75,8 @@ def main(args=sys.argv[1:]):
     np.random.seed(args.seed)
 
     approval_histories = [pickle_from_file(history_file) for history_file in args.history_files]
+    #for app, f in zip(approval_histories, args.history_files):
+    #    app.policy_name = f.split("/")[-1].replace(".pkl", "")
     approval_histories = sorted(approval_histories, key=lambda x: x.policy_name)
 
     plot_losses(

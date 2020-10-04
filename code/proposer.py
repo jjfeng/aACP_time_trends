@@ -25,6 +25,13 @@ class Proposer:
     def score_models(self, dataset: Dataset):
         return np.array([model.loss(dataset) for model in self.proposal_history])
 
+    def score_mixture_model(self, weights: np.ndarray, dataset: Dataset):
+        """
+        Score the ensemble model (where we get the weighted avg of the predictions, and then apply the loss)
+        """
+        predictions = np.array([model.predict(dataset.x) for model in self.proposal_history])
+        avg_predictions = np.sum(predictions * np.reshape(weights, (-1,1,1)), axis=0)
+        return self.proposal_history[0].loss_pred(avg_predictions, dataset.y)
 
 class FixedProposer(Proposer):
     def __init__(self, models: List):

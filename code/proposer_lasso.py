@@ -31,15 +31,18 @@ class LassoModel:
 
 
 class LogisticRegressionCVWrap(LogisticRegressionCV):
+    def loss_pred(self, pred, y):
+        # hinge loss
+        y = y.flatten()
+        margin = (np.sign(y - 0.5) * 4 * (pred[:,1]- 0.5)).astype(float)
+        return np.maximum(0,1 - margin)/3
+
     def predict(self, X, t=None):
-        return super().predict(X)
+        return super().predict_proba(X)
 
     def loss(self, dataset):
-        p_hat = self.predict_proba(dataset.x)[:, 1]
-        # return yhat.flatten() != dataset.y.flatten()
-        y = dataset.y.flatten()
-        # return -(np.log(p_hat[:,0]) * y + np.log(1 - p_hat[:,1]) * (1 - y))
-        return np.power(y - p_hat, 2)
+        pred = self.predict_proba(dataset.x)
+        return self.loss_pred(pred, dataset.y)
 
 
 class LassoProposer(Proposer):

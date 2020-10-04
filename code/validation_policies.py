@@ -18,7 +18,7 @@ class ValidationPolicy(Policy):
         human_max_loss: float,
         const_baseline_weight: float = 1e-10,
         pred_t_factor: float = 1,
-        num_back_batches: int = 1,
+        num_back_batches: int = 3,
     ):
         self.human_max_loss = human_max_loss
 
@@ -134,17 +134,8 @@ class ValidationPolicy(Policy):
         self.baseline_weights = np.maximum(self.baseline_weights, 0)
         self.const_baseline_weight = np.maximum(self.const_baseline_weight, 0)
 
-        predictions = np.array(
-            [
-                np.mean(self.loss_histories[i, max(i + 1, time_t - self.num_back_batches) :])
-                + self.pred_t_factor
-                * np.sqrt(
-                    np.mean(self.var_loss_histories[i, max(i + 1, time_t - self.num_back_batches) :])
-                    / np.sum(self.batch_sizes[max(i, time_t - self.num_back_batches):])
-                )
-                for i in range(model_losses_t.size)
-            ]
-        )
+        # TODO: fix up the standard error estimate
+        predictions = np.mean(self.loss_histories[:time_t + 1,-self.num_back_batches:], axis=1) + self.pred_t_factor * np.sqrt(np.mean(self.var_loss_histories[:time_t + 1, -self.num_back_batches:], axis=1)/np.sum(self.batch_sizes[-self.num_back_batches:]))
         predictions[-1] = self.human_max_loss * 2
         log_model_update_factors = -self.etas[1] * predictions
         log_baseline_update_factor = -self.etas[1] * self.human_max_loss
@@ -161,7 +152,7 @@ class ValidationPolicy(Policy):
         self.baseline_optim_weights = all_optim_weights[self.optim_weights.size: self.optim_weights.size + self.baseline_weights.size]
         self.const_baseline_optim_weight = all_optim_weights[-1:]
 
-        self.optim_weights *= (self.loss_histories[:time_t + 1,-1] <= self.human_max_loss)
+        self.optim_weights *= (predictions <= self.human_max_loss)
 
     def get_predict_weights(self, time_t: int):
         denom = (
