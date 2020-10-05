@@ -101,14 +101,25 @@ class FixedProposerFromFile(Proposer):
 
             # compute the loss
             targets = batch.label if target_func is None else target_func(batch.label)
-            # targets = targets- 1
-            test_loss = criterion(predictions, targets).detach().numpy()
-        return test_loss
+            test_loss = criterion(predictions, targets)
+        return test_loss.detach().numpy(), predictions.detach().numpy(), targets.detach().numpy()
 
     def score_models(self, dataset_file: str):
         return np.array(
             [
-                self._run_test(model_dict, dataset_file, criterion=self.criterion)
+                self._run_test(model_dict, dataset_file, criterion=self.criterion)[0]
                 for model_dict in self.proposal_history
             ]
         )
+
+    def score_mixture_model(self, weights: np.ndarray, dataset_file: str):
+        all_preds = []
+        prev_targets = None
+        for model_dict in self.proposal_history:
+            _, preds, targets = self._run_test(model_dict, dataset_file, criterion=self.criterion)
+            if prev_targets is None:
+                prev_targets = targets
+            assert np.all(prev_targets == targets)
+            all_preds.append(preds)
+        agg_pred = np.sum(np.array(all_preds) * weights.reshape((-1,1)), axis=0)
+        return self.criterion(torch.Tensor(agg_pred), torch.Tensor(targets)).detach().numpy()
