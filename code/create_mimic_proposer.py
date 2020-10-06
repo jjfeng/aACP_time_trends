@@ -34,10 +34,11 @@ def main(args=sys.argv[1:]):
 
     models = []
     for year in range(args.start_year, args.start_year + args.num_years):
-        model_file = args.path_template % year
-        print("model", model_file)
-        assert os.path.exists(model_file)
-        models.append(pickle_from_file(model_file))
+        for quarter in range(4):
+            model_file = args.path_template % (year, quarter)
+            print("model", model_file)
+            assert os.path.exists(model_file)
+            models.append(pickle_from_file(model_file))
 
     proposer = FixedProposer(models)
 

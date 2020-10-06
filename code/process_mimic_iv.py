@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 import numpy as np
@@ -108,7 +109,7 @@ def extract_patients():
     return patients
 
 
-def extract_admissions():
+def extract_admissions(patients):
     admissions = pd.read_csv("~/mimic_iv/core/admissions.csv.gz")
     admissions = admissions.merge(patients, on="subject_id")
     admissions_dt = pd.to_datetime(admissions.admittime).dt
@@ -116,6 +117,7 @@ def extract_admissions():
         admissions_dt.year - admissions.anchor_year + admissions.anchor_year_mean
     )
     admissions["in_month"] = admissions_dt.month
+    admissions["in_quarter"] = (admissions_dt.month / 4).astype(int)
     admissions_deathtime = pd.to_datetime(admissions.deathtime).dt
     admissions["survival_status"] = np.isnan(admissions_deathtime.year)
     return admissions
@@ -147,8 +149,11 @@ def extract_chartevents(nrows=1000000):
 #    "zgrep '%s' ~/mimic_iv/icu/chartevents.csv.gz > ~/mimic_iv/icu/chartevents_filtered.csv" % ITEM_ID_STR,
 #    shell=True)
 
+if not os.path.exists("experiment_mimic/_output/data"):
+    os.makedirs("experiment_mimic/_output/data")
+
 patients = extract_patients()
-admissions = extract_admissions()
+admissions = extract_admissions(patients)
 print(admissions)
 stays = extract_stays(thres=2)
 
@@ -156,7 +161,7 @@ stays = extract_stays(thres=2)
 stays = stays[stays.los >= 1]
 admissions = admissions.merge(stays, on=["subject_id", "hadm_id"])
 
-chartevents = extract_chartevents(nrows=10000000)
+chartevents = extract_chartevents(nrows=100000000)
 print(chartevents)
 # Filter for events only within the first 24 hours
 chartevents = chartevents[chartevents["within_24hr"]]
@@ -165,29 +170,31 @@ features = create_features(chartevents)
 features = impute_mean(features)
 print(features)
 # Merge with Y and year
-full_xy_df = (admissions[["subject_id", "hadm_id", "in_year", OUTCOME]]).merge(
+full_xy_df = (admissions[["subject_id", "hadm_id", "in_year", "in_quarter", OUTCOME]]).merge(
     features, on=["subject_id", "hadm_id"]
-)
+).drop(columns=["subject_id", "hadm_id"])
 full_xy_df = full_xy_df.sample(frac=1)
 
 # chartevents.to_csv("~/mimic_iv/test.csv")
 # chartevents = pd.read_csv("~/mimic_iv/test.csv")
 
 all_xy_dfs = []
-for in_year, year_df in full_xy_df.groupby(["in_year"]):
+for (in_year, in_quarter), year_df in full_xy_df.groupby(["in_year", "in_quarter"]):
     print(in_year, year_df.shape)
     print(year_df)
-    xy = year_df.drop(columns="in_year").to_numpy()[:, 2:]
+    xy = year_df.drop(columns=["in_year", "in_quarter"]).to_numpy()
     ntrain = int(xy.shape[0] * 3 / 4)
     xy_train = xy[:ntrain, :]
     xy_valid = xy[ntrain:, :]
-    np.savetxt("experiment_mimic/_output/data/train_data_%d.csv" % in_year, xy_train)
-    np.savetxt("experiment_mimic/_output/data/valid_data_%d.csv" % in_year, xy_valid)
+    np.savetxt("experiment_mimic/_output/data/train_data_%d_%d.csv" % (in_year,
+        in_quarter), xy_train)
+    np.savetxt("experiment_mimic/_output/data/valid_data_%d_%d.csv" % (in_year,
+            in_quarter), xy_valid)
 
 """
 Just test out a prediction model and see what we get
 """
-all_xy = full_xy_df.drop(columns="in_year").to_numpy()[:, 2:]
+all_xy = full_xy_df.drop(columns=["in_year", "in_quarter"]).to_numpy()
 
 x = all_xy[:, 1:]
 y = all_xy[:, 0].astype(int)

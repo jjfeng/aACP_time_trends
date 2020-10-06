@@ -2,6 +2,7 @@ import numpy as np
 
 from sklearn.linear_model import LassoCV
 from sklearn.linear_model import LogisticRegressionCV
+from sklearn.metrics import roc_auc_score
 
 from proposer import Proposer
 from trial_data import TrialData
@@ -43,7 +44,6 @@ class LogisticRegressionCVWrap(LogisticRegressionCV):
     def loss(self, dataset):
         pred = self.predict_proba(dataset.x)
         return self.loss_pred(pred, dataset.y)
-
 
 class LassoProposer(Proposer):
     def __init__(
