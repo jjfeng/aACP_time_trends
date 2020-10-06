@@ -129,9 +129,12 @@ def extract_stays(thres=2):
     return stays
 
 
-def extract_chartevents(nrows=1000000):
-    chartevents = pd.read_csv("~/mimic_iv/icu/chartevents.csv.gz", nrows=nrows)
-    # chartevents = pd.read_csv("~/mimic_iv/icu/chartevents_small.csv", nrows=10000)
+def extract_chartevents(file_name = None, nrows=1000000):
+    if file_name is None:
+        chartevents = pd.read_csv("~/mimic_iv/icu/chartevents.csv.gz", nrows=nrows)
+    else:
+        chartevents = pd.read_csv(file_name, nrows=nrows,
+        names="subject_id,hadm_id,stay_id,charttime,storetime,itemid,value,valuenum,valueuom,warning".split(","))
     chartevents = chartevents[chartevents.itemid.isin(ITEM_IDS)]
     chartevents = chartevents.replace({"itemid": EQUIV_ITEM_IDS})
     chartevents = chartevents.merge(
@@ -145,9 +148,9 @@ def extract_chartevents(nrows=1000000):
     return chartevents
 
 
-# output = subprocess.check_output(
-#    "zgrep '%s' ~/mimic_iv/icu/chartevents.csv.gz > ~/mimic_iv/icu/chartevents_filtered.csv" % ITEM_ID_STR,
-#    shell=True)
+#output = subprocess.check_output(
+#   "zgrep '%s' ~/mimic_iv/icu/chartevents.csv.gz > ~/mimic_iv/icu/chartevents_filtered.csv" % ITEM_ID_STR,
+#   shell=True)
 
 if not os.path.exists("experiment_mimic/_output/data"):
     os.makedirs("experiment_mimic/_output/data")
@@ -161,7 +164,8 @@ stays = extract_stays(thres=2)
 stays = stays[stays.los >= 1]
 admissions = admissions.merge(stays, on=["subject_id", "hadm_id"])
 
-chartevents = extract_chartevents(nrows=100000000)
+chartevents = extract_chartevents("~/mimic_iv/icu/chartevents_filtered.csv",
+        nrows=10000000)
 print(chartevents)
 # Filter for events only within the first 24 hours
 chartevents = chartevents[chartevents["within_24hr"]]

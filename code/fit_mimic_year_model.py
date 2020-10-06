@@ -10,6 +10,7 @@ from numpy import ndarray
 from typing import List
 
 from proposer_lasso import LogisticRegressionCVWrap
+from proposer_random_forest import RandomForestWrap
 
 
 def parse_args(args):
@@ -57,7 +58,7 @@ def main(args=sys.argv[1:]):
         in quarters])
     x_train = dat[:, 1:]
     y_train = dat[:, 0]
-    model = LogisticRegressionCVWrap(max_iter=1000, cv=3)
+    model = RandomForestWrap(n_estimators=1000)
     model.fit(x_train, y_train)
     # Do save
     with open(args.out_file, "wb") as f:
