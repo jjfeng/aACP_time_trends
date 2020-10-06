@@ -5,10 +5,11 @@ import numpy as np
 import pandas as pd
 
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import roc_auc_score
 
 # items that we want to read
-OUTCOME = "survival_status"
+OUTCOME = "log_los"
 ITEM_IDS = [
     220045,  # Heart rate
     220210,  # Respiratory rate
@@ -126,6 +127,7 @@ def extract_admissions(patients):
 def extract_stays(thres=2):
     stays = pd.read_csv("~/mimic_iv/icu/icustays.csv.gz")
     stays["long_stay"] = stays.los > thres
+    stays["log_los"] = np.log(stays.los)
     return stays
 
 
@@ -190,9 +192,9 @@ for (in_year, in_quarter), year_df in full_xy_df.groupby(["in_year", "in_quarter
     ntrain = int(xy.shape[0] * 3 / 4)
     xy_train = xy[:ntrain, :]
     xy_valid = xy[ntrain:, :]
-    np.savetxt("experiment_mimic/_output/data/train_data_%d_%d.csv" % (in_year,
+    np.savetxt("experiment_mimic/_output/data/los_train_data_%d_%d.csv" % (in_year,
         in_quarter), xy_train)
-    np.savetxt("experiment_mimic/_output/data/valid_data_%d_%d.csv" % (in_year,
+    np.savetxt("experiment_mimic/_output/data/los_valid_data_%d_%d.csv" % (in_year,
             in_quarter), xy_valid)
 
 """
@@ -201,18 +203,18 @@ Just test out a prediction model and see what we get
 all_xy = full_xy_df.drop(columns=["in_year", "in_quarter"]).to_numpy()
 
 x = all_xy[:, 1:]
-y = all_xy[:, 0].astype(int)
+y = all_xy[:, 0]
 ntrain = int(y.size * 3 / 4)
 x_train = x[:ntrain]
 y_train = y[:ntrain]
 x_test = x[ntrain:]
 y_test = y[ntrain:]
-print(x, y)
+print(x.shape, y.shape)
 
-model = LogisticRegression(max_iter=1000)
+model = RandomForestRegressor(n_estimators=1000, criterion="mae")
 model.fit(x_train, y_train)
 print("SCORE", model.score(x_test, y_test))
-predictions = model.predict_proba(x_test)[:, 1]
-print("predictions", predictions)
-print("AUC", roc_auc_score(y_test, predictions))
-print("mean y", y.mean())
+#predictions = model.predict(x_test)[:, 1]
+#print("predictions", predictions)
+#print("AUC", roc_auc_score(y_test, predictions))
+#print("mean y", y.mean())

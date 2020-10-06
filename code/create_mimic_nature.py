@@ -50,7 +50,6 @@ def main(args=sys.argv[1:]):
                 raw_dataset = raw_dataset.reshape((1,-1))
                 print("VALIDATION DATA ONLY SIZE 1")
             print("year q", time_key, quarter)
-            print(raw_dataset)
             dataset = Dataset(raw_dataset[:, 1:], raw_dataset[:, 0], num_classes=2)
             trial_data.add_batch(dataset)
     nature = FixedNature(trial_data=trial_data)

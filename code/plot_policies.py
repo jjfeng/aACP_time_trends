@@ -55,6 +55,8 @@ def plot_losses(approval_histories, fig_name, alpha, ymin, ymax):
             if approval_history.policy_name != "ValidationPolicy"
             else "MarkovHedge",
         )
+        print(approval_history.policy_name)
+        print(running_avg)
         raw_ymin = min(np.min(running_avg), raw_ymin)
     plt.ylabel("Loss")
     plt.xlabel("Time")
