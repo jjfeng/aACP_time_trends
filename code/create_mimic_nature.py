@@ -8,10 +8,9 @@ import numpy as np
 from numpy import ndarray
 from typing import List
 
-from trial_data import TrialDataFromDisk
+from trial_data import TrialData
 from nature import FixedNature
 from data_generator import *
-from support_sim_settings import *
 from dataset import Dataset
 from common import pickle_to_file
 
@@ -33,7 +32,7 @@ def parse_args(args):
 
 def main(args=sys.argv[1:]):
     # TODO: need to check that this is valid data to use
-    MIMIC_TEST = "experiment_mimic/_output/data/data_%d.csv"
+    MIMIC_TEST = "experiment_mimic/_output/data/valid_data_%d.csv"
 
     args = parse_args(args)
     logging.basicConfig(
@@ -46,7 +45,7 @@ def main(args=sys.argv[1:]):
     times = []
     for time_key in range(args.start_year, args.start_year + args.num_years):
         path_time = MIMIC_TEST % time_key
-        raw_dataset = np.genfromtext(path_time)
+        raw_dataset = np.genfromtxt(path_time)
         dataset = Dataset(raw_dataset[:, 1:], raw_dataset[:, 0], num_classes=2)
         trial_data.add_batch(dataset)
     nature = FixedNature(trial_data=trial_data)

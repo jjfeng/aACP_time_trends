@@ -1,11 +1,6 @@
 from typing import List
 import numpy as np
 
-import torch
-from torch import nn
-from torchtext import data
-from model import TextSentiment
-
 from dataset import Dataset
 from trial_data import TrialData
 from approval_history import ApprovalHistory
@@ -45,13 +40,19 @@ class FixedProposer(Proposer):
     def num_models(self):
         return len(self.proposal_history)
 
-    def propose_model(self, trial_data: TrialData):
-        self.proposal_history = self.pretrained_proposal_history[
-            : (self.num_models + 1)
-        ]
+    def propose_model(self, trial_data: TrialData, approval_hist = None, do_append=True):
+        if do_append:
+            self.proposal_history = self.pretrained_proposal_history[
+                : (self.num_models + 1)
+            ]
+        return self.pretrained_proposal_history[self.num_models]
 
 
 class FixedProposerFromFile(Proposer):
+    import torch
+    from torch import nn
+    from torchtext import data
+    from model import TextSentiment
     def __init__(self, model_files: List):
         self.model_files = model_files
         self.proposal_history = []

@@ -9,7 +9,7 @@ import numpy as np
 from numpy import ndarray
 from typing import List
 
-from sklearn.linear_model import LogisticRegression
+from proposer_lasso import LogisticRegressionCVWrap
 
 
 def parse_args(args):
@@ -33,7 +33,7 @@ def parse_args(args):
 
 
 def main(args=sys.argv[1:]):
-    MIMIC_TRAIN = "experiment_mimic/_output/data/data_%d.csv"
+    MIMIC_TRAIN = "experiment_mimic/_output/data/train_data_%d.csv"
 
     args = parse_args(args)
     logging.basicConfig(
@@ -48,7 +48,7 @@ def main(args=sys.argv[1:]):
     print(dat)
     x_train = dat[:, 1:]
     y_train = dat[:, 0]
-    model = LogisticRegression(max_iter=1000)
+    model = LogisticRegressionCVWrap(max_iter=1000)
     model.fit(x_train, y_train)
     # Do save
     with open(args.out_file, "wb") as f:

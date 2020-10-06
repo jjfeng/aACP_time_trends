@@ -51,7 +51,7 @@ stays = pd.read_csv("~/mimic_iv/icu/icustays.csv.gz")
 admissions = admissions.merge(stays, on=["subject_id", "hadm_id"])
 admissions["big_los"] = admissions.los > 3
 
-chartevents = pd.read_csv("~/mimic_iv/icu/chartevents.csv.gz", nrows=500000)
+chartevents = pd.read_csv("~/mimic_iv/icu/chartevents.csv.gz", nrows=5000000)
 # chartevents = pd.read_csv("~/mimic_iv/icu/chartevents_small.csv", nrows=10000)
 chartevents = chartevents[chartevents.itemid.isin(ITEM_IDS)]
 chartevents = chartevents.merge(
@@ -122,11 +122,13 @@ all_xy_df = all_xy_df.fillna(all_xy_df.mean(axis=0, skipna=True))
 
 start_idx = 0
 for subgroup_df, in_year in zip(all_xy_dfs, all_years):
-    xy_df = all_xy_df.iloc[start_idx : start_idx + subgroup_df.shape[0]].to_numpy()[
-        :, 2:
-    ]
+    xy_df = all_xy_df.iloc[start_idx : start_idx + subgroup_df.shape[0]].to_numpy()[:,2:]
+    ntrain = int(xy_df.shape[0] * 3/4)
+    xy_train_df = xy_df[:ntrain,:] 
+    xy_valid_df = xy_df[ntrain:,:] 
     start_idx += subgroup_df.shape[0]
-    np.savetxt("experiment_mimic/_output/data/data_%d.csv" % in_year, xy_df)
+    np.savetxt("experiment_mimic/_output/data/train_data_%d.csv" % in_year, xy_train_df)
+    np.savetxt("experiment_mimic/_output/data/valid_data_%d.csv" % in_year, xy_valid_df)
 
 # Shuffle
 all_xy_df = all_xy_df.sample(frac=1)

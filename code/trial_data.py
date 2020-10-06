@@ -2,9 +2,6 @@ from typing import List
 import numpy as np
 from numpy import ndarray
 
-import torch
-from torchtext import data
-
 from data_generator import DataGenerator
 from dataset import Dataset
 
