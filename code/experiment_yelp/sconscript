@@ -156,7 +156,7 @@ def plot_meta_exp(env, outdir, c):
 
 nest.add(
     'alpha',
-    [],
+    [0.5],
     label_func=lambda c: 'alpha_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
