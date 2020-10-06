@@ -23,6 +23,7 @@ def parse_args(args):
         help="Random number generator seed for replicability",
         default=0,
     )
+    parser.add_argument("--start-year", type=int, default=2009)
     parser.add_argument("--year", type=int, default=2010)
     parser.add_argument("--log-file", type=str, default="_output/model_log.txt")
     parser.add_argument("--out-file", type=str, default="_output/model.pkl")
@@ -44,11 +45,12 @@ def main(args=sys.argv[1:]):
 
     np.random.seed(args.seed)
 
-    dat = np.genfromtxt(MIMIC_TRAIN % args.year)
+    dat = np.concatenate([
+		np.genfromtxt(MIMIC_TRAIN % year) for year in range(max(args.year - 3, args.start_year), args.year + 1)])
     print(dat)
     x_train = dat[:, 1:]
     y_train = dat[:, 0]
-    model = LogisticRegressionCVWrap(max_iter=1000)
+    model = LogisticRegressionCVWrap(max_iter=1000, cv=3)
     model.fit(x_train, y_train)
     # Do save
     with open(args.out_file, "wb") as f:
