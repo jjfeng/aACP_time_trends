@@ -39,15 +39,22 @@ def parse_args(args):
 
     return args
 
+
 def plot_losses(approval_histories, fig_name, alpha, ymin, ymax):
     plt.clf()
     raw_ymin = ymax if ymin is None else ymin
     for approval_history in approval_histories:
-        #plt.plot(np.arange(T - 1), approval_history, "g-")
+        # plt.plot(np.arange(T - 1), approval_history, "g-")
         loss_history = np.array(approval_history.policy_loss_history)
         T = loss_history.size + 1
         running_avg = np.cumsum(loss_history) / np.arange(1, T)
-        plt.plot(np.arange(T - 1), running_avg, label=approval_history.policy_name if approval_history.policy_name != "ValidationPolicy" else "MarkovHedge")
+        plt.plot(
+            np.arange(T - 1),
+            running_avg,
+            label=approval_history.policy_name
+            if approval_history.policy_name != "ValidationPolicy"
+            else "MarkovHedge",
+        )
         raw_ymin = min(np.min(running_avg), raw_ymin)
     plt.ylabel("Loss")
     plt.xlabel("Time")
@@ -56,26 +63,36 @@ def plot_losses(approval_histories, fig_name, alpha, ymin, ymax):
     plt.ylim(max(raw_ymin - 0.05, 0) if ymin is None else ymin, ymax)
     plt.savefig(fig_name)
 
+
 def plot_human_uses(approval_histories, fig_name):
     plt.clf()
-    #plt.figure(figsize=(6, 6))
+    # plt.figure(figsize=(6, 6))
     for approval_history in approval_histories:
         human_history = np.array(approval_history.human_history)
         T = human_history.size + 1
-        plt.plot(np.arange(T - 1), np.cumsum(human_history) / np.arange(1, T), label=approval_history.policy_name if approval_history.policy_name != "ValidationPolicy" else "MarkovHedge")
+        plt.plot(
+            np.arange(T - 1),
+            np.cumsum(human_history) / np.arange(1, T),
+            label=approval_history.policy_name
+            if approval_history.policy_name != "ValidationPolicy"
+            else "MarkovHedge",
+        )
     plt.ylim(0, 1)
     plt.ylabel("Fail-safe prob")
     plt.xlabel("Time")
     plt.legend()
     plt.savefig(fig_name)
 
+
 def main(args=sys.argv[1:]):
     args = parse_args(args)
     print(args)
     np.random.seed(args.seed)
 
-    approval_histories = [pickle_from_file(history_file) for history_file in args.history_files]
-    #for app, f in zip(approval_histories, args.history_files):
+    approval_histories = [
+        pickle_from_file(history_file) for history_file in args.history_files
+    ]
+    # for app, f in zip(approval_histories, args.history_files):
     #    app.policy_name = f.split("/")[-1].replace(".pkl", "")
     approval_histories = sorted(approval_histories, key=lambda x: x.policy_name)
 

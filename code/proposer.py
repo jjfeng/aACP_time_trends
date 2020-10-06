@@ -29,9 +29,12 @@ class Proposer:
         """
         Score the ensemble model (where we get the weighted avg of the predictions, and then apply the loss)
         """
-        predictions = np.array([model.predict(dataset.x) for model in self.proposal_history])
-        avg_predictions = np.sum(predictions * np.reshape(weights, (-1,1,1)), axis=0)
+        predictions = np.array(
+            [model.predict(dataset.x) for model in self.proposal_history]
+        )
+        avg_predictions = np.sum(predictions * np.reshape(weights, (-1, 1, 1)), axis=0)
         return self.proposal_history[0].loss_pred(avg_predictions, dataset.y)
+
 
 class FixedProposer(Proposer):
     def __init__(self, models: List):
@@ -82,7 +85,9 @@ class FixedProposerFromFile(Proposer):
         return model
 
     def _run_test(self, model_dict, path, criterion, target_func=None):
-        test_data = data.TabularDataset(path=path, format="json", fields=model_dict["fields"])
+        test_data = data.TabularDataset(
+            path=path, format="json", fields=model_dict["fields"]
+        )
         test_iterator = data.Iterator(
             test_data,
             batch_size=len(test_data),
@@ -102,7 +107,11 @@ class FixedProposerFromFile(Proposer):
             # compute the loss
             targets = batch.label if target_func is None else target_func(batch.label)
             test_loss = criterion(predictions, targets)
-        return test_loss.detach().numpy(), predictions.detach().numpy(), targets.detach().numpy()
+        return (
+            test_loss.detach().numpy(),
+            predictions.detach().numpy(),
+            targets.detach().numpy(),
+        )
 
     def score_models(self, dataset_file: str):
         return np.array(
@@ -116,10 +125,16 @@ class FixedProposerFromFile(Proposer):
         all_preds = []
         prev_targets = None
         for model_dict in self.proposal_history:
-            _, preds, targets = self._run_test(model_dict, dataset_file, criterion=self.criterion)
+            _, preds, targets = self._run_test(
+                model_dict, dataset_file, criterion=self.criterion
+            )
             if prev_targets is None:
                 prev_targets = targets
             assert np.all(prev_targets == targets)
             all_preds.append(preds)
-        agg_pred = np.sum(np.array(all_preds) * weights.reshape((-1,1)), axis=0)
-        return self.criterion(torch.Tensor(agg_pred), torch.Tensor(targets)).detach().numpy()
+        agg_pred = np.sum(np.array(all_preds) * weights.reshape((-1, 1)), axis=0)
+        return (
+            self.criterion(torch.Tensor(agg_pred), torch.Tensor(targets))
+            .detach()
+            .numpy()
+        )

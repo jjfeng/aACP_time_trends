@@ -51,9 +51,9 @@ class FixedNature(Nature):
     def to_fixed(self):
         return self
 
+
 class AdversarialNature(Nature):
-    """
-    """
+    """"""
 
     def __init__(
         self,

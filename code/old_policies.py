@@ -80,7 +80,10 @@ class FixedShareWithBlind(Policy):
 
         model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
         new_losses = np.concatenate(
-            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
+            [
+                model_losses_t,
+                [0] * (self.num_experts - self.curr_num_experts),
+            ]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
         v_weights = self.weights * np.exp(
@@ -169,7 +172,10 @@ class OptimisticBaselineMonotonicFixedShare(Policy):
             prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
         )
         new_losses = np.concatenate(
-            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
+            [
+                model_losses_t,
+                [0] * (self.num_experts - self.curr_num_experts),
+            ]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
         v_weights = self.weights * np.exp(-self.eta * model_losses_t)
@@ -306,7 +312,10 @@ class OptimisticMonotonicFixedShare(Policy):
             prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
         )
         new_losses = np.concatenate(
-            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
+            [
+                model_losses_t,
+                [0] * (self.num_experts - self.curr_num_experts),
+            ]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
         v_weights = self.weights * np.exp(-self.eta * model_losses_t)
@@ -416,7 +425,10 @@ class MonotonicBaselineFixedShare(Policy):
             prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
         )
         new_losses = np.concatenate(
-            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
+            [
+                model_losses_t,
+                [0] * (self.num_experts - self.curr_num_experts),
+            ]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
         v_weights = self.weights * np.exp(-self.eta * model_losses_t)
@@ -523,7 +535,10 @@ class MonotonicFixedShare(Policy):
             prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
         )
         new_losses = np.concatenate(
-            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
+            [
+                model_losses_t,
+                [0] * (self.num_experts - self.curr_num_experts),
+            ]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
         v_weights = self.weights * np.exp(-self.eta * model_losses_t)
@@ -629,7 +644,10 @@ class FixedShare(Policy):
             prev_weights * np.concatenate([[self.human_max_loss], model_losses_t])
         )
         new_losses = np.concatenate(
-            [model_losses_t, [0] * (self.num_experts - self.curr_num_experts),]
+            [
+                model_losses_t,
+                [0] * (self.num_experts - self.curr_num_experts),
+            ]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
         v_weights = self.weights * np.exp(

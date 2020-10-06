@@ -28,7 +28,9 @@ def parse_args(args):
     parser.add_argument("--y-max", type=float, default=10)
     parser.add_argument("--y-min", type=float, default=0.1)
     parser.add_argument(
-        "--policy-name", type=str, help="name of approval policy",
+        "--policy-name",
+        type=str,
+        help="name of approval policy",
     )
     parser.add_argument(
         "--history-file", type=str, default="_output/approver_history.pkl"

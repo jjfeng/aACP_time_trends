@@ -9,7 +9,7 @@ m = 10
 T = 50
 tau = np.sqrt(np.log(m))
 sigma_max = 0.5
-inflation = tau * sigma_max/np.sqrt(n)
+inflation = tau * sigma_max / np.sqrt(n)
 print("inflation", inflation)
 lambdas = np.exp(np.arange(-6, 2, 0.05))
 deltas = np.arange(0.03, min(max_loss, 0.3), 0.03)
@@ -19,13 +19,14 @@ for delta in deltas:
     drift = delta
     c = min(delta + drift + 1 * inflation, 1)
     z_alphas = norm.ppf(alphas)
-    cs = delta + drift + z_alphas * sigma_max/np.sqrt(n)
-    integral = np.array([np.mean((1 - np.exp(-lam * cs))/cs) for lam in lambdas])
-    multiplier = 1/integral
-    raw_bound = -np.log(1/m * np.exp(-lambdas * delta * T) + (m - 1)/m * np.exp(-lambdas * (delta + drift) * T))
-    bounds = (
-        multiplier * raw_bound
-    )/T
+    cs = delta + drift + z_alphas * sigma_max / np.sqrt(n)
+    integral = np.array([np.mean((1 - np.exp(-lam * cs)) / cs) for lam in lambdas])
+    multiplier = 1 / integral
+    raw_bound = -np.log(
+        1 / m * np.exp(-lambdas * delta * T)
+        + (m - 1) / m * np.exp(-lambdas * (delta + drift) * T)
+    )
+    bounds = (multiplier * raw_bound) / T
     best_bound = np.min(bounds)
     best_idx = np.argmin(bounds)
     best_lambda = lambdas[best_idx]

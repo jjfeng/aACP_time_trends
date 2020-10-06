@@ -70,10 +70,16 @@ class ValidationPolicy(Policy):
             model_losses_t = np.concatenate([model_losses_t, [0]])
             var_model_losses_t = np.concatenate([var_model_losses_t, [0]])
         new_losses = np.concatenate(
-            [model_losses_t, [0] * (self.num_experts - model_losses_t.size),]
+            [
+                model_losses_t,
+                [0] * (self.num_experts - model_losses_t.size),
+            ]
         ).reshape((-1, 1))
         var_new_losses = np.concatenate(
-            [var_model_losses_t, [0] * (self.num_experts - model_losses_t.size),]
+            [
+                var_model_losses_t,
+                [0] * (self.num_experts - model_losses_t.size),
+            ]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
         self.var_loss_histories = np.concatenate(
@@ -124,35 +130,57 @@ class ValidationPolicy(Policy):
         self.const_baseline_weight *= np.exp(-self.etas[0] * self.human_max_loss)
 
         # Adding normalization to prevent numerical underflow
-        normalize_weights = special.softmax(np.concatenate([np.log(self.weights), np.log(self.baseline_weights), np.log(self.const_baseline_weight)]))
-        self.weights = normalize_weights[:self.weights.size]
-        self.baseline_weights = normalize_weights[self.weights.size:self.weights.size + self.baseline_weights.size]
+        normalize_weights = special.softmax(
+            np.concatenate(
+                [
+                    np.log(self.weights),
+                    np.log(self.baseline_weights),
+                    np.log(self.const_baseline_weight),
+                ]
+            )
+        )
+        self.weights = normalize_weights[: self.weights.size]
+        self.baseline_weights = normalize_weights[
+            self.weights.size : self.weights.size + self.baseline_weights.size
+        ]
         self.const_baseline_weight = normalize_weights[-1:]
-
 
         self.weights = np.maximum(self.weights, 0)
         self.baseline_weights = np.maximum(self.baseline_weights, 0)
         self.const_baseline_weight = np.maximum(self.const_baseline_weight, 0)
 
         # TODO: fix up the standard error estimate
-        predictions = np.mean(self.loss_histories[:time_t + 1,-self.num_back_batches:], axis=1) + self.pred_t_factor * np.sqrt(np.mean(self.var_loss_histories[:time_t + 1, -self.num_back_batches:], axis=1)/np.sum(self.batch_sizes[-self.num_back_batches:]))
+        predictions = np.mean(
+            self.loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
+        ) + self.pred_t_factor * np.sqrt(
+            np.mean(
+                self.var_loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
+            )
+            / np.sum(self.batch_sizes[-self.num_back_batches :])
+        )
         predictions[-1] = self.human_max_loss * 2
         log_model_update_factors = -self.etas[1] * predictions
         log_baseline_update_factor = -self.etas[1] * self.human_max_loss
 
         all_optim_weights = special.softmax(
-            np.concatenate([
-                np.log(self.weights) - self.etas[1] * predictions,
-                np.log(self.baseline_weights) - self.etas[1] * self.human_max_loss,
-                np.log(self.const_baseline_weight) - self.etas[1] * self.human_max_loss,
-            ])
+            np.concatenate(
+                [
+                    np.log(self.weights) - self.etas[1] * predictions,
+                    np.log(self.baseline_weights) - self.etas[1] * self.human_max_loss,
+                    np.log(self.const_baseline_weight)
+                    - self.etas[1] * self.human_max_loss,
+                ]
+            )
         )
 
-        self.optim_weights = all_optim_weights[:self.optim_weights.size]
-        self.baseline_optim_weights = all_optim_weights[self.optim_weights.size: self.optim_weights.size + self.baseline_weights.size]
+        self.optim_weights = all_optim_weights[: self.optim_weights.size]
+        self.baseline_optim_weights = all_optim_weights[
+            self.optim_weights.size : self.optim_weights.size
+            + self.baseline_weights.size
+        ]
         self.const_baseline_optim_weight = all_optim_weights[-1:]
 
-        self.optim_weights *= (predictions <= self.human_max_loss)
+        self.optim_weights *= predictions <= self.human_max_loss
 
     def get_predict_weights(self, time_t: int):
         denom = (
@@ -214,8 +242,7 @@ class MetaExpWeightingList(Policy):
         robot_weights, human_weight = policy.weight_history[time_t]
         assert np.isclose(robot_weights.sum() + human_weight, 1)
         policy_loss = (
-            np.sum(model_losses_t * robot_weights)
-            + human_weight * self.human_max_loss
+            np.sum(model_losses_t * robot_weights) + human_weight * self.human_max_loss
         )
         return policy_loss
 
@@ -228,7 +255,7 @@ class MetaExpWeightingList(Policy):
                 loss_t[idx] = self._get_policy_prev_loss(
                     time_t - 1, model_losses_t, self.policy_dict[etas]
                 )
-                #print("policy loss", etas, loss_t[idx])
+                # print("policy loss", etas, loss_t[idx])
             self.loss_ts += loss_t
             self.meta_weights = self.meta_weights * np.exp(-self.eta * loss_t)
 
@@ -380,7 +407,8 @@ class MetaGridSearch(MetaExpWeightingList):
         assert human_weight >= 0
         return robot_weights, human_weight
 
-#class OptimMetaExpWeightingList(Policy):
+
+# class OptimMetaExpWeightingList(Policy):
 #    """
 #    optimistic Meta exponential weighting list
 #    """
@@ -493,7 +521,7 @@ class MetaGridSearch(MetaExpWeightingList):
 #        )
 #        return robot_weights, human_weight
 #
-#class OptimMetaFixedShareList(Policy):
+# class OptimMetaFixedShareList(Policy):
 #    """
 #    optimistic Meta fixed share
 #    """

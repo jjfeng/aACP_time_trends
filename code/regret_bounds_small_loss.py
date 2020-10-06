@@ -4,7 +4,7 @@ from scipy.stats import norm
 
 max_loss = 1
 m = 10
-baseline_weight = 1/m
+baseline_weight = 1 / m
 T = 50
 lambdas = np.exp(np.arange(-6, 2, 0.05))
 deltas = np.arange(0.03, min(max_loss, 0.3), 0.03)
@@ -13,7 +13,7 @@ for delta in deltas:
         max_loss
         / (1 - np.exp(-max_loss * lambdas))
         * (lambdas * delta * T + np.log(1 / baseline_weight))
-    )/T
+    ) / T
     best_bound = np.min(bounds)
     best_lambda = lambdas[np.argmin(bounds)]
     # Create the plot

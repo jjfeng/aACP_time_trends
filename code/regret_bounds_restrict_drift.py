@@ -6,17 +6,21 @@ drift = 0.1
 
 max_loss = 1
 m = 10
-baseline_weight = 1/m
+baseline_weight = 1 / m
 T = 50
 lambdas = np.exp(np.arange(-6, 2, 0.05))
-index=130
+index = 130
 deltas = np.arange(0.03, min(max_loss, 0.3), 0.03)
 for delta in deltas:
     bounds = (
         (delta + drift)
         / (1 - np.exp(-lambdas * (delta + drift)))
-        * (lambdas * delta * T + np.log(1 / baseline_weight) - np.log(1 + (1 - baseline_weight) * np.exp(-lambdas * (delta + drift) * T)))
-    )/T
+        * (
+            lambdas * delta * T
+            + np.log(1 / baseline_weight)
+            - np.log(1 + (1 - baseline_weight) * np.exp(-lambdas * (delta + drift) * T))
+        )
+    ) / T
     best_bound = np.min(bounds)
     best_lambda = lambdas[np.argmin(bounds)]
     print(delta, lambdas[index], bounds[index])

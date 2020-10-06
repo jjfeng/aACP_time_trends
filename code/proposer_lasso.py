@@ -34,8 +34,8 @@ class LogisticRegressionCVWrap(LogisticRegressionCV):
     def loss_pred(self, pred, y):
         # hinge loss
         y = y.flatten()
-        margin = (np.sign(y - 0.5) * 4 * (pred[:,1]- 0.5)).astype(float)
-        return np.maximum(0,1 - margin)/3
+        margin = (np.sign(y - 0.5) * 4 * (pred[:, 1] - 0.5)).astype(float)
+        return np.maximum(0, 1 - margin) / 3
 
     def predict(self, X, t=None):
         return super().predict_proba(X)

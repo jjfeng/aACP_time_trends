@@ -11,7 +11,9 @@ from dataset import Dataset
 
 class TrialData:
     def __init__(
-        self, batch_sizes: ndarray = None, batch_data: List[Dataset] = [],
+        self,
+        batch_sizes: ndarray = [],
+        batch_data: List[Dataset] = [],
     ):
         self.batch_sizes = batch_sizes
 
@@ -36,6 +38,7 @@ class TrialData:
 
     def add_batch(self, data_t: Dataset):
         self.batch_data.append(data_t)
+        self.batch_sizes.append(data_t.num_obs)
 
     def subset(self, end_index: int):
         return TrialData(self.batch_sizes, self.batch_data[:end_index])
@@ -43,7 +46,8 @@ class TrialData:
 
 class TrialDataFromDisk(TrialData):
     def __init__(
-        self, batch_data: List[str] = [],
+        self,
+        batch_data: List[str] = [],
     ):
         self.batch_data = batch_data
 

@@ -32,7 +32,9 @@ def parse_args(args):
     parser.add_argument("--nature-file", type=str, default="_output/nature.pkl")
     parser.add_argument("--proposer-file", type=str, default="_output/proposer.pkl")
     parser.add_argument(
-        "--policy-name", type=str, help="name of approval policy",
+        "--policy-name",
+        type=str,
+        help="name of approval policy",
     )
     parser.add_argument("--human-max-loss", type=float, default=None)
     parser.add_argument("--eta", type=float, default=1)
@@ -52,9 +54,9 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             num_experts=num_experts,
             etas=np.array([args.eta, 0, args.alpha, 0.05]),
             human_max_loss=human_max_loss,
-            #const_baseline_weight=0.5,
+            # const_baseline_weight=0.5,
         )
-    #elif policy_name == "MetaGridSearch":
+    # elif policy_name == "MetaGridSearch":
     #    eta_grid = [
     #        np.exp(np.arange(-5, 1, 2)),
     #        np.exp(np.arange(-5, 7, 2)),
@@ -69,14 +71,14 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     #    )
     elif policy_name == "MetaExpWeighting":
         eta_list = [
-            (0, 0, 0, 1), # baseline
-            (10, 0, 0.2, 0), # online
-            (10, 0, 0.5, 0), # online
-            (0, 0, 0.8, 0.0), # blind
-            (0, 10000, 0.5, 0), # t-test
+            (0, 0, 0, 1),  # baseline
+            (10, 0, 0.2, 0),  # online
+            (10, 0, 0.5, 0),  # online
+            (0, 0, 0.8, 0.0),  # blind
+            (0, 10000, 0.5, 0),  # t-test
         ]
         meta_weights = np.ones(len(eta_list))
-        #meta_weights[1:] = 1/(len(eta_list) - 1)
+        # meta_weights[1:] = 1/(len(eta_list) - 1)
         policy = MetaExpWeightingList(
             eta=args.eta,
             eta_list=eta_list,
@@ -100,9 +102,15 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
 
 
 def run_simulation(
-        nature: Nature, proposer: Proposer, policy: Policy, human_max_loss: float, do_convex_mixture: bool = True
+    nature: Nature,
+    proposer: Proposer,
+    policy: Policy,
+    human_max_loss: float,
+    do_convex_mixture: bool = True,
 ):
-    approval_hist = ApprovalHistory(human_max_loss=human_max_loss, policy_name=str(policy))
+    approval_hist = ApprovalHistory(
+        human_max_loss=human_max_loss, policy_name=str(policy)
+    )
 
     # Run the platform trial
     indiv_loss_robot_t = None
@@ -117,7 +125,9 @@ def run_simulation(
 
         sub_trial_data = nature.get_trial_data(t + 1)
         if np.sum(robot_weights) > 0:
-            mixture_loss_t = proposer.score_mixture_model(robot_weights/np.sum(robot_weights), sub_trial_data.batch_data[-1])
+            mixture_loss_t = proposer.score_mixture_model(
+                robot_weights / np.sum(robot_weights), sub_trial_data.batch_data[-1]
+            )
         else:
             mixture_loss_t = 1
         indiv_loss_robot_t = proposer.score_models(sub_trial_data.batch_data[-1])
@@ -127,7 +137,9 @@ def run_simulation(
         )
         if do_convex_mixture:
             # Take a weighted average of the predictions and then apply the loss
-            policy_loss_t = policy.human_max_loss * human_weight + np.mean(mixture_loss_t) * (1 - human_weight)
+            policy_loss_t = policy.human_max_loss * human_weight + np.mean(
+                mixture_loss_t
+            ) * (1 - human_weight)
         else:
             # Take a weighted average of the losses
             policy_loss_t = np.sum(all_loss_t * weights) / batch_n
@@ -165,7 +177,9 @@ def main(args=sys.argv[1:]):
     nature.next(None)
     model = proposer.propose_model(nature.get_trial_data(0), None)
     if args.human_max_loss is None:
-        args.human_max_loss = np.mean(proposer.score_models(nature.create_test_data(0))[0])
+        args.human_max_loss = np.mean(
+            proposer.score_models(nature.create_test_data(0))[0]
+        )
         logging.info("HUMAN MAX %f", args.human_max_loss)
 
     policy = create_policy(
