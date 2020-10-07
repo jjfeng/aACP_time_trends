@@ -42,6 +42,7 @@ def main(args=sys.argv[1:]):
 
     proposer = FixedProposer(models)
 
+    print("pickling...")
     pickle_to_file(proposer, args.out_file)
 
 

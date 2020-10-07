@@ -9,7 +9,7 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import roc_auc_score
 
 # items that we want to read
-OUTCOME = "log_los"
+OUTCOME = "survival_status"
 ITEM_IDS = [
     220045,  # Heart rate
     220210,  # Respiratory rate
@@ -22,28 +22,30 @@ ITEM_IDS = [
     220181,  # Non Invasive Blood Pressure mean
     223761,  # Temperature Fahrenheit
     220277,  # Oxygen
-    # 225690,  # Bilirubin
+    220274,  # PH
+    220734,  # PH
+    223830,  # PH
+    220235, # CO2
+    220645, # Sodium
+    220615, # Creatinen
+    229761, # Creatine
+    225651, # Bili
+    225690,  # Bilirubin
     # 220228,  # Hemoglobin
     # 220615,  # Creatinine (serum)
-    220739,  # GCS eye
-    223900,  # GCSVerbal
-    223901,  # GCS motor
+    #220739,  # GCS eye
+    #223900,  # GCSVerbal
+    #223901,  # GCS motor
     225664,  # Glucose finger stick
     220621,  # Glucose (serum)
     226537,  # Glucose (whole blood)
+    225624, # BUN
+    227456, # Albumin
+    220545, # Hematocrit
+    226540, # Hematocrit
+    220546, # WBC
+    # Urine is missing
 ]
-# LAB_ITEMS = [
-#    51221, # hematocrit
-#    51222, # hemoglobin
-#    51248, # MCH
-#    51249, # MCHC
-#    51250, # MCV
-#    51265, # platelets
-#    51279, # RBC
-#    51277, # RDW
-#    52159, # RDW SD
-#    51301  # WBC
-# ]
 ITEM_ID_STR = "\|".join([str(itemid) for itemid in ITEM_IDS])
 
 EQUIV_ITEM_IDS = {
@@ -53,10 +55,17 @@ EQUIV_ITEM_IDS = {
     224690: 220210,
     225664: 220621,
     226537: 220621,
+    220274: 223830,  # PH
+    220734: 223830,  # PH
+    229761: 220615, # Creatinen
+    225651: 225690,  # Bilirubin
+    226540: 220545, # Hematocrit
 }
 
 
-def create_features(chartevents_sub):
+def create_features(chartevents_sub, mean_only=False):
+    patient_age = chartevents_sub[["subject_id", "hadm_id",
+        "anchor_age"]].drop_duplicates()
     chartvals = chartevents_sub[["subject_id", "hadm_id", "itemid", "valuenum"]]
     print("CAR VALS", chartvals)
     mean_item_values = (
@@ -87,14 +96,69 @@ def create_features(chartevents_sub):
     min_item_values = min_item_values.pivot(
         index=["subject_id", "hadm_id"], columns="itemid", values="valuenum"
     )
-    variables = pd.concat([mean_item_values, max_item_values, min_item_values], axis=1)
+    if mean_only:
+        variables = mean_item_values
+    else:
+        variables = pd.concat([mean_item_values, max_item_values, min_item_values], axis=1)
     print("VAR", variables)
+
+    variables = variables.merge(patient_age, on=["subject_id", "hadm_id"])
+    print(variables)
     return variables
 
 
 def impute_mean(variables):
+    # TODO: impute better
     # Fill missing with mean
-    variables = variables.fillna(variables.mean(axis=0, skipna=True))
+    fill_vals = variables.mean(axis=0, skipna=True)
+    for s in ["max", "min", "mean"]:
+        fill_vals["220045%s" % s] = 80
+    for s in ["max", "min", "mean"]:
+        fill_vals["220210%s" % s] = 15
+    for s in ["max", "min", "mean"]:
+        fill_vals["220050%s" % s] = 100
+    for s in ["max", "min", "mean"]:
+        fill_vals["220051%s" % s] = 70
+    for s in ["max", "min", "mean"]:
+        fill_vals["220052%s" % s] = 85
+    for s in ["max", "min", "mean"]:
+        fill_vals["223761%s" % s] = 98.6
+    for s in ["max", "min", "mean"]:
+        fill_vals["220277%s" % s] = 95
+    for s in ["max", "min", "mean"]:
+        fill_vals["223830%s" % s] = 7.4
+    for s in ["max", "min", "mean"]:
+        fill_vals["220235%s" % s] = 40
+    for s in ["max", "min", "mean"]:
+        fill_vals["220645%s" % s] = 140
+    for s in ["max", "min", "mean"]:
+        fill_vals["220615%s" % s] = 1
+    for s in ["max", "min", "mean"]:
+        fill_vals["225690%s" % s] = 1
+    for s in ["max", "min", "mean"]:
+        fill_vals["225624%s" % s] = 4
+    for s in ["max", "min", "mean"]:
+        fill_vals["220621%s" % s] = 100
+    for s in ["max", "min", "mean"]:
+        fill_vals["227456%s" % s] = 40
+    for s in ["max", "min", "mean"]:
+        fill_vals["220545%s" % s] = 45
+    for s in ["max", "min", "mean"]:
+        fill_vals["220546%s" % s] = 9
+    #if "220739mean" in fill_vals.index:
+    #    fill_vals["220739mean"] = 4
+    #else:
+    #    print("NO GCS 1")
+    #if "223900mean" in fill_vals.index:
+    #    fill_vals["223900mean"] = 5
+    #else:
+    #    print("NO GCS 2")
+    #if "223901mean" in fill_vals.index:
+    #    fill_vals["223901mean"] = 6
+    #else:
+    #    print("NO GCS 3")
+    print(fill_vals)
+    variables = variables.fillna(fill_vals)
     return variables
 
 
@@ -131,16 +195,21 @@ def extract_stays(thres=2):
     return stays
 
 
-def extract_chartevents(file_name = None, nrows=1000000):
+def extract_chartevents(admissions, file_name = None, nrows=1000000):
     if file_name is None:
-        chartevents = pd.read_csv("~/mimic_iv/icu/chartevents.csv.gz", nrows=nrows)
+        chartevents = pd.read_csv("~/mimic_iv/icu/chartevents.csv.gz",
+                nrows=nrows, usecols=[0,1,2,3,5,6,7])
     else:
         chartevents = pd.read_csv(file_name, nrows=nrows,
-        names="subject_id,hadm_id,stay_id,charttime,storetime,itemid,value,valuenum,valueuom,warning".split(","))
+            names="subject_id,hadm_id,stay_id,charttime,storetime,itemid,value,valuenum,valueuom,warning".split(","),
+            usecols=[0,1,2,3,5,6,7])
     chartevents = chartevents[chartevents.itemid.isin(ITEM_IDS)]
+    for itemid in ITEM_IDS:
+        print(itemid, np.sum(chartevents.itemid == itemid))
+
     chartevents = chartevents.replace({"itemid": EQUIV_ITEM_IDS})
     chartevents = chartevents.merge(
-        admissions[["subject_id", "hadm_id", "admittime"]],
+        admissions[["subject_id", "hadm_id", "admittime", "anchor_age"]],
         on=["subject_id", "hadm_id"],
     )
     chartevents["since_admittime"] = pd.to_datetime(
@@ -148,6 +217,25 @@ def extract_chartevents(file_name = None, nrows=1000000):
     ) - pd.to_datetime(chartevents.admittime)
     chartevents["within_24hr"] = chartevents.since_admittime < np.timedelta64(24, "h")
     return chartevents
+
+
+def extract_labevents(admissions, file_name = None, nrows=1000):
+    if file_name is None:
+        labevents = pd.read_csv("~/mimic_iv/hosp/labevents.csv.gz", nrows=nrows,
+                usecols=[1,2,4,5,7,8])
+    else:
+        labevents = pd.read_csv(file_name, nrows=nrows,
+        names="labevent_id,subject_id,hadm_id,specimen_id,itemid,charttime,storetime,value,valuenum,valueuom,ref_range_lower,ref_range_upper,flag,priority,comments".split(","))
+    labevents = labevents[labevents.itemid.isin(LAB_ITEM_IDS)]
+    labevents = labevents.merge(
+        admissions[["subject_id", "hadm_id", "admittime"]],
+        on=["subject_id", "hadm_id"],
+    )
+    labevents["since_admittime"] = pd.to_datetime(
+        labevents.charttime
+    ) - pd.to_datetime(labevents.admittime)
+    labevents["within_24hr"] = labevents.since_admittime < np.timedelta64(24, "h")
+    return labevents
 
 
 #output = subprocess.check_output(
@@ -159,30 +247,31 @@ if not os.path.exists("experiment_mimic/_output/data"):
 
 patients = extract_patients()
 admissions = extract_admissions(patients)
-print(admissions)
 stays = extract_stays(thres=2)
 
 # Filter for patients staying at least one day
 stays = stays[stays.los >= 1]
 admissions = admissions.merge(stays, on=["subject_id", "hadm_id"])
 
-chartevents = extract_chartevents("~/mimic_iv/icu/chartevents_filtered.csv",
-        nrows=10000000)
-print(chartevents)
+chartevents = extract_chartevents(
+        admissions,
+        "~/mimic_iv/icu/chartevents_filtered.csv",
+        # max rows 51575974
+        nrows=     10000000)
 # Filter for events only within the first 24 hours
 chartevents = chartevents[chartevents["within_24hr"]]
 # Extract X
-features = create_features(chartevents)
-features = impute_mean(features)
+chart_features = create_features(chartevents)
+features = impute_mean(chart_features)
+
+#features = lab_features.merge(chart_features, on=["subject_id", "hadm_id"])
+
 print(features)
 # Merge with Y and year
 full_xy_df = (admissions[["subject_id", "hadm_id", "in_year", "in_quarter", OUTCOME]]).merge(
     features, on=["subject_id", "hadm_id"]
 ).drop(columns=["subject_id", "hadm_id"])
 full_xy_df = full_xy_df.sample(frac=1)
-
-# chartevents.to_csv("~/mimic_iv/test.csv")
-# chartevents = pd.read_csv("~/mimic_iv/test.csv")
 
 all_xy_dfs = []
 for (in_year, in_quarter), year_df in full_xy_df.groupby(["in_year", "in_quarter"]):
@@ -192,9 +281,9 @@ for (in_year, in_quarter), year_df in full_xy_df.groupby(["in_year", "in_quarter
     ntrain = int(xy.shape[0] * 3 / 4)
     xy_train = xy[:ntrain, :]
     xy_valid = xy[ntrain:, :]
-    np.savetxt("experiment_mimic/_output/data/los_train_data_%d_%d.csv" % (in_year,
+    np.savetxt("experiment_mimic/_output/data/train_data_%d_%d.csv" % (in_year,
         in_quarter), xy_train)
-    np.savetxt("experiment_mimic/_output/data/los_valid_data_%d_%d.csv" % (in_year,
+    np.savetxt("experiment_mimic/_output/data/valid_data_%d_%d.csv" % (in_year,
             in_quarter), xy_valid)
 
 """
@@ -203,7 +292,7 @@ Just test out a prediction model and see what we get
 all_xy = full_xy_df.drop(columns=["in_year", "in_quarter"]).to_numpy()
 
 x = all_xy[:, 1:]
-y = all_xy[:, 0]
+y = all_xy[:, 0].astype(int)
 ntrain = int(y.size * 3 / 4)
 x_train = x[:ntrain]
 y_train = y[:ntrain]
@@ -211,10 +300,10 @@ x_test = x[ntrain:]
 y_test = y[ntrain:]
 print(x.shape, y.shape)
 
-model = RandomForestRegressor(n_estimators=1000, criterion="mae")
+model = RandomForestClassifier(n_estimators=1000, max_depth=3, n_jobs=8)
 model.fit(x_train, y_train)
 print("SCORE", model.score(x_test, y_test))
-#predictions = model.predict(x_test)[:, 1]
-#print("predictions", predictions)
-#print("AUC", roc_auc_score(y_test, predictions))
+predictions = model.predict_proba(x_test)[:, 1]
+print("predictions", predictions)
+print("AUC", roc_auc_score(y_test, predictions))
 #print("mean y", y.mean())

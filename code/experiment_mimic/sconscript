@@ -17,7 +17,7 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 START_YEAR = 2009
-NUM_YEARS = 6
+NUM_YEARS = 11
 HUMAN_LOSS = 0.1
 
 nest.add(
@@ -44,7 +44,9 @@ def fit_mimic_year_model(env, outdir, c):
         join(outdir, 'model_log.txt')]
     c['proposer_list'].append(targets[0])
     cmd = [
-        'python fit_mimic_year_model.py',
+        'python run_script.py',
+        '${TARGETS[0]}',
+        'fit_mimic_year_model.py',
 	'--year',
         c['year'],
 	'--quarter',
@@ -131,7 +133,7 @@ def run_meta_exp(env, outdir, c):
 
 nest.add(
     'alpha',
-    [], #[0.5],
+    [0.5],
     label_func=lambda c: 'alpha_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
@@ -191,56 +193,56 @@ def run_ttest_approval(env, outdir, c):
         ' '.join(map(str, cmd)))
 
 
-#@nest.add_target_with_env(localenv)
-#def run_blind_approval(env, outdir, c):
-#    targets = [
-#        join(outdir, 'blind_approval_hist.pkl'),
-#        join(outdir, 'blind_approval_hist_log.txt'),
-#    ]
-#    c['approval_hists'].append(targets[0])
-#    cmd = [
-#        'python run_approval.py',
-#        '--seed',
-#        c['seed'],
-#        '--human-max-loss',
-#        HUMAN_LOSS,
-#        '--nature-file ${SOURCES[0]}',
-#        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name BlindApproval',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#
-#    sources = [c['create_nature'][0], c['create_proposer'][0]]
-#    return env.Command(
-#        targets,
-#        sources,
-#        ' '.join(map(str, cmd)))
-#
-#
-#@nest.add_target_with_env(localenv)
-#def run_fixed_approval(env, outdir, c):
-#    targets = [
-#        join(outdir, 'fixed_approval_hist.pkl'),
-#        join(outdir, 'fixed_approval_hist_log.txt'),
-#    ]
-#    c['approval_hists'].append(targets[0])
-#    cmd = [
-#        'python run_approval.py',
-#        '--seed',
-#        c['seed'],
-#        '--human-max-loss',
-#        HUMAN_LOSS,
-#        '--nature-file ${SOURCES[0]}',
-#        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name FixedPolicy',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#
-#    sources = [c['create_nature'][0], c['create_proposer'][0]]
-#    return env.Command(
-#        targets,
-#        sources,
-#        ' '.join(map(str, cmd)))
+@nest.add_target_with_env(localenv)
+def run_blind_approval(env, outdir, c):
+    targets = [
+        join(outdir, 'blind_approval_hist.pkl'),
+        join(outdir, 'blind_approval_hist_log.txt'),
+    ]
+    c['approval_hists'].append(targets[0])
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--human-max-loss',
+        HUMAN_LOSS,
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name BlindApproval',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+
+@nest.add_target_with_env(localenv)
+def run_fixed_approval(env, outdir, c):
+    targets = [
+        join(outdir, 'fixed_approval_hist.pkl'),
+        join(outdir, 'fixed_approval_hist_log.txt'),
+    ]
+    c['approval_hists'].append(targets[0])
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--human-max-loss',
+        HUMAN_LOSS,
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name FixedPolicy',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
 
 
 @nest.add_target_with_env(localenv)
@@ -255,7 +257,7 @@ def plot_all_hists(env, outdir, c):
 	'--y-min',
         0,
 	'--y-max',
-        0.3,
+        0.2,
 	'--history-files',
         history_files,
 	'--loss-plot ${TARGETS[0]}',

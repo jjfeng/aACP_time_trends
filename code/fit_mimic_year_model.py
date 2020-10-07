@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Creates model for mimic data for year and month
 """
@@ -29,6 +31,7 @@ def parse_args(args):
     parser.add_argument("--start-year", type=int, default=2009)
     parser.add_argument("--year", type=int, default=2010)
     parser.add_argument("--quarter", type=int, default=0)
+    parser.add_argument("--n-jobs", type=int, default=4)
     parser.add_argument("--log-file", type=str, default="_output/model_log.txt")
     parser.add_argument("--out-file", type=str, default="_output/model.pkl")
     parser.set_defaults()
@@ -38,7 +41,7 @@ def parse_args(args):
 
 
 def main(args=sys.argv[1:]):
-    MIMIC_TRAIN = "experiment_mimic/_output/data/los_train_data_%d_%d.csv"
+    MIMIC_TRAIN = "experiment_mimic/_output/data/train_data_%d_%d.csv"
 
     args = parse_args(args)
     logging.basicConfig(
@@ -57,10 +60,17 @@ def main(args=sys.argv[1:]):
 		np.genfromtxt(MIMIC_TRAIN % (year, quarter)) for year in range(max(args.year -
             args.num_back_years, args.start_year), args.year + 1) for quarter
         in quarters])
-    ntrain = int(dat.shape[0]/2)
+    print("done loading data")
+    ntrain = dat.shape[0]
     x_train = dat[:ntrain, 1:]
     y_train = dat[:ntrain, 0]
-    model = RandomForestRWrap(criterion="mae", n_estimators=1000, max_depth=3, oob_score=True)
+
+    model = RandomForestWrap(
+            n_estimators=5000,
+            max_depth=20,
+            oob_score=True,
+            n_jobs=args.n_jobs)
+
     model.fit(x_train, y_train)
     logging.info("OOB score %f", model.oob_score_)
     print("OOB", model.oob_score_)
@@ -70,13 +80,11 @@ def main(args=sys.argv[1:]):
 
     #x_test = dat[ntrain:, 1:]
     #y_test = dat[ntrain:, 0]
-    #predictions = model.predict_proba(x_test)[:,1]
-    #print("AUC", roc_auc_score(y_test, predictions))
-    #print("smart L1", np.mean(np.power(y_test - predictions,2)))
+    #predictions = model.predict(x_test)
+    #print("LOSSSS", np.mean(model.loss_pred(predictions, y_test)))
     #logging.info("simple avg %f", y_train.mean())
-    #margin = (np.sign(y_train - 0.5) * 4 * (y_train.mean() - 0.5)).astype(float)
-    #logging.info("SRUPITD HINGE LOSS %f", np.mean(np.maximum(0,1 - margin)/3))
-    #print("STUPID L1", np.mean(np.power(y_test - y_train.mean(),2)))
+    #print("SRUPITD HINGE LOSS %f", np.mean(model.loss_pred(y_train.mean() *
+    #    np.ones((y_test.size, 2)), y_test)))
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -47,7 +47,6 @@ class FixedProposer(Proposer):
             ]
         return self.pretrained_proposal_history[self.num_models]
 
-
 class FixedProposerFromFile(Proposer):
     import torch
     from torch import nn
