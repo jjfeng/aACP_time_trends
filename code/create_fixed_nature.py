@@ -105,9 +105,10 @@ def main(args=sys.argv[1:]):
     coef_norm = np.sqrt(np.sum(np.power(init_coef, 2)))
     for batch_index in range(args.num_batches):
         do_drift = (
-            batch_index % args.drift_cycle == 1 if args.drift_cycle > 0 else False
+            batch_index % args.drift_cycle == args.drift_cycle - 1 if args.drift_cycle > 0 else False
         )
         if do_drift:
+            print("DRIFT", do_drift)
             new_coef = np.copy(new_coef)
             to0_rand_idx = np.random.choice(
                 np.where(np.abs(new_coef) > 0)[0], size=args.num_coef_drift

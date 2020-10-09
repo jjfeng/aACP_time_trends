@@ -76,6 +76,9 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             (10, 0, 0.5, 0),  # online
             (0, 0, 0.8, 0.0),  # blind
             (0, 10000, 0.5, 0),  # t-test
+            (1, 0, 0.2, 0),
+            (1, 1, 0.2, 0),
+            (1, 10, 0.2, 0),
         ]
         meta_weights = np.ones(len(eta_list))
         # meta_weights[1:] = 1/(len(eta_list) - 1)

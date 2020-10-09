@@ -45,5 +45,5 @@ plt.ylabel("average loss bound")
 # Add a Legend
 plt.legend()
 
-plt.savefig("_output/avg_loss_bounds_drift_restrict_stoch.png")
-print("_output/avg_loss_bounds_drift_restrict_stoch.png")
+plt.savefig("_output/avg_loss_bounds_drift_restrict_stoch_%d.png" % m)
+print("_output/avg_loss_bounds_drift_restrict_stoch_%d.png" % m)
