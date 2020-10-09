@@ -31,8 +31,7 @@ def parse_args(args):
 
 
 def main(args=sys.argv[1:]):
-    # TODO: need to check that this is valid data to use
-    MIMIC_TEST = "experiment_mimic/_output/data/valid_data_%d.csv"
+    MIMIC_TEST = "experiment_mimic/_output/data/valid_data_%d_%d.csv"
 
     args = parse_args(args)
     logging.basicConfig(
@@ -44,10 +43,15 @@ def main(args=sys.argv[1:]):
     trial_data = TrialData()
     times = []
     for time_key in range(args.start_year, args.start_year + args.num_years):
-        path_time = MIMIC_TEST % time_key
-        raw_dataset = np.genfromtxt(path_time)
-        dataset = Dataset(raw_dataset[:, 1:], raw_dataset[:, 0], num_classes=2)
-        trial_data.add_batch(dataset)
+        for quarter in range(4):
+            path_time = MIMIC_TEST % (time_key, quarter)
+            raw_dataset = np.genfromtxt(path_time)
+            if len(raw_dataset.shape) == 1:
+                raw_dataset = raw_dataset.reshape((1,-1))
+                print("VALIDATION DATA ONLY SIZE 1")
+            print("year q", time_key, quarter)
+            dataset = Dataset(raw_dataset[:, 1:], raw_dataset[:, 0], num_classes=2)
+            trial_data.add_batch(dataset)
     nature = FixedNature(trial_data=trial_data)
 
     pickle_to_file(nature, args.out_file)
