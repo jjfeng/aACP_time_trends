@@ -230,7 +230,7 @@ class MetaExpWeightingList(Policy):
         self.meta_weights = meta_weights
 
     def __str__(self):
-        return "Learning-to-Approve"
+        return "Learning-to-Approve-%d" % len(self.eta_list)
 
     def add_expert(self, time_t):
         for k, policy in self.policy_dict.items():
@@ -241,8 +241,9 @@ class MetaExpWeightingList(Policy):
     ):
         robot_weights, human_weight = policy.weight_history[time_t]
         assert np.isclose(robot_weights.sum() + human_weight, 1)
+        #print(robot_weights.size, model_losses_t.size)
         policy_loss = (
-            np.sum(model_losses_t * robot_weights) + human_weight * self.human_max_loss
+                np.sum(model_losses_t[:robot_weights.size] * robot_weights) + human_weight * self.human_max_loss
         )
         return policy_loss
 
@@ -313,7 +314,7 @@ class MetaGridSearch(MetaExpWeightingList):
         max_baseline = np.max(self.eta_grid[-1])
         etas[3] = max_baseline - etas[3]
         # make sure alphas at most sum to 1
-        if etas[2] + etas[3] > 1:
+        if etas[2] + etas[3] >= 1:
             return np.array([etas[0], etas[1], etas[2], 0])
         else:
             return np.array(etas)
@@ -333,9 +334,9 @@ class MetaGridSearch(MetaExpWeightingList):
             self.policy_dict[tuple(etas)] = ValidationPolicy(
                 num_experts, policy_etas, human_max_loss
             )
-            self.regularization[indexes] = 0.001 * np.sum(
-                np.power(np.array(policy_etas), 2)
-            )
+            self.regularization[indexes] = 0 #.001 * np.sum(
+            #    np.power(np.array(policy_etas), 2)
+            #)
 
         self.loss_ts = np.zeros([s.size for s in self.eta_grid])
         self.human_max_loss = human_max_loss
@@ -382,11 +383,15 @@ class MetaGridSearch(MetaExpWeightingList):
             policy_etas = self._get_policy_etas(etas)
             policy = self.policy_dict[etas]
             policy_weight = policy_weights[indexes]
+            #if policy_weight == 0:
+            #    continue
             policy_robot_weights, policy_human_weight = policy.get_predict_weights(
                 time_t
             )
             robot_weights += policy_robot_weights * policy_weight
             human_weight += policy_human_weight * policy_weight
+            #print("etas", policy_etas)
+            #print(policy_robot_weights)
             assert np.all(policy_robot_weights >= 0)
             assert policy_human_weight >= 0 or np.isclose(policy_human_weight, 0)
             if biggest_weight < policy_weights[indexes]:
@@ -404,7 +409,7 @@ class MetaGridSearch(MetaExpWeightingList):
             human_weight,
         )
         assert np.all(robot_weights >= 0)
-        assert human_weight >= 0
+        assert human_weight > 0 or np.isclose(human_weight, 0)
         return robot_weights, human_weight
 
 

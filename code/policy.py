@@ -21,6 +21,9 @@ class Policy:
     def predict_next_losses(self, time_t: int):
         return np.zeros(self.curr_num_experts)
 
+    @property
+    def is_oracle(self):
+        return False
 
 class BaselinePolicy(Policy):
     def __str__(self):
@@ -59,6 +62,25 @@ class BlindApproval(Policy):
             a[-1] = 1
         print(time_t, "chosen robot", np.where(a))
         return a, 0
+
+class OracleApproval(Policy):
+    def __str__(self):
+        return "Oracle"
+
+    def __init__(self, human_max_loss: float):
+        self.human_max_loss = human_max_loss
+        self.curr_num_experts = 0
+
+    def add_expert(self, time_t):
+        self.curr_num_experts += 1
+
+    def get_predict_weights(self, time_t: int):
+        a = np.zeros(self.curr_num_experts)
+        return a, 0
+
+    @property
+    def is_oracle(self):
+        return True
 
 
 class TTestApproval(Policy):

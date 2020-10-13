@@ -5,7 +5,7 @@ from scipy.stats import norm
 max_loss = 1
 n = 50
 alpha = 0.05
-m = 10
+m = 30
 T = 50
 tau = np.sqrt(np.log(m))
 sigma_max = 0.5
