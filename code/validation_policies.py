@@ -60,7 +60,7 @@ class ValidationPolicy(Policy):
             )
             self.optim_weights = np.concatenate([self.optim_weights, [0]])
 
-    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None, mixture_func=None):
         if indiv_robot_loss_t is None:
             return
 
@@ -93,21 +93,26 @@ class ValidationPolicy(Policy):
         )
 
         # heavily weight the new models when transitioning away
+        # matrix11: model to model
         transition_matrix11 = np.eye(self.weights.size) * (1 - self.alpha)
         for i in range(self.weights.size - 1):
             transition_matrix11[i, i] = 1 - self.alpha - self.baseline_alpha
             transition_matrix11[i, i + 1 :] = (self.alpha) / (self.weights.size - i - 1)
-            # transition_matrix11[i,-1] = self.alpha
+            #transition_matrix11[i, :] = (self.alpha) / (self.weights.size - 1)
+            #transition_matrix11[i, i] = 1 - self.alpha - self.baseline_alpha
+        # matrix12: model to baseline
         transition_matrix12 = (
             np.eye(self.weights.size, self.baseline_weights.size, k=1)
             * self.baseline_alpha
         )
+        # matrix21: baseline to model
         transition_matrix21 = np.zeros((self.baseline_weights.size, self.weights.size))
         transition_matrix21[0, -1] = self.alpha
         for i in range(1, self.weights.size - 1):
             transition_matrix21[i, i + 1 :] = (self.alpha) / (self.weights.size - i - 1)
             # transition_matrix21[i,-3:] = (self.alpha)/(3)
             # transition_matrix21[i,-1] = self.alpha
+        # matrix22: baseline to baseline
         transition_matrix22 = np.eye(self.baseline_weights.size) * (1 - self.alpha)
         transition_matrix = np.block(
             [
@@ -115,6 +120,7 @@ class ValidationPolicy(Policy):
                 [transition_matrix21, transition_matrix22],
             ]
         )
+        #print(transition_matrix)
         transition_matrix[:, -1] = 1 - transition_matrix[:, :-1].sum(axis=1)
 
         # print("TRAN", transition_matrix)
@@ -162,25 +168,31 @@ class ValidationPolicy(Policy):
         log_model_update_factors = -self.etas[1] * predictions
         log_baseline_update_factor = -self.etas[1] * self.human_max_loss
 
-        all_optim_weights = special.softmax(
-            np.concatenate(
-                [
-                    np.log(self.weights) - self.etas[1] * predictions,
-                    np.log(self.baseline_weights) - self.etas[1] * self.human_max_loss,
-                    np.log(self.const_baseline_weight)
-                    - self.etas[1] * self.human_max_loss,
-                ]
+        if self.etas[1] > 0:
+            all_optim_weights = special.softmax(
+                np.concatenate(
+                    [
+                        np.log(self.weights) - self.etas[1] * predictions,
+                        np.log(self.baseline_weights) - self.etas[1] * self.human_max_loss,
+                        np.log(self.const_baseline_weight)
+                        - self.etas[1] * self.human_max_loss,
+                    ]
+                )
             )
-        )
 
-        self.optim_weights = all_optim_weights[: self.optim_weights.size]
-        self.baseline_optim_weights = all_optim_weights[
-            self.optim_weights.size : self.optim_weights.size
-            + self.baseline_weights.size
-        ]
-        self.const_baseline_optim_weight = all_optim_weights[-1:]
+            self.optim_weights = all_optim_weights[: self.optim_weights.size]
+            self.baseline_optim_weights = all_optim_weights[
+                self.optim_weights.size : self.optim_weights.size
+                + self.baseline_weights.size
+            ]
+            self.const_baseline_optim_weight = all_optim_weights[-1:]
 
-        self.optim_weights *= predictions <= self.human_max_loss
+            # Impose constraint
+            #self.optim_weights *= predictions <= self.human_max_loss
+        else:
+            self.optim_weights = self.weights
+            self.baseline_optim_weights = self.baseline_weights
+            self.const_baseline_optim_weight = self.const_baseline_weight
 
     def get_predict_weights(self, time_t: int):
         denom = (
@@ -237,24 +249,30 @@ class MetaExpWeightingList(Policy):
             policy.add_expert(time_t)
 
     def _get_policy_prev_loss(
-        self, time_t: int, model_losses_t: np.ndarray, policy: Policy
+        self, time_t: int, model_losses_t: np.ndarray, mixture_func = None, policy: Policy = None
     ):
         robot_weights, human_weight = policy.weight_history[time_t]
         assert np.isclose(robot_weights.sum() + human_weight, 1)
         #print(robot_weights.size, model_losses_t.size)
-        policy_loss = (
+        if mixture_func is not None:
+            mixture_loss_t = mixture_func(robot_weights)
+            policy_loss = (
+                np.mean(mixture_loss_t) * (1 - human_weight) + human_weight * self.human_max_loss
+            )
+        else:
+            policy_loss = (
                 np.sum(model_losses_t[:robot_weights.size] * robot_weights) + human_weight * self.human_max_loss
-        )
+            )
         return policy_loss
 
-    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None, mixture_func=None):
         if indiv_robot_loss_t is not None:
             # Update the meta policy weights first
             model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
             loss_t = np.zeros(self.eta_list_size)
             for idx, etas in enumerate(self.eta_list):
                 loss_t[idx] = self._get_policy_prev_loss(
-                    time_t - 1, model_losses_t, self.policy_dict[etas]
+                    time_t - 1, model_losses_t, mixture_func, self.policy_dict[etas]
                 )
                 # print("policy loss", etas, loss_t[idx])
             self.loss_ts += loss_t
@@ -290,6 +308,8 @@ class MetaExpWeightingList(Policy):
                 policy_weight,
                 policy_human_weight,
                 np.argmax(policy_robot_weights),
+                np.max(policy_robot_weights),
+                "avg", np.sum(policy_robot_weights * np.arange(policy_robot_weights.size))
             )
         print("ETAS", biggest_eta, biggest_weight)
         print(
@@ -348,7 +368,7 @@ class MetaGridSearch(MetaExpWeightingList):
     def __str__(self):
         return "MetaGridSearch"
 
-    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
+    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None, mixture_func=None):
         if indiv_robot_loss_t is not None:
             # Update the meta policy weights first
             model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
@@ -356,7 +376,7 @@ class MetaGridSearch(MetaExpWeightingList):
             for indexes in product(*self.eta_indexes):
                 etas = tuple([etas[i] for i, etas in zip(indexes, self.eta_grid)])
                 loss_t[indexes] = self._get_policy_prev_loss(
-                    time_t - 1, model_losses_t, self.policy_dict[etas]
+                    time_t - 1, model_losses_t, mixture_func, self.policy_dict[etas]
                 )
             self.loss_ts += loss_t
             regularized_loss = self.eta * self.loss_ts + self.regularization

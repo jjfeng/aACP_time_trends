@@ -56,24 +56,24 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             human_max_loss=human_max_loss,
             # const_baseline_weight=0.5,
         )
-    #elif policy_name == "MetaGridSearch":
-    #   eta_grid = [
-    #       np.exp(np.arange(-3, 3, 1)),
-    #       np.exp(np.arange(-3, 4, 1)),
-    #       np.arange(0, 1.01, 0.1),
-    #       np.arange(0, 1, 0.1),
-    #   ]
-    #   policy = MetaGridSearch(
-    #       eta=args.eta,
-    #       eta_grid=eta_grid,
-    #       num_experts=num_experts,
-    #       human_max_loss=human_max_loss,
-    #   )
+    elif policy_name == "MetaGridSearch":
+       eta_grid = [
+           np.exp(np.arange(-3, 3, 1)),
+           np.exp(np.arange(-3, 4, 1)),
+           np.arange(0, 1.01, 0.1),
+           np.arange(0, 1, 0.1),
+       ]
+       policy = MetaGridSearch(
+           eta=args.eta,
+           eta_grid=eta_grid,
+           num_experts=num_experts,
+           human_max_loss=human_max_loss,
+       )
     elif policy_name == "MetaExpWeightingSmall":
         eta_list = [
             (0, 0, 0, 1),  # baseline
-            (1, 0, 0.5, 0),  # online
-            (0, 0, 0.8, 0.0),  # blind
+            #(1.5, 0, 0.5, 0.05),  # online
+            (0, 0, 0.99, 0.0),  # blind
             (0, 10000, 0.5, 0),  # t-test
         ]
         meta_weights = np.ones(len(eta_list))
@@ -88,37 +88,27 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     elif policy_name == "MetaExpWeighting":
         eta_list = [
             (0, 0, 0, 1),  # baseline
-            (10, 0, 0.2, 0),  # online
-            (10, 0, 0.5, 0),  # online
-            (0, 0, 0.8, 0.0),  # blind
+            (1.5, 0, 0.5, 0.05),  # online
+            (0, 0, 0.99, 0.0),  # blind
             (0, 10000, 0.5, 0),  # t-test
-            (1, 0, 0.2, 0.025),
-            (1, 1, 0.2, 0.025),
-            (1, 10, 0.2, 0.025),
-            (1, 100, 0.2, 0.025),
-            (1, 0, 0.4, 0.025),
-            (1, 1, 0.4, 0.025),
-            (1, 10, 0.4, 0.025),
-            (1, 100, 0.4, 0.025),
-            (1, 0, 0.1, 0.05),
-            (1, 1, 0.1, 0.05),
-            (1, 10, 0.1, 0.05),
-            (1, 100, 0.1, 0.05),
-            (10, 0, 0.2, 0),
-            (10, 10, 0.2, 0),
-            (10, 100, 0.2, 0),
-            (10, 1000, 0.2, 0),
-            (10, 0, 0.4, 0),
-            (10, 10, 0.4, 0),
-            (10, 100, 0.4, 0),
-            (10, 1000, 0.4, 0),
+            (10, 0, 0.05, 0),
+            (10, 1, 0.05, 0),
+            (10, 10, 0.05, 0),
             (10, 0, 0.10, 0),
+            (10, 1, 0.10, 0),
             (10, 10, 0.10, 0),
-            (10, 100, 0.10, 0),
-            (10, 1000, 0.10, 0),
+            (10, 0, 0.2, 0),
+            (10, 1, 0.2, 0),
+            (10, 10, 0.2, 0),
+            (10, 0, 0.4, 0),
+            (10, 1, 0.4, 0),
+            (10, 10, 0.4, 0),
+            (10, 0, 0.8, 0),
+            (10, 1, 0.8, 0),
+            (10, 10, 0.8, 0),
         ]
         meta_weights = np.ones(len(eta_list))
-        # meta_weights[1:] = 1/(len(eta_list) - 1)
+        #meta_weights[1:] = 1/(len(eta_list) - 1)*3
         policy = MetaExpWeightingList(
             eta=args.eta,
             eta_list=eta_list,
@@ -135,7 +125,7 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     elif policy_name == "FixedPolicy":
         policy = FixedPolicy(human_max_loss)
     elif policy_name == "TTestApproval":
-        policy = TTestApproval(num_experts, human_max_loss=human_max_loss)
+        policy = TTestApproval(num_experts, human_max_loss=human_max_loss) #, factor=1.6)
     elif policy_name == "Oracle":
         policy = OracleApproval(human_max_loss=human_max_loss)
     else:
@@ -156,11 +146,12 @@ def run_simulation(
 
     # Run the platform trial
     indiv_loss_robot_t = None
+    mixture_loss_t = None
     prev_weights = None
     for t in range(nature.total_time - 1):
         logging.info("TIME STEP %d", t)
         policy.add_expert(t)
-        policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights)
+        policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights, mixture_func=lambda x: proposer.score_mixture_model(x/(np.sum(x) + 1e-10), sub_trial_data.batch_data[-1] ))
         sub_trial_data = nature.get_trial_data(t + 1)
         if not policy.is_oracle:
             robot_weights, human_weight = policy.get_predict_weights(t)
@@ -182,6 +173,7 @@ def run_simulation(
             robot_weights = np.zeros(all_loss_t.size - 1)
             if human_weight == 0:
                 robot_weights[best_model_idx - 1] = 1
+            print("best robot", best_model_idx - 1, "human", human_weight)
             mixture_loss_t = proposer.score_mixture_model(
                 robot_weights, sub_trial_data.batch_data[-1]
             )
