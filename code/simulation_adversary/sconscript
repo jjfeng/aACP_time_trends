@@ -12,15 +12,14 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 DENSITY = "bernoulli"
-NUM_P = 20
-INIT_BATCH_SIZE = 50
-BATCH_SIZE = 50
+NUM_P = 40
+INIT_BATCH_SIZE = 75
+BATCH_SIZE = 75
 NUM_BATCHES = 50
 TRAIN_NUM_BATCHES = 4
 
-NUM_COEFS = 10
+NUM_COEFS = 15
 COEF_SCALE = 10
-NUM_COEF_DRIFT = 1
 
 YMAX = 0.35
 
@@ -28,6 +27,11 @@ nest.add(
     'num_drift',
     [1],
     label_func=lambda c: 'num_drift_%d' % c)
+
+nest.add(
+    'revert_drift',
+    [0.2],
+    label_func=lambda c: 'revert_drift_%.2f' % c)
 
 nest.add(
     'seed',
@@ -48,6 +52,8 @@ def create_nature(env, outdir, c):
         '--batch-size',
         BATCH_SIZE,
         '--batch-incr 0',
+        '--prob-revert-drift',
+        c['revert_drift'],
         '--num-coef-drift',
         c['num_drift'],
         '--num-coefs',
@@ -275,7 +281,7 @@ def plot_all_hists(env, outdir, c):
 	'--y-min',
         0,
 	'--y-max',
-        0.22,
+        0.2,
 	'--history-files',
         history_files,
 	'--loss-plot ${TARGETS[0]}',

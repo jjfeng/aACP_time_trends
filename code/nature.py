@@ -61,6 +61,7 @@ class AdversarialNature(Nature):
         num_coef_drift: int,
         batch_sizes: List,
         init_coef: np.ndarray,
+        prob_revert_drift: float = 0
     ):
         self.data_gen = data_gen
         self.num_coef_drift = num_coef_drift
@@ -69,6 +70,8 @@ class AdversarialNature(Nature):
         self.init_coef = init_coef
         self.trial_data = TrialData(self.batch_sizes)
         self.coefs = [self.init_coef]
+        self.prob_revert_drift = prob_revert_drift
+        self.last_coef_change = 0
 
     def next(self, approval_hist: ApprovalHistory = None):
         np.random.seed(len(self.coefs))
@@ -96,10 +99,17 @@ class AdversarialNature(Nature):
             new_coef[to0_rand_idx] = 0
             new_coef[to1_rand_idx] = np.max(self.coefs[0])
 
-            self.coefs.append(new_coef)
+            self.last_coef_change = len(self.coefs) - 1
         else:
-            # no drift
-            self.coefs.append(self.coefs[-1])
+            if np.random.rand() < self.prob_revert_drift:
+                # Try reverting to old coefs
+                new_coef = self.coefs[self.last_coef_change]
+                self.last_coef_change = len(self.coefs) - 1
+            else:
+                # no drift at all
+                new_coef = self.coefs[-1]
+
+        self.coefs.append(new_coef)
 
         new_data = self.data_gen.create_data(
             self.batch_sizes[self.curr_time], self.curr_time, coef=self.coefs[-1]
