@@ -25,12 +25,12 @@ YMAX = 0.35
 
 nest.add(
     'num_drift',
-    [1],
+    [2],
     label_func=lambda c: 'num_drift_%d' % c)
 
 nest.add(
     'revert_drift',
-    [0.2],
+    [0],
     label_func=lambda c: 'revert_drift_%.2f' % c)
 
 nest.add(
@@ -79,7 +79,8 @@ def create_proposer(env, outdir, c):
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
-    batches = [TRAIN_NUM_BATCHES] * (NUM_BATCHES + 1)
+    #batches = [TRAIN_NUM_BATCHES] * (NUM_BATCHES + 1)
+    batches = [(i % 4) + 1 for i in range(NUM_BATCHES + 1)]
     cmd = [
         'python create_lasso_proposer.py',
         '--density-parametric',
