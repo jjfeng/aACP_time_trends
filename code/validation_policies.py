@@ -158,7 +158,7 @@ class ValidationPolicy(Policy):
         # TODO: fix up the standard error estimate
         predictions = np.mean(
             self.loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
-        ) + self.pred_t_factor * np.sqrt(
+        ) + self.pred_t_factor * np.log(time_t + 1) * np.sqrt(
             np.mean(
                 self.var_loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
             )
@@ -167,31 +167,25 @@ class ValidationPolicy(Policy):
         # Give some reasonable prediction for newest model
         predictions[-1] = predictions[-2]
 
-        if self.etas[1] > 0:
-            all_optim_weights = special.softmax(
-                np.concatenate(
-                    [
-                        np.log(self.weights) - self.etas[1] * predictions,
-                        np.log(self.baseline_weights) - self.etas[1] * self.human_max_loss,
-                        np.log(self.const_baseline_weight)
-                        - self.etas[1] * self.human_max_loss,
-                    ]
-                )
+        all_optim_weights = special.softmax(
+            np.concatenate(
+                [
+                    np.log(self.weights) - self.etas[1] * predictions,
+                    np.log(self.baseline_weights) - self.etas[1] * self.human_max_loss,
+                    np.log(self.const_baseline_weight)
+                    - self.etas[1] * self.human_max_loss,
+                ]
             )
-            self.optim_weights = all_optim_weights[: self.optim_weights.size]
-            self.baseline_optim_weights = all_optim_weights[
-                self.optim_weights.size : self.optim_weights.size
-                + self.baseline_weights.size
-            ]
-            self.const_baseline_optim_weight = all_optim_weights[-1:]
+        )
+        self.optim_weights = all_optim_weights[: self.optim_weights.size]
+        self.baseline_optim_weights = all_optim_weights[
+            self.optim_weights.size : self.optim_weights.size
+            + self.baseline_weights.size
+        ]
+        self.const_baseline_optim_weight = all_optim_weights[-1:]
 
-
-            # Impose constraint
-            self.optim_weights *= predictions <= self.human_max_loss
-        else:
-            self.optim_weights = self.weights
-            self.baseline_optim_weights = self.baseline_weights
-            self.const_baseline_optim_weight = self.const_baseline_weight
+        # Impose constraint
+        self.optim_weights *= predictions <= self.human_max_loss
 
     def get_predict_weights(self, time_t: int):
         denom = (
