@@ -72,12 +72,12 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     elif policy_name == "MetaExpWeightingSmall":
         eta_list = [
             (0, 0, 0, 1),  # baseline
-            #(1.5, 0, 0.5, 0.05),  # online
+            (1.5, 0, 0.5, 0.05),  # online
             (0, 0, 0.99, 0.0),  # blind
             (0, 10000, 0.5, 0),  # t-test
         ]
-        meta_weights = np.ones(len(eta_list))
-        # meta_weights[1:] = 1/(len(eta_list) - 1)
+        meta_weights = np.ones(len(eta_list)) * 16/4
+        meta_weights[0] = 1
         policy = MetaExpWeightingList(
             eta=args.eta,
             eta_list=eta_list,
@@ -91,21 +91,18 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             (1.5, 0, 0.5, 0.05),  # online
             (0, 0, 0.99, 0.0),  # blind
             (0, 10000, 0.5, 0),  # t-test
-            (10, 0, 0.05, 0),
-            (10, 1, 0.05, 0),
-            (10, 10, 0.05, 0),
             (10, 0, 0.10, 0),
             (10, 1, 0.10, 0),
             (10, 10, 0.10, 0),
-            (10, 0, 0.2, 0),
-            (10, 1, 0.2, 0),
-            (10, 10, 0.2, 0),
-            (10, 0, 0.4, 0),
-            (10, 1, 0.4, 0),
-            (10, 10, 0.4, 0),
-            (10, 0, 0.8, 0),
-            (10, 1, 0.8, 0),
-            (10, 10, 0.8, 0),
+            (10, 100, 0.10, 0),
+            (10, 0, 0.3, 0),
+            (10, 1, 0.3, 0),
+            (10, 10, 0.3, 0),
+            (10, 100, 0.3, 0),
+            (10, 0, 0.5, 0),
+            (10, 1, 0.5, 0),
+            (10, 10, 0.5, 0),
+            (10, 100, 0.5, 0),
         ]
         meta_weights = np.ones(len(eta_list))
         #meta_weights[1:] = 1/(len(eta_list) - 1)*3

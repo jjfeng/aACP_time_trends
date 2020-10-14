@@ -16,8 +16,8 @@ class ValidationPolicy(Policy):
         num_experts: int,
         etas: np.ndarray,
         human_max_loss: float,
-        const_baseline_weight: float = 1e-10,
         pred_t_factor: float = 1,
+        const_baseline_weight: float = 1e-10,
         num_back_batches: int = 3,
     ):
         self.human_max_loss = human_max_loss
@@ -158,15 +158,14 @@ class ValidationPolicy(Policy):
         # TODO: fix up the standard error estimate
         predictions = np.mean(
             self.loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
-        ) + self.pred_t_factor * np.sqrt(
-            np.mean(
-                self.var_loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
-            )
-            / np.sum(self.batch_sizes[-self.num_back_batches :])
         )
-        predictions[-1] = self.human_max_loss * 2
-        log_model_update_factors = -self.etas[1] * predictions
-        log_baseline_update_factor = -self.etas[1] * self.human_max_loss
+        #+ self.pred_t_factor * np.sqrt(
+        #    np.mean(
+        #        self.var_loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
+        #    )
+        #    / np.sum(self.batch_sizes[-self.num_back_batches :])
+        #)
+        predictions[-1] = predictions[-2] #self.human_max_loss
 
         if self.etas[1] > 0:
             all_optim_weights = special.softmax(
@@ -179,13 +178,13 @@ class ValidationPolicy(Policy):
                     ]
                 )
             )
-
             self.optim_weights = all_optim_weights[: self.optim_weights.size]
             self.baseline_optim_weights = all_optim_weights[
                 self.optim_weights.size : self.optim_weights.size
                 + self.baseline_weights.size
             ]
             self.const_baseline_optim_weight = all_optim_weights[-1:]
+
 
             # Impose constraint
             #self.optim_weights *= predictions <= self.human_max_loss

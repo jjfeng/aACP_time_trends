@@ -38,6 +38,7 @@ def parse_args(args):
         "--sim-func-name", type=str, default="linear", choices=["linear", "curvy"]
     )
     parser.add_argument("--num-coef-drift", type=int, default=2)
+    parser.add_argument("--prob-revert-drift", type=float, default=0)
     parser.add_argument("--num-p", type=int, default=50)
     parser.add_argument(
         "--support-setting", type=str, default="constant", choices=["constant"]
@@ -100,7 +101,7 @@ def main(args=sys.argv[1:]):
     init_coef = np.zeros(args.num_p)
     init_coef[: args.num_coefs] = args.coef_scale
     nature = AdversarialNature(
-        data_gen, args.num_coef_drift, args.batch_sizes, init_coef=init_coef
+        data_gen, args.num_coef_drift, args.batch_sizes, init_coef=init_coef, prob_revert_drift=args.prob_revert_drift
     )
 
     pickle_to_file(nature, args.out_file)
