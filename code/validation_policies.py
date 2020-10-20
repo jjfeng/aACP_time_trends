@@ -1,5 +1,6 @@
 from itertools import product
 from scipy import special
+import scipy.stats
 import numpy as np
 from policy import Policy
 
@@ -214,6 +215,7 @@ class MetaExpWeightingList(Policy):
         meta_weights: np.ndarray,
         num_experts: int,
         human_max_loss: float,
+        ci_alpha: float = 0.05
     ):
         self.eta = eta
         self.eta_list = eta_list
@@ -221,11 +223,13 @@ class MetaExpWeightingList(Policy):
 
         self.eta_indexes = np.arange(len(eta_list))
         print("ETA INDEX", self.eta_indexes)
+        pred_t_factor = scipy.stats.norm().ppf(1 - ci_alpha)
+        print("pred t factor", pred_t_factor)
 
         self.policy_dict = {}
         for idx, etas in enumerate(eta_list):
             self.policy_dict[etas] = ValidationPolicy(
-                num_experts, np.array(etas), human_max_loss
+                num_experts, np.array(etas), human_max_loss, pred_t_factor=pred_t_factor
             )
 
         self.loss_ts = np.zeros(len(eta_list))

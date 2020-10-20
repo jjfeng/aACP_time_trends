@@ -18,6 +18,7 @@ BATCH_SIZE = 75
 NUM_BATCHES = 50
 NUM_COEFS = 15
 COEF_SCALE = 10
+CONTROL_FACTOR = 1.6
 
 nest.add(
     'seed',
@@ -80,6 +81,32 @@ def create_proposer(env, outdir, c):
 
 nest.add_aggregate('approval_hists', list)
 
+@nest.add_target_with_env(localenv)
+def run_meta_exp(env, outdir, c):
+    targets = [
+        join(outdir, 'meta_exp_approval_hist.pkl'),
+        join(outdir, 'meta_exp_approval_hist_log.txt'),
+    ]
+    c['approval_hists'].append(targets[0])
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--control-error-factor',
+        CONTROL_FACTOR,
+        '--ci-alpha 0.025',
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name MetaExpWeighting',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
 nest.add(
     'eta',
     [1.5],
@@ -135,30 +162,30 @@ def run_meta_exp_small(env, outdir, c):
         ' '.join(map(str, cmd)))
 
 
-@nest.add_target_with_env(localenv)
-def run_meta_exp(env, outdir, c):
-    targets = [
-        join(outdir, 'meta_exp_approval_hist.pkl'),
-        join(outdir, 'meta_exp_approval_hist_log.txt'),
-    ]
-    c['approval_hists'].append(targets[0])
-    cmd = [
-        'python run_approval.py',
-        '--seed',
-        c['seed'],
-        '--eta',
-        c['eta'],
-        '--nature-file ${SOURCES[0]}',
-        '--proposer-file ${SOURCES[1]}',
-        '--policy-name MetaExpWeighting',
-	'--out-file ${TARGETS[0]}',
-	'--log-file ${TARGETS[1]}']
-
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
-    return env.Command(
-        targets,
-        sources,
-        ' '.join(map(str, cmd)))
+#@nest.add_target_with_env(localenv)
+#def run_meta_exp(env, outdir, c):
+#    targets = [
+#        join(outdir, 'meta_exp_approval_hist.pkl'),
+#        join(outdir, 'meta_exp_approval_hist_log.txt'),
+#    ]
+#    c['approval_hists'].append(targets[0])
+#    cmd = [
+#        'python run_approval.py',
+#        '--seed',
+#        c['seed'],
+#        '--eta',
+#        c['eta'],
+#        '--nature-file ${SOURCES[0]}',
+#        '--proposer-file ${SOURCES[1]}',
+#        '--policy-name MetaExpWeighting',
+#	'--out-file ${TARGETS[0]}',
+#	'--log-file ${TARGETS[1]}']
+#
+#    sources = [c['create_nature'][0], c['create_proposer'][0]]
+#    return env.Command(
+#        targets,
+#        sources,
+#        ' '.join(map(str, cmd)))
 
 nest.add(
     'alpha',

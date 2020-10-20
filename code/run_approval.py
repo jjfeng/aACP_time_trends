@@ -15,6 +15,7 @@ from proposer import Proposer
 from approval_history import ApprovalHistory
 from policy import *
 from validation_policies import *
+from regret_bounds_restrict_drift_stochastic import get_regret_bounds
 from common import pickle_from_file, pickle_to_file
 
 
@@ -39,6 +40,8 @@ def parse_args(args):
     parser.add_argument("--human-max-loss", type=float, default=None)
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
+    parser.add_argument("--ci-alpha", type=float, default=0.025)
+    parser.add_argument("--control-error-factor", type=float, default=1.5)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
     parser.add_argument("--out-file", type=str, default="_output/approver_history.pkl")
     parser.add_argument("--out-nature-file", type=str, default=None)
@@ -48,7 +51,7 @@ def parse_args(args):
     return args
 
 
-def create_policy(policy_name, args, human_max_loss, num_experts):
+def create_policy(policy_name, args, human_max_loss, total_time, num_experts):
     if policy_name == "MarkovHedge":
         policy = ValidationPolicy(
             num_experts=num_experts,
@@ -88,7 +91,7 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
     elif policy_name == "MetaExpWeighting":
         eta_list = [
             (0, 0, 0, 1),  # baseline
-            (1.5, 0, 0.5, 0.05),  # online
+            #(1.5, 0, 0.5, 0.05),  # online
             (0, 0, 0.99, 0.0),  # blind
             (0, 10000, 0.5, 0),  # t-test
             (10, 0, 0.10, 0),
@@ -105,13 +108,32 @@ def create_policy(policy_name, args, human_max_loss, num_experts):
             (10, 100, 0.5, 0),
         ]
         meta_weights = np.ones(len(eta_list))
-        #meta_weights[1:] = 1/(len(eta_list) - 1)*3
+        #meta_weights[1:] = 8/(len(eta_list) - 1)
+        lambdas = np.exp(np.arange(-6, 2, 0.02))
+        regret_bounds = get_regret_bounds(
+            max_loss=1,
+            alpha=args.ci_alpha,
+            m = len(eta_list), #baseline_weight=meta_weights[0]/np.sum(meta_weights),
+            T=total_time,
+            delta=human_max_loss,
+            drift=human_max_loss,
+            lambdas=lambdas)
+        best_bound = np.min(regret_bounds)
+        logging.info("baseline_weight %f", meta_weights[0]/np.sum(meta_weights))
+        logging.info("human max %f", human_max_loss)
+        logging.info("BEST BOUND %f, desired control %f", best_bound, human_max_loss * args.control_error_factor)
+        assert best_bound < human_max_loss * args.control_error_factor
+        loss_diffs = human_max_loss * args.control_error_factor - regret_bounds
+        eta_idx = np.max(np.where(loss_diffs >= 0))
+        eta = lambdas[eta_idx]
+        logging.info("closest lambda %f, bound %f", eta, regret_bounds[eta_idx])
         policy = MetaExpWeightingList(
-            eta=args.eta,
+            eta=eta,
             eta_list=eta_list,
             meta_weights=meta_weights,
             num_experts=num_experts,
             human_max_loss=human_max_loss,
+            ci_alpha=args.ci_alpha
         )
     elif policy_name == "BaselinePolicy":
         policy = BaselinePolicy(human_max_loss=human_max_loss)
@@ -227,6 +249,7 @@ def main(args=sys.argv[1:]):
         args.policy_name,
         args,
         human_max_loss=args.human_max_loss,
+        total_time=nature.total_time,
         num_experts=nature.total_time,
     )
 

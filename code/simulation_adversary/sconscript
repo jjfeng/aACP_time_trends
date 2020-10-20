@@ -17,6 +17,7 @@ INIT_BATCH_SIZE = 75
 BATCH_SIZE = 75
 NUM_BATCHES = 50
 TRAIN_NUM_BATCHES = 4
+CONTROL_FACTOR = 1.5
 
 NUM_COEFS = 15
 COEF_SCALE = 10
@@ -125,35 +126,36 @@ def run_ttest_approval(env, outdir, c):
         sources,
         ' '.join(map(str, cmd)))
 
+
+@nest.add_target_with_env(localenv)
+def run_meta_exp(env, outdir, c):
+    targets = [
+        join(outdir, 'meta_exp_approval_hist.pkl'),
+        join(outdir, 'meta_exp_approval_hist_log.txt'),
+    ]
+    c['approval_hists'].append(targets[0])
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--control-error-factor',
+        CONTROL_FACTOR,
+        '--ci-alpha 0.025',
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name MetaExpWeighting',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['run_ttest_approval'][1], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
 nest.add(
     'eta',
     [1.5],
     label_func=lambda c: 'eta_%.2f' % c)
-
-#@nest.add_target_with_env(localenv)
-#def run_meta_exp_grid(env, outdir, c):
-#    targets = [
-#        join(outdir, 'meta_approval_grid_hist.pkl'),
-#        join(outdir, 'meta_approval_grid_list_log.txt'),
-#    ]
-#    c['approval_hists'].append(targets[0])
-#    cmd = [
-#        'python run_approval.py',
-#        '--seed',
-#        c['seed'],
-#        '--eta',
-#        c['eta'],
-#        '--nature-file ${SOURCES[0]}',
-#        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name MetaGridSearch',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#
-#    sources = [c['create_nature'][0], c['create_proposer'][0]]
-#    return env.Command(
-#        targets,
-#        sources,
-#        ' '.join(map(str, cmd)))
 
 @nest.add_target_with_env(localenv)
 def run_meta_exp_small(env, outdir, c):
@@ -171,31 +173,6 @@ def run_meta_exp_small(env, outdir, c):
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name MetaExpWeightingSmall',
-	'--out-file ${TARGETS[0]}',
-	'--log-file ${TARGETS[1]}']
-
-    sources = [c['run_ttest_approval'][1], c['create_proposer'][0]]
-    return env.Command(
-        targets,
-        sources,
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
-def run_meta_exp(env, outdir, c):
-    targets = [
-        join(outdir, 'meta_exp_approval_hist.pkl'),
-        join(outdir, 'meta_exp_approval_hist_log.txt'),
-    ]
-    c['approval_hists'].append(targets[0])
-    cmd = [
-        'python run_approval.py',
-        '--seed',
-        c['seed'],
-        '--eta',
-        c['eta'],
-        '--nature-file ${SOURCES[0]}',
-        '--proposer-file ${SOURCES[1]}',
-        '--policy-name MetaExpWeighting',
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
 
