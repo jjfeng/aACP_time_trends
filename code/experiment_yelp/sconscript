@@ -15,9 +15,10 @@ NUM_HIDDEN = 50
 NUM_EPOCHS = 500
 
 START_YEAR = 2008
-NUM_YEARS = 11
+NUM_YEARS = 1
 NUM_MONTHS = 4
 HUMAN_LOSS = 1.1
+CONTROL_FACTOR = 1.6
 
 nest.add(
     'seed',
@@ -43,7 +44,9 @@ def fit_yelp_year_month_model(env, outdir, c):
         join(outdir, 'model_log.txt')]
     c['proposer_list'].append(targets[0])
     cmd = [
-        'python fit_yelp_year_month_model.py',
+        'python run_script.py',
+        '${TARGETS[0]}',
+        'fit_yelp_year_month_model.py',
 	'--num-hidden',
         NUM_HIDDEN,
 	'--year',
@@ -102,12 +105,6 @@ def create_proposer(env, outdir, c):
 
 nest.add_aggregate('approval_hists', list)
 
-nest.add(
-    'eta',
-    [1.5],
-    label_func=lambda c: 'eta_%.2f' % c)
-
-
 @nest.add_target_with_env(localenv)
 def run_meta_exp(env, outdir, c):
     targets = [
@@ -119,8 +116,9 @@ def run_meta_exp(env, outdir, c):
         'python run_approval.py',
         '--seed',
         c['seed'],
-        '--eta',
-        c['eta'],
+        '--control-error-factor',
+        CONTROL_FACTOR,
+        '--ci-alpha 0.025',
         '--human-max-loss',
         HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
@@ -134,6 +132,12 @@ def run_meta_exp(env, outdir, c):
         targets,
         sources,
         ' '.join(map(str, cmd)))
+
+nest.add(
+    'eta',
+    [1.5],
+    label_func=lambda c: 'eta_%.2f' % c)
+
 
 @nest.add_target_with_env(localenv)
 def plot_meta_exp(env, outdir, c):
