@@ -1,6 +1,11 @@
 from typing import List
 import numpy as np
 
+import torch
+from torch import nn
+from torchtext import data
+from model import TextSentiment
+
 from dataset import Dataset
 from trial_data import TrialData
 from approval_history import ApprovalHistory
@@ -48,14 +53,10 @@ class FixedProposer(Proposer):
         return self.pretrained_proposal_history[self.num_models]
 
 class FixedProposerFromFile(Proposer):
-    import torch
-    from torch import nn
-    from torchtext import data
-    from model import TextSentiment
-    def __init__(self, model_files: List):
+    def __init__(self, model_files: List, criterion):
         self.model_files = model_files
         self.proposal_history = []
-        self.criterion = nn.L1Loss(reduce=False)
+        self.criterion = criterion
 
     @property
     def num_models(self):
@@ -124,7 +125,7 @@ class FixedProposerFromFile(Proposer):
     def score_mixture_model(self, weights: np.ndarray, dataset_file: str):
         all_preds = []
         prev_targets = None
-        for model_dict in self.proposal_history:
+        for model_dict in self.proposal_history[:weights.size]:
             _, preds, targets = self._run_test(
                 model_dict, dataset_file, criterion=self.criterion
             )

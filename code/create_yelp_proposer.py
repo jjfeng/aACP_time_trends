@@ -9,6 +9,8 @@ import numpy as np
 from numpy import ndarray
 from typing import List
 
+from torch import nn
+
 from trial_data import TrialData
 from nature import FixedNature
 from proposer import FixedProposerFromFile
@@ -21,6 +23,7 @@ def parse_args(args):
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument("path_template", type=str)
+    parser.add_argument("--max-loss", type=float, default=5)
     parser.add_argument("--start-year", type=int, default=2008)
     parser.add_argument("--num-years", type=int, default=1)
     parser.add_argument("--num-months", type=int, default=1)
@@ -30,6 +33,8 @@ def parse_args(args):
 
     return args
 
+def normalize_l1():
+    torch.abs(x - y)/args.max_loss
 
 def main(args=sys.argv[1:]):
     args = parse_args(args)
@@ -43,8 +48,9 @@ def main(args=sys.argv[1:]):
             print("model", model_file)
             assert os.path.exists(model_file)
             model_paths.append(model_file)
-
-    proposer = FixedProposerFromFile(model_paths)
+    raw_criterion = nn.L1Loss(reduce=False)
+    proposer = FixedProposerFromFile(model_paths,
+            criterion=lambda x, y: raw_criterion(x, y)/args.max_loss)
 
     pickle_to_file(proposer, args.out_file)
 

@@ -21,6 +21,11 @@ NUM_YEARS = 11
 HUMAN_LOSS = 0.1
 
 nest.add(
+    'num_back_years',
+    [1],
+    label_func=lambda c: 'num_back_years_%d' % c)
+
+nest.add(
     'seed',
     range(1),
     label_func=lambda c: 'seed_%d' % c)
@@ -47,6 +52,8 @@ def fit_mimic_year_model(env, outdir, c):
         'python run_script.py',
         '${TARGETS[0]}',
         'fit_mimic_year_model.py',
+	'--num-back-years',
+    c['num_back_years'],
 	'--year',
         c['year'],
 	'--quarter',

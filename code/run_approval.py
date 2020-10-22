@@ -41,6 +41,7 @@ def parse_args(args):
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
     parser.add_argument("--ci-alpha", type=float, default=0.025)
+    parser.add_argument("--max-loss", type=float, default=1)
     parser.add_argument("--control-error-factor", type=float, default=1.5)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
     parser.add_argument("--out-file", type=str, default="_output/approver_history.pkl")
@@ -51,7 +52,7 @@ def parse_args(args):
     return args
 
 
-def create_policy(policy_name, args, human_max_loss, total_time, num_experts):
+def create_policy(policy_name, args, human_max_loss, max_loss, total_time, num_experts):
     if policy_name == "MarkovHedge":
         policy = ValidationPolicy(
             num_experts=num_experts,
@@ -108,12 +109,11 @@ def create_policy(policy_name, args, human_max_loss, total_time, num_experts):
             (10, 100, 0.5, 0),
         ]
         meta_weights = np.ones(len(eta_list))
-        #meta_weights[1:] = 8/(len(eta_list) - 1)
         lambdas = np.exp(np.arange(-6, 2, 0.02))
         regret_bounds = get_regret_bounds(
-            max_loss=1,
+            max_loss=max_loss,
             alpha=args.ci_alpha,
-            m = len(eta_list), #baseline_weight=meta_weights[0]/np.sum(meta_weights),
+            m = len(eta_list),
             T=total_time,
             delta=human_max_loss,
             drift=human_max_loss,

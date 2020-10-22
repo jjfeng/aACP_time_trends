@@ -6,11 +6,13 @@ from scipy.stats import norm
 def get_regret_bounds(max_loss, alpha, m, T, delta, drift, lambdas):
     # Using our regret bounds
     denom = -(
-            (np.exp(-lambdas * (delta + drift)) - 1)/(delta + drift) * (1 - alpha)
+            (np.exp(-lambdas * (delta + drift)/max_loss) - 1)/((delta +
+                drift)/max_loss) * (1 - alpha)
             + (np.exp(-lambdas) - 1) * alpha)
-    raw_bound = -np.log(np.exp(-lambdas * delta * T) + (m - 1) * np.exp(-lambdas * (delta + drift) * T)) + np.log(m)
+    raw_bound = -np.log(np.exp(-lambdas * delta * T)/max_loss + (m - 1) * np.exp(-lambdas
+        * (delta + drift)/max_loss * T)) + np.log(m)
     bounds = raw_bound/denom / T
-    return bounds
+    return bounds * max_loss
 
 def main(args=sys.argv[1:]):
     max_loss = 1

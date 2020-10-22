@@ -15,7 +15,7 @@ NUM_HIDDEN = 50
 NUM_EPOCHS = 500
 
 START_YEAR = 2008
-NUM_YEARS = 1
+NUM_YEARS = 11
 NUM_MONTHS = 4
 HUMAN_LOSS = 1.1
 CONTROL_FACTOR = 1.6
@@ -91,6 +91,7 @@ def create_proposer(env, outdir, c):
         join(outdir, 'proposer_log.txt')]
     cmd = [
         'python create_yelp_proposer.py "experiment_yelp/_output/seed_0/year_%d/month_%d/model.pkl"',
+        '--max-loss 5',
         '--start-year',
         START_YEAR,
         '--num-years',
@@ -120,7 +121,7 @@ def run_meta_exp(env, outdir, c):
         CONTROL_FACTOR,
         '--ci-alpha 0.025',
         '--human-max-loss',
-        HUMAN_LOSS,
+        HUMAN_LOSS/5,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name MetaExpWeighting',
