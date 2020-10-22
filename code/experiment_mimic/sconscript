@@ -17,12 +17,31 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 START_YEAR = 2009
-NUM_YEARS = 11
+NUM_YEARS = 3
 HUMAN_LOSS = 0.1
+CONTROL_FACTOR = 1.6
+
+@nest.add_target_with_env(localenv)
+def create_nature(env, outdir, c):
+    targets = [
+        join(outdir, 'nature.pkl'),
+        join(outdir, 'nature_log.txt')]
+    cmd = [
+        'python create_mimic_nature.py',
+        '--start-year',
+        START_YEAR,
+        '--num-years',
+        NUM_YEARS,
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+    return env.Command(
+        targets,
+        [],
+        ' '.join(map(str, cmd)))
 
 nest.add(
     'num_back_years',
-    [1],
+    [2],
     label_func=lambda c: 'num_back_years_%d' % c)
 
 nest.add(
@@ -68,30 +87,14 @@ def fit_mimic_year_model(env, outdir, c):
 nest.pop('year')
 
 @nest.add_target_with_env(localenv)
-def create_nature(env, outdir, c):
-    targets = [
-        join(outdir, 'nature.pkl'),
-        join(outdir, 'nature_log.txt')]
-    cmd = [
-        'python create_mimic_nature.py',
-        '--start-year',
-        START_YEAR,
-        '--num-years',
-        NUM_YEARS,
-	'--out-file ${TARGETS[0]}',
-	'--log-file ${TARGETS[1]}']
-    return env.Command(
-        targets,
-        [],
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
 def create_proposer(env, outdir, c):
     targets = [
         join(outdir, 'proposer.pkl')]
+    model_template = c['proposer_list'][0].replace("year_%d" % START_YEAR,
+    "year_%d").replace("quarter_0", "quarter_%d")
     cmd = [
         'python create_mimic_proposer.py',
-        '"experiment_mimic/_output/seed_0/year_%d/quarter_%d/model.pkl"',
+        '"experiment_mimic/%s"' % model_template,
         '--start-year',
         START_YEAR,
         '--num-years',
@@ -104,12 +107,6 @@ def create_proposer(env, outdir, c):
 
 nest.add_aggregate('approval_hists', list)
 
-nest.add(
-    'eta',
-    [1.5],
-    label_func=lambda c: 'eta_%.2f' % c)
-
-
 @nest.add_target_with_env(localenv)
 def run_meta_exp(env, outdir, c):
     targets = [
@@ -121,8 +118,9 @@ def run_meta_exp(env, outdir, c):
         'python run_approval.py',
         '--seed',
         c['seed'],
-        '--eta',
-        c['eta'],
+        '--control-error-factor',
+        CONTROL_FACTOR,
+        '--ci-alpha 0.025',
         '--human-max-loss',
         HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
@@ -137,6 +135,11 @@ def run_meta_exp(env, outdir, c):
         sources,
         ' '.join(map(str, cmd)))
 
+
+nest.add(
+    'eta',
+    [1.5],
+    label_func=lambda c: 'eta_%.2f' % c)
 
 nest.add(
     'alpha',
