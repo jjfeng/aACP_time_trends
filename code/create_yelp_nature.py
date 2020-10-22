@@ -24,6 +24,7 @@ def parse_args(args):
     parser.add_argument("--start-year", type=int, default=2008)
     parser.add_argument("--num-years", type=int, default=1)
     parser.add_argument("--num-months", type=int, default=1)
+    parser.add_argument("--valid-data-template", type=str)
     parser.add_argument("--log-file", type=str, default="_output/nature_log.txt")
     parser.add_argument("--out-file", type=str, default="_output/nature.pkl")
     parser.set_defaults()
@@ -33,9 +34,6 @@ def parse_args(args):
 
 
 def main(args=sys.argv[1:]):
-    # TODO: need to check that this is valid data to use
-    YELP_TEST = "data/yelp_academic_dataset_review_year_valid_%s_%s.json"
-
     args = parse_args(args)
     logging.basicConfig(
         format="%(message)s", filename=args.log_file, level=logging.DEBUG
@@ -54,7 +52,7 @@ def main(args=sys.argv[1:]):
 
     batch_sizes = []
     for time_key in times:
-        path_time = YELP_TEST % time_key
+        path_time = args.valid_data_template % time_key
         with open(path_time) as f:
             num_lines = sum(1 for line in f)
         batch_sizes.append(num_lines)

@@ -26,6 +26,7 @@ def parse_args(args):
         help="Random number generator seed for replicability",
         default=0,
     )
+    parser.add_argument("--train-file", type=str)
     parser.add_argument("--year", type=int, default=2008)
     parser.add_argument("--month", type=int, default=1)
     parser.add_argument("--epochs", type=int, default=1)
@@ -55,8 +56,6 @@ def train_rating_model_year_month(path, n_epochs, num_hidden=5):
 
 
 def main(args=sys.argv[1:]):
-    YELP_TRAIN = "data/yelp_academic_dataset_review_year_train_%s_%s.json"
-
     args = parse_args(args)
     logging.basicConfig(
         format="%(message)s", filename=args.log_file, level=logging.DEBUG
@@ -67,7 +66,7 @@ def main(args=sys.argv[1:]):
     np.random.seed(args.seed)
 
     model, fields = train_rating_model_year_month(
-        YELP_TRAIN % (str(args.year), str(args.month)),
+        args.train_file,
         n_epochs=args.epochs,
         num_hidden=args.num_hidden,
     )
