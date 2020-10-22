@@ -13,7 +13,6 @@ class Nature:
 
     def get_trial_data(self, time_t: int):
         subtrial_data = self.trial_data.subset(time_t + 1)
-        subtrial_data.load()
         return subtrial_data
 
     def create_test_data(self, time_t: int):
@@ -31,18 +30,16 @@ class FixedNature(Nature):
         data_gen: DataGenerator = None,
         trial_data: TrialData = None,
         coefs: List = None,
+        batch_sizes: List[int] = None
     ):
         self.trial_data = trial_data
+        self.batch_sizes = batch_sizes if batch_sizes is not None else trial_data.batch_sizes
         self.data_gen = data_gen
         self.coefs = coefs
 
     def next(self, approval_hist: ApprovalHistory = None):
         # Do nothing
         return
-
-    @property
-    def batch_sizes(self):
-        return self.trial_data.batch_sizes
 
     @property
     def total_time(self):

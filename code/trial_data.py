@@ -16,9 +16,6 @@ class TrialData:
 
         self.batch_data = batch_data
 
-    def load(self):
-        return
-
     @property
     def num_batches(self):
         return len(self.batch_data)

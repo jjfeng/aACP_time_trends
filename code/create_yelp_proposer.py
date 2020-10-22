@@ -9,8 +9,6 @@ import numpy as np
 from numpy import ndarray
 from typing import List
 
-from torch import nn
-
 from trial_data import TrialData
 from nature import FixedNature
 from proposer import FixedProposerFromFile
@@ -50,9 +48,8 @@ def main(args=sys.argv[1:]):
             print("model", model_file)
             assert os.path.exists(model_file)
             model_paths.append(model_file)
-    raw_criterion = nn.L1Loss(reduce=False)
     proposer = FixedProposerFromFile(
-        model_paths, criterion=lambda x, y: raw_criterion(x, y) / args.max_loss
+            model_paths, criterion_str="l1", max_loss=args.max_loss
     )
 
     pickle_to_file(proposer, args.out_file)

@@ -15,10 +15,11 @@ NUM_HIDDEN = 50
 NUM_EPOCHS = 500
 
 START_YEAR = 2008
-NUM_YEARS = 11
+NUM_YEARS = 1
 NUM_MONTHS = 4
-HUMAN_LOSS = 1.1
-CONTROL_FACTOR = 1.6
+MAX_LOSS = 4
+HUMAN_LOSS = 1/MAX_LOSS
+CONTROL_FACTOR = 3
 
 nest.add(
     'seed',
@@ -91,7 +92,8 @@ def create_proposer(env, outdir, c):
         join(outdir, 'proposer_log.txt')]
     cmd = [
         'python create_yelp_proposer.py "experiment_yelp/_output/seed_0/year_%d/month_%d/model.pkl"',
-        '--max-loss 5',
+        '--max-loss',
+        MAX_LOSS,
         '--start-year',
         START_YEAR,
         '--num-years',
@@ -121,7 +123,7 @@ def run_meta_exp(env, outdir, c):
         CONTROL_FACTOR,
         '--ci-alpha 0.025',
         '--human-max-loss',
-        HUMAN_LOSS/5,
+        HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name MetaExpWeighting',
@@ -139,24 +141,6 @@ nest.add(
     [1.5],
     label_func=lambda c: 'eta_%.2f' % c)
 
-
-@nest.add_target_with_env(localenv)
-def plot_meta_exp(env, outdir, c):
-    targets = [
-        join(outdir, 'meta_exp_approval_hist_loss.png'),
-        join(outdir, 'meta_exp_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--policy-name MetaExpWeighting',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_meta_exp'],
-        ' '.join(map(str, cmd)))
 
 
 nest.add(
@@ -193,24 +177,6 @@ def run_online(env, outdir, c):
         sources,
         ' '.join(map(str, cmd)))
 
-@nest.add_target_with_env(localenv)
-def plot_online(env, outdir, c):
-    targets = [
-        join(outdir, 'online_approval_hist_loss.png'),
-        join(outdir, 'online_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--policy-name MarkovHedge',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_online'],
-        ' '.join(map(str, cmd)))
-
 nest.pop('eta')
 
 @nest.add_target_with_env(localenv)
@@ -236,25 +202,6 @@ def run_ttest_approval(env, outdir, c):
     return env.Command(
         targets,
         sources,
-        ' '.join(map(str, cmd)))
-
-
-@nest.add_target_with_env(localenv)
-def plot_ttest(env, outdir, c):
-    targets = [
-        join(outdir, 'ttest_approval_hist_loss.png'),
-        join(outdir, 'ttest_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--policy-name TTestApproval',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_ttest_approval'],
         ' '.join(map(str, cmd)))
 
 
@@ -285,24 +232,6 @@ def run_blind_approval(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def plot_blind(env, outdir, c):
-    targets = [
-        join(outdir, 'blind_approval_hist_loss.png'),
-        join(outdir, 'blind_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--policy-name BlindApproval',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_blind_approval'],
-        ' '.join(map(str, cmd)))
-
-@nest.add_target_with_env(localenv)
 def run_fixed_approval(env, outdir, c):
     targets = [
         join(outdir, 'fixed_approval_hist.pkl'),
@@ -327,24 +256,6 @@ def run_fixed_approval(env, outdir, c):
         sources,
         ' '.join(map(str, cmd)))
 
-
-@nest.add_target_with_env(localenv)
-def plot_fixed(env, outdir, c):
-    targets = [
-        join(outdir, 'fixed_approval_hist_loss.png'),
-        join(outdir, 'fixed_approval_hist_human.png'),
-    ]
-    cmd = [
-        'python plot_history.py',
-        '--policy-name FixedPolicy',
-	'--history-file ${SOURCES[0]}',
-	'--loss-plot ${TARGETS[0]}',
-	'--human-plot ${TARGETS[1]}']
-
-    return env.Command(
-        targets,
-        c['run_fixed_approval'],
-        ' '.join(map(str, cmd)))
 
 @nest.add_target_with_env(localenv)
 def plot_all_hists(env, outdir, c):

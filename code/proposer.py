@@ -57,10 +57,17 @@ class FixedProposer(Proposer):
 
 
 class FixedProposerFromFile(Proposer):
-    def __init__(self, model_files: List, criterion):
+    def __init__(self, model_files: List, criterion_str, max_loss: float):
         self.model_files = model_files
         self.proposal_history = []
-        self.criterion = criterion
+        self.max_loss = max_loss
+        if criterion_str == "l1":
+            self.raw_criterion = nn.L1Loss(reduce=False)
+        else:
+            raise ValueError("no other losses implemented right now")
+
+    def criterion(self, pred_y, y):
+        return self.raw_criterion(pred_y,y)/self.max_loss
 
     @property
     def num_models(self):
@@ -89,7 +96,7 @@ class FixedProposerFromFile(Proposer):
             self.proposal_history.append({"model": model, "fields": fields})
         return model
 
-    def _run_test(self, model_dict, path, criterion, target_func=None):
+    def _run_test(self, model_dict, path, target_func=None):
         test_data = data.TabularDataset(
             path=path, format="json", fields=model_dict["fields"]
         )
@@ -111,7 +118,7 @@ class FixedProposerFromFile(Proposer):
 
             # compute the loss
             targets = batch.label if target_func is None else target_func(batch.label)
-            test_loss = criterion(predictions, targets)
+            test_loss = self.criterion(predictions, targets)
         return (
             test_loss.detach().numpy(),
             predictions.detach().numpy(),
@@ -121,7 +128,7 @@ class FixedProposerFromFile(Proposer):
     def score_models(self, dataset_file: str):
         return np.array(
             [
-                self._run_test(model_dict, dataset_file, criterion=self.criterion)[0]
+                self._run_test(model_dict, dataset_file)[0]
                 for model_dict in self.proposal_history
             ]
         )
@@ -131,7 +138,7 @@ class FixedProposerFromFile(Proposer):
         prev_targets = None
         for model_dict in self.proposal_history[: weights.size]:
             _, preds, targets = self._run_test(
-                model_dict, dataset_file, criterion=self.criterion
+                model_dict, dataset_file
             )
             if prev_targets is None:
                 prev_targets = targets

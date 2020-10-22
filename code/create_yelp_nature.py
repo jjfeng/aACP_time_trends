@@ -52,11 +52,15 @@ def main(args=sys.argv[1:]):
         for month in MONTHS:
             times.append((year, month))
 
-    for idx, time_key in enumerate(times):
+    batch_sizes = []
+    for time_key in times:
         path_time = YELP_TEST % time_key
+        with open(path_time) as f:
+            num_lines = sum(1 for line in f)
+        batch_sizes.append(num_lines)
         trial_data.add_batch(path_time)
-    nature = FixedNature(trial_data=trial_data)
 
+    nature = FixedNature(trial_data=trial_data, batch_sizes=batch_sizes)
     pickle_to_file(nature, args.out_file)
 
 
