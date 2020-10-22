@@ -68,7 +68,8 @@ class DataGenerator:
         elif self.sim_func_form == "bernoulli":
             raise ValueError("sure?")
 
-    def create_data(self, num_obs: int, t_idx: int, coef: np.ndarray, seed: int = None):
+    def create_data(self, num_obs: int, t_idx: int, coef: np.ndarray, seed: int
+            = None) -> Dataset:
         """
         @param num_obs: number of observations
         @param seed: if given, set the seed before generating data
@@ -81,7 +82,7 @@ class DataGenerator:
         dataset = self.create_data_given_x(data_gen_xs, coef)
         return dataset
 
-    def create_data_given_x(self, xs: ndarray, coef):
+    def create_data_given_x(self, xs: ndarray, coef) -> Dataset:
         """
         For the given Xs, generate responses and dataset
         regression-type data only

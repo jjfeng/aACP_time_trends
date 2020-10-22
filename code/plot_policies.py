@@ -45,7 +45,7 @@ def plot_losses(approval_histories, fig_name, alpha, ymin, ymax):
     raw_ymin = ymax if ymin is None else ymin
     for approval_history in approval_histories:
         # plt.plot(np.arange(T - 1), approval_history, "g-")
-        loss_history = np.array(approval_history.policy_loss_history)
+        loss_history = np.array(approval_history.expected_policy_loss_history)
         T = loss_history.size + 1
         running_avg = np.cumsum(loss_history) / np.arange(1, T)
         plt.plot(

@@ -4,6 +4,7 @@ import numpy as np
 from approval_history import ApprovalHistory
 from data_generator import DataGenerator
 from trial_data import TrialData
+from dataset import Dataset
 
 
 class Nature:
@@ -16,7 +17,8 @@ class Nature:
         return subtrial_data
 
     def create_test_data(self, time_t: int):
-        raise NotImplementedError()
+        # Simply return data from this batch
+        return self.trial_data.batch_data[time_t]
 
 
 class FixedNature(Nature):
@@ -46,7 +48,8 @@ class FixedNature(Nature):
     def total_time(self):
         return self.trial_data.num_batches
 
-    def create_test_data(self, time_t: int, num_obs: int = 1000):
+    def create_test_data(self, time_t: int, num_obs: int = 1000) -> Dataset:
+        # Generate new test data if possible
         if self.data_gen is not None:
             return self.data_gen.create_data(num_obs, time_t, self.coefs[time_t])
         else:
@@ -54,7 +57,6 @@ class FixedNature(Nature):
 
     def to_fixed(self):
         return self
-
 
 class AdversarialNature(Nature):
     """"""
@@ -129,6 +131,7 @@ class AdversarialNature(Nature):
         return len(self.batch_sizes)
 
     def create_test_data(self, time_t: int, num_obs: int = 1000):
+        # Generate new test data if possible
         if self.data_gen is not None:
             return self.data_gen.create_data(num_obs, time_t, self.coefs[time_t])
         else:

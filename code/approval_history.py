@@ -6,6 +6,7 @@ class ApprovalHistory:
         self.human_max_loss = human_max_loss
         self.policy_name = policy_name
         self.policy_loss_history = []
+        self.expected_policy_loss_history = []
         self.all_loss_history = []
         self.human_history = []
         self.expert_weights_history = []
@@ -18,12 +19,14 @@ class ApprovalHistory:
         self,
         human_weight: float,
         expert_weights: np.ndarray,
-        loss: float,
+        obs_loss: float,
+        expected_loss: float,
         all_loss: np.ndarray,
     ):
         self.human_history.append(human_weight)
         self.expert_weights_history.append(expert_weights)
-        self.policy_loss_history.append(loss)
+        self.policy_loss_history.append(obs_loss)
+        self.expected_policy_loss_history.append(expected_loss)
         self.all_loss_history.append(all_loss)
 
     def __str__(self):
@@ -31,8 +34,8 @@ class ApprovalHistory:
         Policy loss: %s (total: %.2f)
         Human hist: %s (mean: %.2f)
         """ % (
-            np.array_str(np.array(self.policy_loss_history), precision=2),
-            np.sum(self.policy_loss_history),
+            np.array_str(np.array(self.expected_policy_loss_history), precision=2),
+            np.sum(self.expected_policy_loss_history),
             np.array_str(np.array(self.human_history), precision=2),
             np.mean(self.human_history),
         )

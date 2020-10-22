@@ -9,7 +9,6 @@ from numpy import ndarray
 from typing import List
 import pandas as pd
 
-# from approval_simulation_common import *
 from nature import Nature
 from proposer import Proposer
 from approval_history import ApprovalHistory
@@ -42,6 +41,7 @@ def parse_args(args):
     parser.add_argument("--alpha", type=float, default=0)
     parser.add_argument("--ci-alpha", type=float, default=0.025)
     parser.add_argument("--control-error-factor", type=float, default=1.5)
+    parser.add_argument("--num-test-obs", type=int, default=1000)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
     parser.add_argument("--out-file", type=str, default="_output/approver_history.pkl")
     parser.add_argument("--out-nature-file", type=str, default=None)
@@ -157,6 +157,7 @@ def run_simulation(
     policy: Policy,
     human_max_loss: float,
     do_convex_mixture: bool = True,
+    num_test_obs: int = 1000
 ):
     approval_hist = ApprovalHistory(
         human_max_loss=human_max_loss, policy_name=str(policy)
@@ -171,6 +172,7 @@ def run_simulation(
         policy.add_expert(t)
         policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights, mixture_func=lambda x: proposer.score_mixture_model(x/(np.sum(x) + 1e-10), sub_trial_data.batch_data[-1] ))
         sub_trial_data = nature.get_trial_data(t + 1)
+        population_trial_data = nature.create_test_data(t + 1, num_test_obs)
         if not policy.is_oracle:
             robot_weights, human_weight = policy.get_predict_weights(t)
 
@@ -178,8 +180,12 @@ def run_simulation(
                 mixture_loss_t = proposer.score_mixture_model(
                     robot_weights / np.sum(robot_weights), sub_trial_data.batch_data[-1]
                 )
+                expected_mixture_loss_t = proposer.score_mixture_model(
+                    robot_weights / np.sum(robot_weights), population_trial_data
+                )
             else:
                 mixture_loss_t = 1
+                expected_mixture_loss_t = 1
         indiv_loss_robot_t = proposer.score_models(sub_trial_data.batch_data[-1])
         batch_n = indiv_loss_robot_t.shape[1]
         all_loss_t = np.concatenate(
@@ -195,6 +201,9 @@ def run_simulation(
             mixture_loss_t = proposer.score_mixture_model(
                 robot_weights, sub_trial_data.batch_data[-1]
             )
+            expected_mixture_loss_t = proposer.score_mixture_model(
+                robot_weights, population_trial_data
+            )
 
         weights = np.concatenate([[human_weight], robot_weights])
         if do_convex_mixture:
@@ -202,15 +211,19 @@ def run_simulation(
             policy_loss_t = policy.human_max_loss * human_weight + np.mean(
                 mixture_loss_t
             ) * (1 - human_weight)
+            expected_policy_loss_t = policy.human_max_loss * human_weight + np.mean(
+                expected_mixture_loss_t
+            ) * (1 - human_weight)
         else:
             # Take a weighted average of the losses
             policy_loss_t = np.sum(all_loss_t * weights) / batch_n
-        approval_hist.append(human_weight, robot_weights, policy_loss_t, all_loss_t)
+            expected_policy_loss_t = np.sum(all_loss_t * weights) / batch_n
+        approval_hist.append(human_weight, robot_weights, policy_loss_t, expected_policy_loss_t, all_loss_t)
 
         nature.next(approval_hist)
 
         prev_weights = weights
-        print("time", t, "loss", policy_loss_t)
+        print("time", t, "loss", policy_loss_t, expected_policy_loss_t)
         logging.info("losses %s", policy_loss_t)
         # print("losses", all_loss_t/batch_n)
         # logging.info("loss pred %s", loss_predictions)
@@ -253,7 +266,8 @@ def main(args=sys.argv[1:]):
         batch_size=nature.batch_sizes[-1],
     )
 
-    approval_history = run_simulation(nature, proposer, policy, args.human_max_loss)
+    approval_history = run_simulation(nature, proposer, policy,
+            args.human_max_loss, num_test_obs=args.num_test_obs)
     logging.info(approval_history)
     print(approval_history)
 

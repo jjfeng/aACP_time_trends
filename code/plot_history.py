@@ -57,11 +57,11 @@ def main(args=sys.argv[1:]):
 
     title = "%s: loss %.3f, human %.2f" % (
         args.policy_name,
-        np.mean(approval_history.policy_loss_history),
+        np.mean(approval_history.expected_policy_loss_history),
         np.mean(approval_history.human_history),
     )
     plot_loss(
-        np.array(approval_history.policy_loss_history),
+        np.array(approval_history.expected_policy_loss_history),
         args.loss_plot,
         title=title,
         alpha=approval_history.human_max_loss,
