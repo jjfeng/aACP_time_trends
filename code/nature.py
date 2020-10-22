@@ -39,6 +39,10 @@ class FixedNature(Nature):
         return
 
     @property
+    def batch_sizes(self):
+        return self.trial_data.batch_sizes
+
+    @property
     def total_time(self):
         return self.trial_data.num_batches
 

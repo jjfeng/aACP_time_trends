@@ -7,7 +7,7 @@ m = 10
 baseline_weight = 1 / m
 T = 50
 lambdas = np.exp(np.arange(-6, 2, 0.05))
-deltas = np.arange(0.03, min(max_loss, 0.3), 0.03)
+deltas = np.arange(0.03, min(max_loss, 0.2), 0.03)
 for delta in deltas:
     bounds = (
         max_loss
@@ -20,7 +20,7 @@ for delta in deltas:
     plt.plot(
         lambdas,
         bounds,
-        label="d=%.2f, bound=%.3f, lam=%.3f" % (delta, best_bound, best_lambda),
+        label="d=%.2f" % (delta),
     )
 
 # Add X and y Label#
