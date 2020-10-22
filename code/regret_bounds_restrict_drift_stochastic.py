@@ -39,7 +39,7 @@ def main(args=sys.argv[1:]):
         plt.plot(
             lambdas,
             bounds,
-            label="d=%.2f, bound=%.3f, lam=%.3f" % (delta, best_bound, best_lambda),
+            label="d=%.2f" % delta
         )
 
     # Add X and y Label#
