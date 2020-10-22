@@ -7,7 +7,7 @@ from trial_data import TrialData
 
 
 class RandomForestWrap(RandomForestClassifier):
-    def loss_pred(self, pred, y):
+    def _criterion(self, pred, y):
         # hinge loss
         y = y.flatten()
         margin = (np.sign(y - 0.5) * 4 * (pred[:, 1] - 0.5)).astype(float)
@@ -18,11 +18,11 @@ class RandomForestWrap(RandomForestClassifier):
 
     def loss(self, dataset):
         pred = self.predict_proba(dataset.x)
-        return self.loss_pred(pred, dataset.y)
+        return self._criterion(pred, dataset.y)
 
 
 class RandomForestRWrap(RandomForestRegressor):
-    def loss_pred(self, pred, y):
+    def _criterion(self, pred, y):
         # hinge loss
         y = y.flatten()
         return np.abs(y - pred)
@@ -32,4 +32,4 @@ class RandomForestRWrap(RandomForestRegressor):
 
     def loss(self, dataset):
         pred = self.predict(dataset.x)
-        return self.loss_pred(pred, dataset.y)
+        return self._criterion(pred, dataset.y)

@@ -16,7 +16,7 @@ class Proposer:
         self.proposal_history = []
 
     def criterion(self, pred_y, y):
-        return self.proposal_history[0].criterion(pred_y, y)
+        return self.proposal_history[0]._criterion(pred_y, y)
 
     @property
     def num_models(self):
@@ -48,6 +48,10 @@ class FixedProposer(Proposer):
     def __init__(self, models: List):
         self.pretrained_proposal_history = models
         self.proposal_history = []
+
+    def criterion(self, pred_y, y):
+        return self.pretrained_proposal_history[0]._criterion(pred_y, y)
+
 
     @property
     def num_models(self):
