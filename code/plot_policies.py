@@ -91,8 +91,12 @@ def main(args=sys.argv[1:]):
     print(args)
     np.random.seed(args.seed)
 
-    orig_approval_histories = [pickle_from_file(history_file) for history_file in args.history_files]
-    approval_histories = [x for x in orig_approval_histories if x.policy_name != "Fixed"]
+    orig_approval_histories = [
+        pickle_from_file(history_file) for history_file in args.history_files
+    ]
+    approval_histories = [
+        x for x in orig_approval_histories if x.policy_name != "Fixed"
+    ]
     approval_histories = sorted(approval_histories, key=lambda x: x.policy_name)
     for x in orig_approval_histories:
         if x.policy_name == "Fixed":

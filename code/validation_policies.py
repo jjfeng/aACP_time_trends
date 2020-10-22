@@ -61,7 +61,9 @@ class ValidationPolicy(Policy):
             )
             self.optim_weights = np.concatenate([self.optim_weights, [0]])
 
-    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None, mixture_func=None):
+    def update_weights(
+        self, time_t, indiv_robot_loss_t=None, prev_weights=None, mixture_func=None
+    ):
         if indiv_robot_loss_t is None:
             return
 
@@ -99,8 +101,8 @@ class ValidationPolicy(Policy):
         for i in range(self.weights.size - 1):
             transition_matrix11[i, i] = 1 - self.alpha - self.baseline_alpha
             transition_matrix11[i, i + 1 :] = (self.alpha) / (self.weights.size - i - 1)
-            #transition_matrix11[i, :] = (self.alpha) / (self.weights.size - 1)
-            #transition_matrix11[i, i] = 1 - self.alpha - self.baseline_alpha
+            # transition_matrix11[i, :] = (self.alpha) / (self.weights.size - 1)
+            # transition_matrix11[i, i] = 1 - self.alpha - self.baseline_alpha
         # matrix12: model to baseline
         transition_matrix12 = (
             np.eye(self.weights.size, self.baseline_weights.size, k=1)
@@ -121,7 +123,7 @@ class ValidationPolicy(Policy):
                 [transition_matrix21, transition_matrix22],
             ]
         )
-        #print(transition_matrix)
+        # print(transition_matrix)
         transition_matrix[:, -1] = 1 - transition_matrix[:, :-1].sum(axis=1)
 
         # print("TRAN", transition_matrix)
@@ -215,7 +217,8 @@ class MetaExpWeightingList(Policy):
         meta_weights: np.ndarray,
         num_experts: int,
         human_max_loss: float,
-        ci_alpha: float = 0.05
+        ci_alpha: float = 0.05,
+        num_back_batches: int = 3,
     ):
         self.eta = eta
         self.eta_list = eta_list
@@ -229,7 +232,11 @@ class MetaExpWeightingList(Policy):
         self.policy_dict = {}
         for idx, etas in enumerate(eta_list):
             self.policy_dict[etas] = ValidationPolicy(
-                num_experts, np.array(etas), human_max_loss, pred_t_factor=pred_t_factor
+                num_experts,
+                np.array(etas),
+                human_max_loss,
+                pred_t_factor=pred_t_factor,
+                num_back_batches=num_back_batches,
             )
 
         self.loss_ts = np.zeros(len(eta_list))
@@ -246,23 +253,31 @@ class MetaExpWeightingList(Policy):
             policy.add_expert(time_t)
 
     def _get_policy_prev_loss(
-        self, time_t: int, model_losses_t: np.ndarray, mixture_func = None, policy: Policy = None
+        self,
+        time_t: int,
+        model_losses_t: np.ndarray,
+        mixture_func=None,
+        policy: Policy = None,
     ):
         robot_weights, human_weight = policy.weight_history[time_t]
         assert np.isclose(robot_weights.sum() + human_weight, 1)
-        #print(robot_weights.size, model_losses_t.size)
+        # print(robot_weights.size, model_losses_t.size)
         if mixture_func is not None:
             mixture_loss_t = mixture_func(robot_weights)
             policy_loss = (
-                np.mean(mixture_loss_t) * (1 - human_weight) + human_weight * self.human_max_loss
+                np.mean(mixture_loss_t) * (1 - human_weight)
+                + human_weight * self.human_max_loss
             )
         else:
             policy_loss = (
-                np.sum(model_losses_t[:robot_weights.size] * robot_weights) + human_weight * self.human_max_loss
+                np.sum(model_losses_t[: robot_weights.size] * robot_weights)
+                + human_weight * self.human_max_loss
             )
         return policy_loss
 
-    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None, mixture_func=None):
+    def update_weights(
+        self, time_t, indiv_robot_loss_t=None, prev_weights=None, mixture_func=None
+    ):
         if indiv_robot_loss_t is not None:
             # Update the meta policy weights first
             model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
@@ -306,7 +321,8 @@ class MetaExpWeightingList(Policy):
                 policy_human_weight,
                 np.argmax(policy_robot_weights),
                 np.max(policy_robot_weights),
-                "avg", np.sum(policy_robot_weights * np.arange(policy_robot_weights.size))
+                "avg",
+                np.sum(policy_robot_weights * np.arange(policy_robot_weights.size)),
             )
         print("ETAS", biggest_eta, biggest_weight)
         print(
@@ -351,9 +367,9 @@ class MetaGridSearch(MetaExpWeightingList):
             self.policy_dict[tuple(etas)] = ValidationPolicy(
                 num_experts, policy_etas, human_max_loss
             )
-            self.regularization[indexes] = 0 #.001 * np.sum(
+            self.regularization[indexes] = 0  # .001 * np.sum(
             #    np.power(np.array(policy_etas), 2)
-            #)
+            # )
 
         self.loss_ts = np.zeros([s.size for s in self.eta_grid])
         self.human_max_loss = human_max_loss
@@ -365,7 +381,9 @@ class MetaGridSearch(MetaExpWeightingList):
     def __str__(self):
         return "MetaGridSearch"
 
-    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None, mixture_func=None):
+    def update_weights(
+        self, time_t, indiv_robot_loss_t=None, prev_weights=None, mixture_func=None
+    ):
         if indiv_robot_loss_t is not None:
             # Update the meta policy weights first
             model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
@@ -400,15 +418,15 @@ class MetaGridSearch(MetaExpWeightingList):
             policy_etas = self._get_policy_etas(etas)
             policy = self.policy_dict[etas]
             policy_weight = policy_weights[indexes]
-            #if policy_weight == 0:
+            # if policy_weight == 0:
             #    continue
             policy_robot_weights, policy_human_weight = policy.get_predict_weights(
                 time_t
             )
             robot_weights += policy_robot_weights * policy_weight
             human_weight += policy_human_weight * policy_weight
-            #print("etas", policy_etas)
-            #print(policy_robot_weights)
+            # print("etas", policy_etas)
+            # print(policy_robot_weights)
             assert np.all(policy_robot_weights >= 0)
             assert policy_human_weight >= 0 or np.isclose(policy_human_weight, 0)
             if biggest_weight < policy_weights[indexes]:
@@ -428,235 +446,3 @@ class MetaGridSearch(MetaExpWeightingList):
         assert np.all(robot_weights >= 0)
         assert human_weight > 0 or np.isclose(human_weight, 0)
         return robot_weights, human_weight
-
-
-# class OptimMetaExpWeightingList(Policy):
-#    """
-#    optimistic Meta exponential weighting list
-#    """
-#
-#    def _get_policy_etas(self, etas):
-#        return np.array(etas)
-#
-#    def __init__(
-#        self,
-#        eta: float,
-#        eta_list,
-#        meta_weights: np.ndarray,
-#        num_experts: int,
-#        human_max_loss: float,
-#    ):
-#        self.eta = eta
-#        self.eta_list = eta_list
-#        self.eta_list_size = len(eta_list)
-#
-#        self.eta_indexes = np.arange(len(eta_list))
-#        print("ETA INDEX", self.eta_indexes)
-#
-#        self.policy_dict = {}
-#        for idx, etas in enumerate(eta_list):
-#            self.policy_dict[etas] = ValidationPolicy(
-#                num_experts, np.array(etas), human_max_loss
-#            )
-#
-#        self.loss_ts = np.zeros(len(eta_list))
-#        self.prev_losses = self.loss_ts
-#        self.human_max_loss = human_max_loss
-#        self.num_experts = num_experts
-#
-#        self.meta_weights = meta_weights
-#        self.optim_meta_weights = self.meta_weights
-#
-#    def __str__(self):
-#        return "OptimMetaExp"
-#
-#    def add_expert(self, time_t):
-#        for k, policy in self.policy_dict.items():
-#            policy.add_expert(time_t)
-#
-#    def _get_policy_prev_loss(
-#        self, time_t: int, model_losses_t: np.ndarray, policy: Policy
-#    ):
-#        robot_weights, human_weight = policy.weight_history[time_t]
-#        assert np.isclose(robot_weights.sum() + human_weight, 1)
-#        policy_loss = (
-#            np.sum(model_losses_t * robot_weights)
-#            + human_weight * self.human_max_loss
-#        )
-#        return policy_loss
-#
-#    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
-#        if indiv_robot_loss_t is not None:
-#            # Update the meta policy weights first
-#            model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
-#            loss_t = np.zeros(self.eta_list_size)
-#            for idx, etas in enumerate(self.eta_list):
-#                loss_t[idx] = self._get_policy_prev_loss(
-#                    time_t - 1, model_losses_t, self.policy_dict[etas]
-#                )
-#                print("policy loss", etas, loss_t[idx])
-#            self.loss_ts += loss_t
-#            self.meta_weights = self.meta_weights * np.exp(-self.eta * loss_t)
-#            predictions = loss_t
-#            self.optim_meta_weights = self.meta_weights * np.exp(-self.eta * predictions)
-#
-#        # Let each policy update their own weights
-#        for policy in self.policy_dict.values():
-#            policy.update_weights(time_t, indiv_robot_loss_t, prev_weights=None)
-#
-#    def get_predict_weights(self, time_t):
-#        denom = np.sum(self.optim_meta_weights)
-#        policy_weights = self.optim_meta_weights / denom
-#
-#        robot_weights = 0
-#        human_weight = 0
-#        biggest_weight = 0
-#        biggest_eta = None
-#        for idx, etas in enumerate(self.eta_list):
-#            policy = self.policy_dict[etas]
-#            policy_eta = self._get_policy_etas(etas)
-#            policy_weight = policy_weights[idx]
-#            policy_robot_weights, policy_human_weight = policy.get_predict_weights(
-#                time_t
-#            )
-#            robot_weights += policy_robot_weights * policy_weight
-#            human_weight += policy_human_weight * policy_weight
-#            if biggest_weight < policy_weights[idx]:
-#                biggest_weight = policy_weights[idx]
-#                biggest_eta = policy_eta
-#            print(
-#                "policy",
-#                policy_eta,
-#                policy_weight,
-#                policy_human_weight,
-#                np.argmax(policy_robot_weights),
-#            )
-#        print("ETAS", biggest_eta, biggest_weight)
-#        print(
-#            "time",
-#            time_t,
-#            "max weigth robot",
-#            np.argmax(robot_weights),
-#            robot_weights.max(),
-#            "human",
-#            human_weight,
-#        )
-#        return robot_weights, human_weight
-#
-# class OptimMetaFixedShareList(Policy):
-#    """
-#    optimistic Meta fixed share
-#    """
-#
-#    def _get_policy_etas(self, etas):
-#        return np.array(etas)
-#
-#    def __init__(
-#        self,
-#        eta: float,
-#        eta_list,
-#        meta_weights: np.ndarray,
-#        num_experts: int,
-#        human_max_loss: float,
-#    ):
-#        self.eta_list = eta_list
-#        self.eta_list_size = len(eta_list)
-#
-#        self.eta = eta
-#        self.alpha = 0.05
-#        self.transition_matrix = np.eye(self.eta_list_size) * (1 - self.alpha - self.alpha/(self.eta_list_size - 1)) + np.ones((self.eta_list_size, self.eta_list_size)) * self.alpha/(self.eta_list_size - 1)
-#
-#        self.eta_indexes = np.arange(len(eta_list))
-#        print("ETA INDEX", self.eta_indexes)
-#
-#        self.policy_dict = {}
-#        for idx, etas in enumerate(eta_list):
-#            self.policy_dict[etas] = ValidationPolicy(
-#                num_experts, np.array(etas), human_max_loss
-#            )
-#
-#        self.loss_ts = np.zeros(len(eta_list))
-#        self.prev_losses = self.loss_ts
-#        self.human_max_loss = human_max_loss
-#        self.num_experts = num_experts
-#
-#        self.meta_weights = meta_weights
-#        self.optim_meta_weights = self.meta_weights
-#
-#    def __str__(self):
-#        return "OptimFixedShare"
-#
-#    def add_expert(self, time_t):
-#        for k, policy in self.policy_dict.items():
-#            policy.add_expert(time_t)
-#
-#    def _get_policy_prev_loss(
-#        self, time_t: int, model_losses_t: np.ndarray, policy: Policy
-#    ):
-#        robot_weights, human_weight = policy.weight_history[time_t]
-#        assert np.isclose(robot_weights.sum() + human_weight, 1)
-#        policy_loss = (
-#            np.sum(model_losses_t * robot_weights)
-#            + human_weight * self.human_max_loss
-#        )
-#        return policy_loss
-#
-#    def update_weights(self, time_t, indiv_robot_loss_t=None, prev_weights=None):
-#        if indiv_robot_loss_t is not None:
-#            # Update the meta policy weights first
-#            model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
-#            loss_t = np.zeros(self.eta_list_size)
-#            for idx, etas in enumerate(self.eta_list):
-#                loss_t[idx] = self._get_policy_prev_loss(
-#                    time_t - 1, model_losses_t, self.policy_dict[etas]
-#                )
-#                print("policy loss", etas, loss_t[idx])
-#            self.loss_ts += loss_t
-#            self.meta_weights = self.meta_weights * np.exp(-self.eta * loss_t)
-#            self.meta_weights = np.matmul(self.meta_weights.reshape((1,-1)), self.transition_matrix).flatten()
-#
-#            predictions = loss_t
-#            self.optim_meta_weights = self.meta_weights * np.exp(-self.eta * predictions)
-#
-#        # Let each policy update their own weights
-#        for policy in self.policy_dict.values():
-#            policy.update_weights(time_t, indiv_robot_loss_t, prev_weights=None)
-#
-#    def get_predict_weights(self, time_t):
-#        denom = np.sum(self.optim_meta_weights)
-#        policy_weights = self.optim_meta_weights / denom
-#
-#        robot_weights = 0
-#        human_weight = 0
-#        biggest_weight = 0
-#        biggest_eta = None
-#        for idx, etas in enumerate(self.eta_list):
-#            policy = self.policy_dict[etas]
-#            policy_eta = self._get_policy_etas(etas)
-#            policy_weight = policy_weights[idx]
-#            policy_robot_weights, policy_human_weight = policy.get_predict_weights(
-#                time_t
-#            )
-#            robot_weights += policy_robot_weights * policy_weight
-#            human_weight += policy_human_weight * policy_weight
-#            if biggest_weight < policy_weights[idx]:
-#                biggest_weight = policy_weights[idx]
-#                biggest_eta = policy_eta
-#            print(
-#                "policy",
-#                policy_eta,
-#                policy_weight,
-#                policy_human_weight,
-#                np.argmax(policy_robot_weights),
-#            )
-#        print("ETAS", biggest_eta, biggest_weight)
-#        print(
-#            "time",
-#            time_t,
-#            "max weigth robot",
-#            np.argmax(robot_weights),
-#            robot_weights.max(),
-#            "human",
-#            human_weight,
-#        )
-#        return robot_weights, human_weight

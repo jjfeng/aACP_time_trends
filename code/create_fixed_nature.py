@@ -109,7 +109,9 @@ def main(args=sys.argv[1:]):
     did_drift = False
     for batch_index in range(args.num_batches):
         do_drift = (
-            batch_index % args.drift_cycle == args.drift_cycle - 1 if args.drift_cycle > 0 else False
+            batch_index % args.drift_cycle == args.drift_cycle - 1
+            if args.drift_cycle > 0
+            else False
         )
         if do_drift:
             print("DRIFT", do_drift)
@@ -139,9 +141,7 @@ def main(args=sys.argv[1:]):
         )
         all_coefs.append(new_coef)
         trial_data.add_batch(new_data)
-    nature = FixedNature(
-        data_gen, trial_data, coefs=all_coefs
-    )
+    nature = FixedNature(data_gen, trial_data, coefs=all_coefs)
 
     pickle_to_file(nature, args.out_file)
 

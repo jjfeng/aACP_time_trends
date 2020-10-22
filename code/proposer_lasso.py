@@ -45,6 +45,7 @@ class LogisticRegressionCVWrap(LogisticRegressionCV):
         pred = self.predict_proba(dataset.x)
         return self.loss_pred(pred, dataset.y)
 
+
 class LassoProposer(Proposer):
     def __init__(
         self,

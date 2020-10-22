@@ -30,7 +30,10 @@ class Proposer:
         Score the ensemble model (where we get the weighted avg of the predictions, and then apply the loss)
         """
         predictions = np.array(
-                [model.predict(dataset.x) for model in self.proposal_history[:weights.size]]
+            [
+                model.predict(dataset.x)
+                for model in self.proposal_history[: weights.size]
+            ]
         )
         avg_predictions = np.sum(predictions * np.reshape(weights, (-1, 1, 1)), axis=0)
         return self.proposal_history[0].loss_pred(avg_predictions, dataset.y)
@@ -45,12 +48,13 @@ class FixedProposer(Proposer):
     def num_models(self):
         return len(self.proposal_history)
 
-    def propose_model(self, trial_data: TrialData, approval_hist = None, do_append=True):
+    def propose_model(self, trial_data: TrialData, approval_hist=None, do_append=True):
         if do_append:
             self.proposal_history = self.pretrained_proposal_history[
                 : (self.num_models + 1)
             ]
         return self.pretrained_proposal_history[self.num_models]
+
 
 class FixedProposerFromFile(Proposer):
     def __init__(self, model_files: List, criterion):
@@ -125,7 +129,7 @@ class FixedProposerFromFile(Proposer):
     def score_mixture_model(self, weights: np.ndarray, dataset_file: str):
         all_preds = []
         prev_targets = None
-        for model_dict in self.proposal_history[:weights.size]:
+        for model_dict in self.proposal_history[: weights.size]:
             _, preds, targets = self._run_test(
                 model_dict, dataset_file, criterion=self.criterion
             )

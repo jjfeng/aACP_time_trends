@@ -101,7 +101,11 @@ def main(args=sys.argv[1:]):
     init_coef = np.zeros(args.num_p)
     init_coef[: args.num_coefs] = args.coef_scale
     nature = AdversarialNature(
-        data_gen, args.num_coef_drift, args.batch_sizes, init_coef=init_coef, prob_revert_drift=args.prob_revert_drift
+        data_gen,
+        args.num_coef_drift,
+        args.batch_sizes,
+        init_coef=init_coef,
+        prob_revert_drift=args.prob_revert_drift,
     )
 
     pickle_to_file(nature, args.out_file)

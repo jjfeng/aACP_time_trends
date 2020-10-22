@@ -33,8 +33,10 @@ def parse_args(args):
 
     return args
 
+
 def normalize_l1():
-    torch.abs(x - y)/args.max_loss
+    torch.abs(x - y) / args.max_loss
+
 
 def main(args=sys.argv[1:]):
     args = parse_args(args)
@@ -49,8 +51,9 @@ def main(args=sys.argv[1:]):
             assert os.path.exists(model_file)
             model_paths.append(model_file)
     raw_criterion = nn.L1Loss(reduce=False)
-    proposer = FixedProposerFromFile(model_paths,
-            criterion=lambda x, y: raw_criterion(x, y)/args.max_loss)
+    proposer = FixedProposerFromFile(
+        model_paths, criterion=lambda x, y: raw_criterion(x, y) / args.max_loss
+    )
 
     pickle_to_file(proposer, args.out_file)
 

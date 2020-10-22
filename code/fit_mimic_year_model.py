@@ -53,23 +53,26 @@ def main(args=sys.argv[1:]):
     np.random.seed(args.seed)
 
     quarters = list(range(4))
-    quarters = quarters[args.quarter + 1:] + quarters[: args.quarter + 1]
+    quarters = quarters[args.quarter + 1 :] + quarters[: args.quarter + 1]
     if args.start_year == args.year:
         quarters = range(args.quarter + 1)
-    dat = np.concatenate([
-		np.genfromtxt(MIMIC_TRAIN % (year, quarter)) for year in range(max(args.year -
-            args.num_back_years, args.start_year), args.year + 1) for quarter
-        in quarters])
+    dat = np.concatenate(
+        [
+            np.genfromtxt(MIMIC_TRAIN % (year, quarter))
+            for year in range(
+                max(args.year - args.num_back_years, args.start_year), args.year + 1
+            )
+            for quarter in quarters
+        ]
+    )
     print("done loading data")
     ntrain = dat.shape[0]
     x_train = dat[:ntrain, 1:]
     y_train = dat[:ntrain, 0]
 
     model = RandomForestWrap(
-            n_estimators=5000,
-            max_depth=20,
-            oob_score=True,
-            n_jobs=args.n_jobs)
+        n_estimators=5000, max_depth=20, oob_score=True, n_jobs=args.n_jobs
+    )
 
     model.fit(x_train, y_train)
     logging.info("OOB score %f", model.oob_score_)
@@ -78,13 +81,14 @@ def main(args=sys.argv[1:]):
     with open(args.out_file, "wb") as f:
         pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
 
-    #x_test = dat[ntrain:, 1:]
-    #y_test = dat[ntrain:, 0]
-    #predictions = model.predict(x_test)
-    #print("LOSSSS", np.mean(model.loss_pred(predictions, y_test)))
-    #logging.info("simple avg %f", y_train.mean())
-    #print("SRUPITD HINGE LOSS %f", np.mean(model.loss_pred(y_train.mean() *
+    # x_test = dat[ntrain:, 1:]
+    # y_test = dat[ntrain:, 0]
+    # predictions = model.predict(x_test)
+    # print("LOSSSS", np.mean(model.loss_pred(predictions, y_test)))
+    # logging.info("simple avg %f", y_train.mean())
+    # print("SRUPITD HINGE LOSS %f", np.mean(model.loss_pred(y_train.mean() *
     #    np.ones((y_test.size, 2)), y_test)))
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

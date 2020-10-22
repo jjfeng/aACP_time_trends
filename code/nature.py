@@ -58,6 +58,7 @@ class FixedNature(Nature):
     def to_fixed(self):
         return self
 
+
 class AdversarialNature(Nature):
     """"""
 
@@ -67,7 +68,7 @@ class AdversarialNature(Nature):
         num_coef_drift: int,
         batch_sizes: List,
         init_coef: np.ndarray,
-        prob_revert_drift: float = 0
+        prob_revert_drift: float = 0,
     ):
         self.data_gen = data_gen
         self.num_coef_drift = num_coef_drift

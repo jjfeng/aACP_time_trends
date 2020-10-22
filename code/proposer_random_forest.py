@@ -20,6 +20,7 @@ class RandomForestWrap(RandomForestClassifier):
         pred = self.predict_proba(dataset.x)
         return self.loss_pred(pred, dataset.y)
 
+
 class RandomForestRWrap(RandomForestRegressor):
     def loss_pred(self, pred, y):
         # hinge loss
@@ -32,4 +33,3 @@ class RandomForestRWrap(RandomForestRegressor):
     def loss(self, dataset):
         pred = self.predict(dataset.x)
         return self.loss_pred(pred, dataset.y)
-

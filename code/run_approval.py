@@ -51,7 +51,9 @@ def parse_args(args):
     return args
 
 
-def create_policy(policy_name, args, human_max_loss, total_time, num_experts, batch_size):
+def create_policy(
+    policy_name, args, human_max_loss, total_time, num_experts, batch_size
+):
     if policy_name == "MarkovHedge":
         policy = ValidationPolicy(
             num_experts=num_experts,
@@ -60,18 +62,18 @@ def create_policy(policy_name, args, human_max_loss, total_time, num_experts, ba
             # const_baseline_weight=0.5,
         )
     elif policy_name == "MetaGridSearch":
-       eta_grid = [
-           np.exp(np.arange(-3, 3, 1)),
-           np.exp(np.arange(-3, 4, 1)),
-           np.arange(0, 1.01, 0.1),
-           np.arange(0, 1, 0.1),
-       ]
-       policy = MetaGridSearch(
-           eta=args.eta,
-           eta_grid=eta_grid,
-           num_experts=num_experts,
-           human_max_loss=human_max_loss,
-       )
+        eta_grid = [
+            np.exp(np.arange(-3, 3, 1)),
+            np.exp(np.arange(-3, 4, 1)),
+            np.arange(0, 1.01, 0.1),
+            np.arange(0, 1, 0.1),
+        ]
+        policy = MetaGridSearch(
+            eta=args.eta,
+            eta_grid=eta_grid,
+            num_experts=num_experts,
+            human_max_loss=human_max_loss,
+        )
     elif policy_name == "MetaExpWeightingSmall":
         eta_list = [
             (0, 0, 0, 1),  # baseline
@@ -79,7 +81,7 @@ def create_policy(policy_name, args, human_max_loss, total_time, num_experts, ba
             (0, 0, 0.99, 0.0),  # blind
             (0, 10000, 0.5, 0),  # t-test
         ]
-        meta_weights = np.ones(len(eta_list)) * 16/4
+        meta_weights = np.ones(len(eta_list)) * 16 / 4
         meta_weights[0] = 1
         policy = MetaExpWeightingList(
             eta=args.eta,
@@ -91,7 +93,7 @@ def create_policy(policy_name, args, human_max_loss, total_time, num_experts, ba
     elif policy_name == "MetaExpWeighting":
         eta_list = [
             (0, 0, 0, 1),  # baseline
-            #(1.5, 0, 0.5, 0.05),  # online
+            # (1.5, 0, 0.5, 0.05),  # online
             (0, 0, 0.99, 0.0),  # blind
             (0, 10000, 0.5, 0),  # t-test
             (10, 0, 0.10, 0),
@@ -111,16 +113,21 @@ def create_policy(policy_name, args, human_max_loss, total_time, num_experts, ba
         lambdas = np.exp(np.arange(-6, 2, 0.02))
         regret_bounds = get_regret_bounds(
             alpha=args.ci_alpha,
-            m = len(eta_list),
+            m=len(eta_list),
             T=total_time,
             delta=human_max_loss,
             drift=human_max_loss,
             lambdas=lambdas,
-            n=batch_size)
+            n=batch_size,
+        )
         best_bound = np.min(regret_bounds)
-        logging.info("baseline_weight %f", meta_weights[0]/np.sum(meta_weights))
+        logging.info("baseline_weight %f", meta_weights[0] / np.sum(meta_weights))
         logging.info("human max %f", human_max_loss)
-        logging.info("BEST BOUND %f, desired control %f", best_bound, human_max_loss * args.control_error_factor)
+        logging.info(
+            "BEST BOUND %f, desired control %f",
+            best_bound,
+            human_max_loss * args.control_error_factor,
+        )
         assert best_bound < human_max_loss * args.control_error_factor
         loss_diffs = human_max_loss * args.control_error_factor - regret_bounds
         eta_idx = np.max(np.where(loss_diffs >= 0))
@@ -132,7 +139,7 @@ def create_policy(policy_name, args, human_max_loss, total_time, num_experts, ba
             meta_weights=meta_weights,
             num_experts=num_experts,
             human_max_loss=human_max_loss,
-            ci_alpha=args.ci_alpha
+            ci_alpha=args.ci_alpha,
         )
     elif policy_name == "BaselinePolicy":
         policy = BaselinePolicy(human_max_loss=human_max_loss)
@@ -143,7 +150,9 @@ def create_policy(policy_name, args, human_max_loss, total_time, num_experts, ba
     elif policy_name == "FixedPolicy":
         policy = FixedPolicy(human_max_loss)
     elif policy_name == "TTestApproval":
-        policy = TTestApproval(num_experts, human_max_loss=human_max_loss) #, factor=1.6)
+        policy = TTestApproval(
+            num_experts, human_max_loss=human_max_loss
+        )  # , factor=1.6)
     elif policy_name == "Oracle":
         policy = OracleApproval(human_max_loss=human_max_loss)
     else:
@@ -157,7 +166,7 @@ def run_simulation(
     policy: Policy,
     human_max_loss: float,
     do_convex_mixture: bool = True,
-    num_test_obs: int = 1000
+    num_test_obs: int = 1000,
 ):
     approval_hist = ApprovalHistory(
         human_max_loss=human_max_loss, policy_name=str(policy)
@@ -170,7 +179,14 @@ def run_simulation(
     for t in range(nature.total_time - 1):
         logging.info("TIME STEP %d", t)
         policy.add_expert(t)
-        policy.update_weights(t, indiv_loss_robot_t, prev_weights=prev_weights, mixture_func=lambda x: proposer.score_mixture_model(x/(np.sum(x) + 1e-10), sub_trial_data.batch_data[-1] ))
+        policy.update_weights(
+            t,
+            indiv_loss_robot_t,
+            prev_weights=prev_weights,
+            mixture_func=lambda x: proposer.score_mixture_model(
+                x / (np.sum(x) + 1e-10), sub_trial_data.batch_data[-1]
+            ),
+        )
         sub_trial_data = nature.get_trial_data(t + 1)
         population_trial_data = nature.create_test_data(t + 1, num_test_obs)
         if not policy.is_oracle:
@@ -218,7 +234,13 @@ def run_simulation(
             # Take a weighted average of the losses
             policy_loss_t = np.sum(all_loss_t * weights) / batch_n
             expected_policy_loss_t = np.sum(all_loss_t * weights) / batch_n
-        approval_hist.append(human_weight, robot_weights, policy_loss_t, expected_policy_loss_t, all_loss_t)
+        approval_hist.append(
+            human_weight,
+            robot_weights,
+            policy_loss_t,
+            expected_policy_loss_t,
+            all_loss_t,
+        )
 
         nature.next(approval_hist)
 
@@ -266,8 +288,9 @@ def main(args=sys.argv[1:]):
         batch_size=nature.batch_sizes[-1],
     )
 
-    approval_history = run_simulation(nature, proposer, policy,
-            args.human_max_loss, num_test_obs=args.num_test_obs)
+    approval_history = run_simulation(
+        nature, proposer, policy, args.human_max_loss, num_test_obs=args.num_test_obs
+    )
     logging.info(approval_history)
     print(approval_history)
 

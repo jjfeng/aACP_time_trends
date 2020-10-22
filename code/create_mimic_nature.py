@@ -47,7 +47,7 @@ def main(args=sys.argv[1:]):
             path_time = MIMIC_TEST % (time_key, quarter)
             raw_dataset = np.genfromtxt(path_time)
             if len(raw_dataset.shape) == 1:
-                raw_dataset = raw_dataset.reshape((1,-1))
+                raw_dataset = raw_dataset.reshape((1, -1))
                 print("VALIDATION DATA ONLY SIZE 1")
             print("year q", time_key, quarter)
             dataset = Dataset(raw_dataset[:, 1:], raw_dataset[:, 0], num_classes=2)
