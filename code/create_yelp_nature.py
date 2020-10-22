@@ -22,6 +22,7 @@ def parse_args(args):
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument("--start-year", type=int, default=2008)
+    parser.add_argument("--batch-size", type=int, default=2000)
     parser.add_argument("--num-years", type=int, default=1)
     parser.add_argument("--num-months", type=int, default=1)
     parser.add_argument("--valid-data-template", type=str)
@@ -50,15 +51,13 @@ def main(args=sys.argv[1:]):
         for month in MONTHS:
             times.append((year, month))
 
-    batch_sizes = []
     for time_key in times:
         path_time = args.valid_data_template % time_key
-        with open(path_time) as f:
-            num_lines = sum(1 for line in f)
-        batch_sizes.append(num_lines)
-        trial_data.add_batch(path_time)
+        trial_data.add_batch(path_time, args.batch_size)
 
-    nature = FixedNature(trial_data=trial_data, batch_sizes=batch_sizes)
+    nature = FixedNature(
+            trial_data=trial_data,
+            batch_sizes=[args.batch_size] * len(trial_data))
     pickle_to_file(nature, args.out_file)
 
 

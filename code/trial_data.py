@@ -41,16 +41,19 @@ class TrialData:
 class TrialDataFromDisk(TrialData):
     def __init__(
         self,
+        batch_sizes: ndarray = [],
         batch_data: List[str] = [],
     ):
         self.batch_data = batch_data
+        self.batch_sizes = batch_sizes
 
     @property
     def num_batches(self):
         return len(self.batch_data)
 
-    def add_batch(self, file_str: str):
-        self.batch_data.append(file_str)
+    def add_batch(self, file_str: str, batch_size: int):
+        self.batch_data.append({"path": file_str, "batch_size": batch_size}))
+        self.batch_sizes.append(batch_size)
 
     def subset(self, end_index: int):
         return TrialDataFromDisk(self.batch_data[:end_index])

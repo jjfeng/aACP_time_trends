@@ -96,13 +96,13 @@ class FixedProposerFromFile(Proposer):
             self.proposal_history.append({"model": model, "fields": fields})
         return model
 
-    def _run_test(self, model_dict, path, target_func=None):
+    def _run_test(self, model_dict, path, test_size, target_func=None):
         test_data = data.TabularDataset(
             path=path, format="json", fields=model_dict["fields"]
         )
         test_iterator = data.Iterator(
             test_data,
-            batch_size=len(test_data),
+            batch_size=test_size,
             sort_key=lambda x: len(x.text),
             sort_within_batch=False,
             shuffle=False,
@@ -119,26 +119,34 @@ class FixedProposerFromFile(Proposer):
             # compute the loss
             targets = batch.label if target_func is None else target_func(batch.label)
             test_loss = self.criterion(predictions, targets)
+
+            # Only do one iteration of the test iterator
+            break
+
         return (
             test_loss.detach().numpy(),
             predictions.detach().numpy(),
             targets.detach().numpy(),
         )
 
-    def score_models(self, dataset_file: str):
+    def score_models(self, dataset_dict: Dict):
+        dataset_file = dataset_dict["path"]
+        test_size = dataset_dict["batch_size"]
         return np.array(
             [
-                self._run_test(model_dict, dataset_file)[0]
+                self._run_test(model_dict, dataset_file, test_size)[0]
                 for model_dict in self.proposal_history
             ]
         )
 
-    def score_mixture_model(self, weights: np.ndarray, dataset_file: str):
+    def score_mixture_model(self, weights: np.ndarray, dataset_dict: Dict):
+        dataset_file = dataset_dict["path"]
+        test_size = dataset_dict["batch_size"]
         all_preds = []
         prev_targets = None
         for model_dict in self.proposal_history[: weights.size]:
             _, preds, targets = self._run_test(
-                model_dict, dataset_file
+                model_dict, dataset_file, test_size,
             )
             if prev_targets is None:
                 prev_targets = targets
