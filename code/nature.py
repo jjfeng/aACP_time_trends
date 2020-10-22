@@ -30,10 +30,9 @@ class FixedNature(Nature):
         data_gen: DataGenerator = None,
         trial_data: TrialData = None,
         coefs: List = None,
-        batch_sizes: List[int] = None
     ):
         self.trial_data = trial_data
-        self.batch_sizes = batch_sizes if batch_sizes is not None else trial_data.batch_sizes
+        self.batch_sizes = trial_data.batch_sizes
         self.data_gen = data_gen
         self.coefs = coefs
 

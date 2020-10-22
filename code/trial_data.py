@@ -52,7 +52,7 @@ class TrialDataFromDisk(TrialData):
         return len(self.batch_data)
 
     def add_batch(self, file_str: str, batch_size: int):
-        self.batch_data.append({"path": file_str, "batch_size": batch_size}))
+        self.batch_data.append({"path": file_str, "batch_size": batch_size})
         self.batch_sizes.append(batch_size)
 
     def subset(self, end_index: int):

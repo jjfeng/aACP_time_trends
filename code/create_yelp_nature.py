@@ -55,9 +55,7 @@ def main(args=sys.argv[1:]):
         path_time = args.valid_data_template % time_key
         trial_data.add_batch(path_time, args.batch_size)
 
-    nature = FixedNature(
-            trial_data=trial_data,
-            batch_sizes=[args.batch_size] * len(trial_data))
+    nature = FixedNature(trial_data=trial_data)
     pickle_to_file(nature, args.out_file)
 
 
