@@ -26,12 +26,15 @@ def parse_args(args):
     parser.add_argument("--split-ratio", type=float, default=0.5)
     parser.add_argument("--max-train", type=int, default=2000)
     parser.add_argument("--max-read", type=int, default=None)
-    parser.add_argument("--full-file",
-            type=str, default="data/yelp_academic_dataset_review.json")
-    parser.add_argument("--out-train-file", type=str,
-            default="yelp_academic_dataset_review_train.json")
-    parser.add_argument("--out-valid-file", type=str,
-            default="yelp_academic_dataset_review_valid.json")
+    parser.add_argument(
+        "--full-file", type=str, default="data/yelp_academic_dataset_review.json"
+    )
+    parser.add_argument(
+        "--out-train-file", type=str, default="yelp_academic_dataset_review_train.json"
+    )
+    parser.add_argument(
+        "--out-valid-file", type=str, default="yelp_academic_dataset_review_valid.json"
+    )
     parser.set_defaults()
     args = parser.parse_args()
 
@@ -55,20 +58,18 @@ def main(args=sys.argv[1:]):
                     break
             else:
                 continue
-    
+
     random.shuffle(year_month_lines)
-    num_train = min(
-            args.max_train,
-            int(len(year_month_lines) * args.split_ratio)
-            )
+    num_train = min(args.max_train, int(len(year_month_lines) * args.split_ratio))
     print("year", args.year, "month", args.month, "NUM TRAIN", num_train)
     train_lines = year_month_lines[:num_train]
     valid_lines = year_month_lines[num_train:]
     with open(args.out_train_file, "w") as f:
         f.writelines(train_lines)
-    
+
     with open(args.out_valid_file, "w") as f:
         f.writelines(valid_lines)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

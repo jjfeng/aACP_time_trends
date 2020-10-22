@@ -28,11 +28,14 @@ class LassoModel:
     def loss(self, dataset):
         y_hat = self.predict(dataset.x).flatten()
         y = dataset.y.flatten()
-        return np.power(y - y_hat, 2)
+        return self.criterion(y, y_hat)
+
+    def criterion(self, pred_y, y):
+        return np.power(pred_y - y, 2)
 
 
 class LogisticRegressionCVWrap(LogisticRegressionCV):
-    def loss_pred(self, pred, y):
+    def criterion(self, pred, y):
         # hinge loss
         y = y.flatten()
         margin = (np.sign(y - 0.5) * 4 * (pred[:, 1] - 0.5)).astype(float)
@@ -43,7 +46,7 @@ class LogisticRegressionCVWrap(LogisticRegressionCV):
 
     def loss(self, dataset):
         pred = self.predict_proba(dataset.x)
-        return self.loss_pred(pred, dataset.y)
+        return self.criterion(pred, dataset.y)
 
 
 class LassoProposer(Proposer):

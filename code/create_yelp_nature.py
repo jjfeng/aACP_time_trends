@@ -42,7 +42,6 @@ def main(args=sys.argv[1:]):
     print(args)
     logging.info(args)
 
-    trial_data = TrialDataFromDisk()
     times = []
     models = []
     YEARS = range(args.start_year, args.start_year + args.num_years)
@@ -51,6 +50,7 @@ def main(args=sys.argv[1:]):
         for month in MONTHS:
             times.append((year, month))
 
+    trial_data = TrialDataFromDisk()
     for time_key in times:
         path_time = args.valid_data_template % time_key
         trial_data.add_batch(path_time, args.batch_size)

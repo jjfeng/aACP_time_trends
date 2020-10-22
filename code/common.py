@@ -49,3 +49,25 @@ def plot_human_use(human_history, fig_name, title: str):
     plt.xlabel("Time")
     plt.title(title)
     plt.savefig(fig_name)
+
+
+def score_mixture_model(
+    human_weight: float,
+    robot_weights: np.ndarray,
+    criterion,
+    batch_preds: np.ndarray,
+    batch_target: np.ndarray,
+    human_max_loss: float,
+):
+    """
+    Score the ensemble model
+    """
+    if np.sum(robot_weights) > 0:
+        weights = robot_weights / np.sum(robot_weights)
+        avg_predictions = np.sum(batch_preds * np.reshape(weights, (-1, 1, 1)), axis=0)
+        mixture_loss_t = criterion(avg_predictions, batch_target)
+        return human_max_loss * human_weight + np.mean(mixture_loss_t) * (
+            1 - human_weight
+        )
+    else:
+        return human_max_loss

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 import numpy as np
 
 import torch
@@ -15,6 +15,9 @@ class Proposer:
     def __init__(self):
         self.proposal_history = []
 
+    def criterion(self, pred_y, y):
+        return self.proposal_history[0].criterion(pred_y, y)
+
     @property
     def num_models(self):
         return len(self.proposal_history)
@@ -23,20 +26,22 @@ class Proposer:
         raise NotImplementedError()
 
     def score_models(self, dataset: Dataset):
-        return np.array([model.loss(dataset) for model in self.proposal_history])
-
-    def score_mixture_model(self, weights: np.ndarray, dataset: Dataset):
-        """
-        Score the ensemble model (where we get the weighted avg of the predictions, and then apply the loss)
-        """
-        predictions = np.array(
+        predictions, target = self.get_model_preds_and_target(dataset)
+        return np.array(
             [
-                model.predict(dataset.x)
-                for model in self.proposal_history[: weights.size]
+                self.criterion(predictions[i, :], target)
+                for i in range(predictions.shape[0])
             ]
         )
-        avg_predictions = np.sum(predictions * np.reshape(weights, (-1, 1, 1)), axis=0)
-        return self.proposal_history[0].loss_pred(avg_predictions, dataset.y)
+
+    def get_model_preds_and_target(self, dataset: Dataset):
+        """
+        Get preds and target from the models
+        """
+        predictions = np.array(
+            [model.predict(dataset.x) for model in self.proposal_history]
+        )
+        return predictions, dataset.y
 
 
 class FixedProposer(Proposer):
@@ -67,7 +72,7 @@ class FixedProposerFromFile(Proposer):
             raise ValueError("no other losses implemented right now")
 
     def criterion(self, pred_y, y):
-        return self.raw_criterion(pred_y,y)/self.max_loss
+        return np.abs(pred_y - y) / self.max_loss
 
     @property
     def num_models(self):
@@ -118,43 +123,23 @@ class FixedProposerFromFile(Proposer):
 
             # compute the loss
             targets = batch.label if target_func is None else target_func(batch.label)
-            test_loss = self.criterion(predictions, targets)
 
             # Only do one iteration of the test iterator
             break
 
         return (
-            test_loss.detach().numpy(),
             predictions.detach().numpy(),
             targets.detach().numpy(),
         )
 
-    def score_models(self, dataset_dict: Dict):
+    def get_model_preds_and_target(self, dataset_dict: Dict):
+        """
+        Get preds and target from the models
+        """
         dataset_file = dataset_dict["path"]
         test_size = dataset_dict["batch_size"]
-        return np.array(
-            [
-                self._run_test(model_dict, dataset_file, test_size)[0]
-                for model_dict in self.proposal_history
-            ]
-        )
-
-    def score_mixture_model(self, weights: np.ndarray, dataset_dict: Dict):
-        dataset_file = dataset_dict["path"]
-        test_size = dataset_dict["batch_size"]
-        all_preds = []
-        prev_targets = None
-        for model_dict in self.proposal_history[: weights.size]:
-            _, preds, targets = self._run_test(
-                model_dict, dataset_file, test_size,
-            )
-            if prev_targets is None:
-                prev_targets = targets
-            assert np.all(prev_targets == targets)
-            all_preds.append(preds)
-        agg_pred = np.sum(np.array(all_preds) * weights.reshape((-1, 1)), axis=0)
-        return (
-            self.criterion(torch.Tensor(agg_pred), torch.Tensor(targets))
-            .detach()
-            .numpy()
-        )
+        predictions = []
+        for model_dict in self.proposal_history:
+            preds, targets = self._run_test(model_dict, dataset_file, test_size)
+            predictions.append(preds)
+        return np.array(predictions), targets

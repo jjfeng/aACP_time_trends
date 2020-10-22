@@ -46,10 +46,14 @@ def main(args=sys.argv[1:]):
         for month in MONTHS:
             model_file = args.path_template % (year, month)
             print("model", model_file)
-            assert os.path.exists(model_file)
-            model_paths.append(model_file)
+            print(os.path.exists(model_file))
+            if not os.path.exists(model_file):
+                model_paths.append(prev_model_file)
+            else:
+                model_paths.append(model_file)
+            prev_model_file = model_file
     proposer = FixedProposerFromFile(
-            model_paths, criterion_str="l1", max_loss=args.max_loss
+        model_paths, criterion_str="l1", max_loss=args.max_loss
     )
 
     pickle_to_file(proposer, args.out_file)

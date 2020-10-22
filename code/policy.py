@@ -16,7 +16,11 @@ class Policy:
         raise NotImplementedError()
 
     def update_weights(
-        self, time_t, indiv_robot_loss_t=None, prev_weights=None, mixture_func=None
+        self,
+        time_t,
+        criterion,
+        batch_model_preds: np.ndarray = None,
+        batch_targets: np.ndarray = None,
     ):
         return
 
@@ -103,11 +107,21 @@ class TTestApproval(Policy):
         self.curr_num_experts += 1
 
     def update_weights(
-        self, time_t, indiv_robot_loss_t=None, prev_weights=None, mixture_func=None
+        self,
+        time_t,
+        criterion,
+        batch_model_preds: np.ndarray = None,
+        batch_targets: np.ndarray = None,
     ):
-        if indiv_robot_loss_t is None:
+        if batch_targets is None:
             return
 
+        indiv_robot_loss_t = np.array(
+            [
+                criterion(batch_model_preds[i, :], batch_targets)
+                for i in range(batch_model_preds.shape[0])
+            ]
+        )
         num_updates = min(self.curr_num_experts, indiv_robot_loss_t.shape[0])
         for i in range(num_updates):
             self.loss_histories[i].append(indiv_robot_loss_t[i, :])

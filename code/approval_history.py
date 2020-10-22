@@ -7,7 +7,6 @@ class ApprovalHistory:
         self.policy_name = policy_name
         self.policy_loss_history = []
         self.expected_policy_loss_history = []
-        self.all_loss_history = []
         self.human_history = []
         self.expert_weights_history = []
 
@@ -21,13 +20,11 @@ class ApprovalHistory:
         expert_weights: np.ndarray,
         obs_loss: float,
         expected_loss: float,
-        all_loss: np.ndarray,
     ):
         self.human_history.append(human_weight)
         self.expert_weights_history.append(expert_weights)
         self.policy_loss_history.append(obs_loss)
         self.expected_policy_loss_history.append(expected_loss)
-        self.all_loss_history.append(all_loss)
 
     def __str__(self):
         return """

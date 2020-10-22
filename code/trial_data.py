@@ -41,8 +41,8 @@ class TrialData:
 class TrialDataFromDisk(TrialData):
     def __init__(
         self,
-        batch_sizes: ndarray = [],
         batch_data: List[str] = [],
+        batch_sizes: ndarray = [],
     ):
         self.batch_data = batch_data
         self.batch_sizes = batch_sizes

@@ -1,4 +1,5 @@
 import sys
+import time
 import os
 import shutil
 import argparse
@@ -9,6 +10,7 @@ from numpy import ndarray
 from typing import List
 import pandas as pd
 
+from simulation import Simulation
 from nature import Nature
 from proposer import Proposer
 from approval_history import ApprovalHistory
@@ -160,105 +162,6 @@ def create_policy(
     return policy
 
 
-def run_simulation(
-    nature: Nature,
-    proposer: Proposer,
-    policy: Policy,
-    human_max_loss: float,
-    do_convex_mixture: bool = True,
-    num_test_obs: int = 1000,
-):
-    approval_hist = ApprovalHistory(
-        human_max_loss=human_max_loss, policy_name=str(policy)
-    )
-
-    # Run the platform trial
-    indiv_loss_robot_t = None
-    mixture_loss_t = None
-    prev_weights = None
-    for t in range(nature.total_time - 1):
-        logging.info("TIME STEP %d", t)
-        policy.add_expert(t)
-        policy.update_weights(
-            t,
-            indiv_loss_robot_t,
-            prev_weights=prev_weights,
-            mixture_func=lambda x: proposer.score_mixture_model(
-                x / (np.sum(x) + 1e-10), sub_trial_data.batch_data[-1]
-            ),
-        )
-        sub_trial_data = nature.get_trial_data(t + 1)
-        population_trial_data = nature.create_test_data(t + 1, num_test_obs)
-        if not policy.is_oracle:
-            robot_weights, human_weight = policy.get_predict_weights(t)
-
-            if np.sum(robot_weights) > 0:
-                mixture_loss_t = proposer.score_mixture_model(
-                    robot_weights / np.sum(robot_weights), sub_trial_data.batch_data[-1]
-                )
-                expected_mixture_loss_t = proposer.score_mixture_model(
-                    robot_weights / np.sum(robot_weights), population_trial_data
-                )
-            else:
-                mixture_loss_t = 1
-                expected_mixture_loss_t = 1
-        indiv_loss_robot_t = proposer.score_models(sub_trial_data.batch_data[-1])
-        batch_n = indiv_loss_robot_t.shape[1]
-        all_loss_t = np.concatenate(
-            [[policy.human_max_loss * batch_n], np.sum(indiv_loss_robot_t, axis=1)]
-        )
-        if policy.is_oracle:
-            best_model_idx = np.argmin(all_loss_t)
-            human_weight = 1 if best_model_idx == 0 else 0
-            robot_weights = np.zeros(all_loss_t.size - 1)
-            if human_weight == 0:
-                robot_weights[best_model_idx - 1] = 1
-            print("best robot", best_model_idx - 1, "human", human_weight)
-            mixture_loss_t = proposer.score_mixture_model(
-                robot_weights, sub_trial_data.batch_data[-1]
-            )
-            expected_mixture_loss_t = proposer.score_mixture_model(
-                robot_weights, population_trial_data
-            )
-
-        weights = np.concatenate([[human_weight], robot_weights])
-        if do_convex_mixture:
-            # Take a weighted average of the predictions and then apply the loss
-            policy_loss_t = policy.human_max_loss * human_weight + np.mean(
-                mixture_loss_t
-            ) * (1 - human_weight)
-            expected_policy_loss_t = policy.human_max_loss * human_weight + np.mean(
-                expected_mixture_loss_t
-            ) * (1 - human_weight)
-        else:
-            # Take a weighted average of the losses
-            policy_loss_t = np.sum(all_loss_t * weights) / batch_n
-            expected_policy_loss_t = np.sum(all_loss_t * weights) / batch_n
-        approval_hist.append(
-            human_weight,
-            robot_weights,
-            policy_loss_t,
-            expected_policy_loss_t,
-            all_loss_t,
-        )
-
-        nature.next(approval_hist)
-
-        prev_weights = weights
-        print("time", t, "loss", policy_loss_t, expected_policy_loss_t)
-        logging.info("losses %s", policy_loss_t)
-        # print("losses", all_loss_t/batch_n)
-        # logging.info("loss pred %s", loss_predictions)
-        # if loss_predictions.size > 2 and np.var(loss_predictions) > 0:
-        #    logging.info("corr %s", scipy.stats.spearmanr(all_loss_t[1:]/batch_n, loss_predictions))
-        logging.info("weights %s (max %d)", weights, np.argmax(weights))
-
-        if t < nature.total_time - 2:
-            proposer.propose_model(sub_trial_data, approval_hist)
-
-    return approval_hist
-
-
 def main(args=sys.argv[1:]):
     args = parse_args(args)
     logging.basicConfig(
@@ -288,13 +191,16 @@ def main(args=sys.argv[1:]):
         batch_size=nature.batch_sizes[-1],
     )
 
-    approval_history = run_simulation(
+    st_time = time.time()
+    sim = Simulation(
         nature, proposer, policy, args.human_max_loss, num_test_obs=args.num_test_obs
     )
-    logging.info(approval_history)
-    print(approval_history)
+    sim.run()
+    logging.info(sim.approval_hist)
+    print(sim.approval_hist)
+    logging.info("run time %d", time.time() - st_time)
 
-    pickle_to_file(approval_history, args.out_file)
+    pickle_to_file(sim.approval_hist, args.out_file)
     if args.out_nature_file is not None:
         pickle_to_file(nature.to_fixed(), args.out_nature_file)
 
