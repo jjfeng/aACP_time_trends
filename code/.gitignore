@@ -7,3 +7,5 @@
 _output/
 data/
 .vector_cache/
+*.sh.e*
+*.sh.o*
