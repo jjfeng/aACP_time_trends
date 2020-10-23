@@ -168,13 +168,13 @@ class ValidationPolicy(Policy):
         # TODO: fix up the standard error estimate
         predictions = np.mean(
             self.loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
-        ) + self.pred_t_factor * np.log(time_t + 1) * np.sqrt(
+        ) + self.pred_t_factor * np.sqrt(
             np.mean(
                 self.var_loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
             )
             / np.sum(self.batch_sizes[-self.num_back_batches :])
         )
-        # Give some reasonable prediction for newest model
+        # TODO: Give some reasonable prediction for newest model
         predictions[-1] = predictions[-2]
 
         all_optim_weights = special.softmax(

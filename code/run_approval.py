@@ -42,6 +42,7 @@ def parse_args(args):
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
     parser.add_argument("--ci-alpha", type=float, default=0.025)
+    parser.add_argument("--num-back-batches", type=int, default=3)
     parser.add_argument("--control-error-factor", type=float, default=1.5)
     parser.add_argument("--num-test-obs", type=int, default=1000)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
@@ -56,6 +57,7 @@ def parse_args(args):
 def create_policy(
     policy_name, args, human_max_loss, total_time, num_experts, batch_size
 ):
+    logging.info("MEAN BATCH SIZE %.2f", batch_size)
     if policy_name == "MarkovHedge":
         policy = ValidationPolicy(
             num_experts=num_experts,
@@ -132,12 +134,15 @@ def create_policy(
         )
         #assert best_bound < human_max_loss * args.control_error_factor
         loss_diffs = human_max_loss * args.control_error_factor - regret_bounds
+        print("BATCH SIZE", batch_size)
+        print(loss_diffs)
         if np.all(loss_diffs < 0):
-            eta_idx = np.argmin(loss_diffs)
+            eta_idx = np.argmin(regret_bounds)
+            logging.info("lambda %f with smallest bound %f", lambdas[eta_idx], regret_bounds[eta_idx])
         else:
             eta_idx = np.max(np.where(loss_diffs >= 0))
+            logging.info("closest lambda %f, bound %f", lambdas[eta_idx], regret_bounds[eta_idx])
         eta = lambdas[eta_idx]
-        logging.info("closest lambda %f, bound %f", eta, regret_bounds[eta_idx])
         policy = MetaExpWeightingList(
             eta=eta,
             eta_list=eta_list,
@@ -145,6 +150,7 @@ def create_policy(
             num_experts=num_experts,
             human_max_loss=human_max_loss,
             ci_alpha=args.ci_alpha,
+            num_back_batches=args.num_back_batches,
         )
     elif policy_name == "BaselinePolicy":
         policy = BaselinePolicy(human_max_loss=human_max_loss)
@@ -157,7 +163,7 @@ def create_policy(
     elif policy_name == "TTestApproval":
         policy = TTestApproval(
             num_experts, human_max_loss=human_max_loss
-        )  # , factor=1.6)
+        )
     elif policy_name == "Oracle":
         policy = OracleApproval(human_max_loss=human_max_loss)
     else:
@@ -191,7 +197,7 @@ def main(args=sys.argv[1:]):
         human_max_loss=args.human_max_loss,
         total_time=nature.total_time,
         num_experts=nature.total_time,
-        batch_size=nature.batch_sizes[-1],
+        batch_size=np.mean(nature.batch_sizes[1:]),
     )
 
     st_time = time.time()

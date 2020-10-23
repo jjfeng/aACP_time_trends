@@ -18,7 +18,7 @@ nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 START_YEAR = 2009
 NUM_YEARS = 11
-HUMAN_LOSS = 0.1
+HUMAN_LOSS = 0.075
 CONTROL_FACTOR = 1.6
 
 @nest.add_target_with_env(localenv)
