@@ -17,7 +17,7 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 START_YEAR = 2009
-NUM_YEARS = 3
+NUM_YEARS = 11
 HUMAN_LOSS = 0.1
 CONTROL_FACTOR = 1.6
 

@@ -274,7 +274,7 @@ chartevents = extract_chartevents(
     admissions,
     "~/mimic_iv/icu/chartevents_filtered.csv",
     # max rows 51575974
-    nrows=10000000,
+    nrows=    100000000,
 )
 # Filter for events only within the first 24 hours
 chartevents = chartevents[chartevents["within_24hr"]]
@@ -293,14 +293,22 @@ full_xy_df = (
 )
 full_xy_df = full_xy_df.sample(frac=1)
 
+MIN_BATCH_SIZE = 30
 all_xy_dfs = []
 for (in_year, in_quarter), year_df in full_xy_df.groupby(["in_year", "in_quarter"]):
     print(in_year, year_df.shape)
     print(year_df)
     xy = year_df.drop(columns=["in_year", "in_quarter"]).to_numpy()
-    ntrain = int(xy.shape[0] * 3 / 4)
-    xy_train = xy[:ntrain, :]
-    xy_valid = xy[ntrain:, :]
+    print(in_year, in_quarter, xy.shape)
+    if xy.shape[0] > MIN_BATCH_SIZE:
+        nvalid = max(int(xy.shape[0]/4), MIN_BATCH_SIZE)
+        ntrain = xy.shape[0] - nvalid
+        xy_train = xy[:ntrain, :]
+        xy_valid = xy[ntrain:, :]
+    else:
+        ntrain = 0
+        xy_train = xy[:0, :]
+        xy_valid = xy
     np.savetxt(
         "experiment_mimic/_output/data/train_data_%d_%d.csv" % (in_year, in_quarter),
         xy_train,
