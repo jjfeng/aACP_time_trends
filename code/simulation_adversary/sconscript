@@ -26,7 +26,7 @@ YMAX = 0.35
 
 nest.add(
     'num_drift',
-    [2],
+    [3],
     label_func=lambda c: 'num_drift_%d' % c)
 
 nest.add(

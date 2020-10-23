@@ -141,6 +141,31 @@ nest.add(
     [1.5],
     label_func=lambda c: 'eta_%.2f' % c)
 
+@nest.add_target_with_env(localenv)
+def run_meta_exp_small(env, outdir, c):
+    targets = [
+        join(outdir, 'meta_exp_approval_small_hist.pkl'),
+        join(outdir, 'meta_exp_approval_small_list_log.txt'),
+    ]
+    c['approval_hists'].append(targets[0])
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--eta',
+        c['eta'],
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--policy-name MetaExpWeightingSmall',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
 nest.add(
     'alpha',
     [0.5],

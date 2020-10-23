@@ -157,7 +157,8 @@ class TTestApproval(Policy):
 
         a = np.zeros(self.curr_num_experts)
         if len(self.loss_histories[0]) == 0:
-            return a, 1
+            a[0] = 1
+            return a, 0
         else:
             best_model_loss = np.concatenate(
                 self.loss_histories[best_model_idx][best_model_idx:]
