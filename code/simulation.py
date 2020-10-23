@@ -58,10 +58,14 @@ class Simulation:
 
             # Population data
             pop_batch_data = self.nature.create_test_data(t + 1, self.num_test_obs)
-            (
-                pop_batch_preds,
-                pop_batch_target,
-            ) = self.proposer.get_model_preds_and_target(pop_batch_data)
+            if pop_batch_data is not None:
+                (
+                    pop_batch_preds,
+                    pop_batch_target,
+                ) = self.proposer.get_model_preds_and_target(pop_batch_data)
+            else:
+                pop_batch_preds = batch_preds
+                pop_batch_target = batch_target
 
             # Score models
             print("scoring")
@@ -99,5 +103,5 @@ class Simulation:
             )
             logging.info("human weight %f", human_weight)
 
-            if t < self.total_time - 2:
+            if t < self.total_time - 1:
                 self.proposer.propose_model(sub_trial_data, self.approval_hist)

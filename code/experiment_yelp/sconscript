@@ -17,7 +17,7 @@ NUM_EPOCHS = 500
 MAX_TRAIN = 2000
 START_YEAR = 2008
 NUM_YEARS = 11
-NUM_MONTHS = 4
+NUM_MONTHS = 12
 MAX_LOSS = 4
 HUMAN_LOSS = 1/MAX_LOSS
 CONTROL_FACTOR = 1.6
@@ -305,9 +305,9 @@ def plot_all_hists(env, outdir, c):
     cmd = [
         'python plot_policies.py',
 	'--y-min',
-        0,
+        0.18,
 	'--y-max',
-        0.5,
+        0.28,
 	'--history-files',
         history_files,
 	'--loss-plot ${TARGETS[0]}',

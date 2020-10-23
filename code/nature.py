@@ -12,12 +12,19 @@ class Nature:
         raise NotImplementedError()
 
     def get_trial_data(self, time_t: int):
+        """
+        Return all trial data up to time_t, inclusive
+        """
         subtrial_data = self.trial_data.subset(time_t + 1)
         return subtrial_data
 
     def create_test_data(self, time_t: int):
+        """
+        Return trial data for this time_t
+        If None, means no new test data
+        """
         # Simply return data from this batch
-        return self.trial_data.batch_data[time_t]
+        return None
 
 
 class FixedNature(Nature):
@@ -49,7 +56,7 @@ class FixedNature(Nature):
         if self.data_gen is not None:
             return self.data_gen.create_data(num_obs, time_t, self.coefs[time_t])
         else:
-            return self.trial_data.batch_data[time_t]
+            return None
 
     def to_fixed(self):
         return self
@@ -132,7 +139,7 @@ class AdversarialNature(Nature):
         if self.data_gen is not None:
             return self.data_gen.create_data(num_obs, time_t, self.coefs[time_t])
         else:
-            return self.trial_data.batch_data[time_t]
+            return None 
 
     def to_fixed(self):
         return FixedNature(self.data_gen, self.trial_data, self.coefs)

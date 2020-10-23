@@ -1,4 +1,5 @@
 from typing import List
+import logging
 from itertools import product
 from scipy import special
 import scipy.stats
@@ -316,17 +317,16 @@ class MetaExpWeightingList(Policy):
             if biggest_weight < policy_weights[idx]:
                 biggest_weight = policy_weights[idx]
                 biggest_eta = policy_eta
-            print(
-                "policy",
+            logging.info(
+                "policy %s policy weight %.4f human weight %.4f top model %d top model weight %.4f avg model %.2f",
                 policy_eta,
                 policy_weight,
                 policy_human_weight,
                 np.argmax(policy_robot_weights),
                 np.max(policy_robot_weights),
-                "avg",
                 np.sum(policy_robot_weights * np.arange(policy_robot_weights.size)),
             )
-        print("ETAS", biggest_eta, biggest_weight)
+        logging.info("ETAS %s %.4f", biggest_eta, biggest_weight)
         print(
             "time",
             time_t,

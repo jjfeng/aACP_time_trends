@@ -130,9 +130,12 @@ def create_policy(
             best_bound,
             human_max_loss * args.control_error_factor,
         )
-        assert best_bound < human_max_loss * args.control_error_factor
+        #assert best_bound < human_max_loss * args.control_error_factor
         loss_diffs = human_max_loss * args.control_error_factor - regret_bounds
-        eta_idx = np.max(np.where(loss_diffs >= 0))
+        if np.all(loss_diffs < 0):
+            eta_idx = np.argmin(loss_diffs)
+        else:
+            eta_idx = np.max(np.where(loss_diffs >= 0))
         eta = lambdas[eta_idx]
         logging.info("closest lambda %f, bound %f", eta, regret_bounds[eta_idx])
         policy = MetaExpWeightingList(
