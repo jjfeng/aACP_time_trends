@@ -22,6 +22,7 @@ def parse_args(args):
 
     parser.add_argument("--start-year", type=int, default=2009)
     parser.add_argument("--num-years", type=int, default=1)
+    parser.add_argument("--min-batch-size", type=int, default=20)
     parser.add_argument("--log-file", type=str, default="_output/nature_log.txt")
     parser.add_argument("--out-file", type=str, default="_output/nature.pkl")
     parser.set_defaults()
@@ -49,6 +50,11 @@ def main(args=sys.argv[1:]):
             if len(raw_dataset.shape) == 1:
                 raw_dataset = raw_dataset.reshape((1, -1))
                 print("VALIDATION DATA ONLY SIZE 1")
+            print(raw_dataset.shape)
+            if raw_dataset.shape[0] < args.min_batch_size:
+                print("SKIPPING THIS BATCH. TOO SMALL", raw_dataset.shape)
+                continue
+
             print("year q", time_key, quarter)
             dataset = Dataset(raw_dataset[:, 1:], raw_dataset[:, 0], num_classes=2)
             trial_data.add_batch(dataset)

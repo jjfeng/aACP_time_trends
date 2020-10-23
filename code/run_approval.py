@@ -181,6 +181,7 @@ def main(args=sys.argv[1:]):
     np.random.seed(args.seed)
 
     nature = pickle_from_file(args.nature_file)
+    logging.info("BATCH SIZES %s", nature.batch_sizes)
     proposer = pickle_from_file(args.proposer_file)
 
     nature.next(None)

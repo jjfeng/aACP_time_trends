@@ -20,6 +20,7 @@ START_YEAR = 2009
 NUM_YEARS = 11
 HUMAN_LOSS = 0.075
 CONTROL_FACTOR = 1.6
+MIN_BATCH_SIZE = 20
 
 @nest.add_target_with_env(localenv)
 def create_nature(env, outdir, c):
@@ -32,6 +33,8 @@ def create_nature(env, outdir, c):
         START_YEAR,
         '--num-years',
         NUM_YEARS,
+        '--min-batch-size',
+        MIN_BATCH_SIZE,
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
     return env.Command(
@@ -77,6 +80,7 @@ def fit_mimic_year_model(env, outdir, c):
         c['year'],
 	'--quarter',
         c['quarter'],
+	'--n-trees 5000',
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
     return env.Command(
@@ -154,6 +158,8 @@ def run_meta_exp_small(env, outdir, c):
         c['seed'],
         '--eta',
         c['eta'],
+        '--human-max-loss',
+        HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name MetaExpWeightingSmall',

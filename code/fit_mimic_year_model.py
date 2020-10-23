@@ -32,6 +32,7 @@ def parse_args(args):
     parser.add_argument("--year", type=int, default=2010)
     parser.add_argument("--quarter", type=int, default=0)
     parser.add_argument("--n-jobs", type=int, default=4)
+    parser.add_argument("--n-trees", type=int, default=5000)
     parser.add_argument("--log-file", type=str, default="_output/model_log.txt")
     parser.add_argument("--out-file", type=str, default="_output/model.pkl")
     parser.set_defaults()
@@ -71,7 +72,7 @@ def main(args=sys.argv[1:]):
     y_train = dat[:ntrain, 0]
 
     model = RandomForestWrap(
-        n_estimators=5000, max_depth=20, oob_score=True, n_jobs=args.n_jobs
+        n_estimators=args.n_trees, max_depth=20, oob_score=True, n_jobs=args.n_jobs
     )
 
     model.fit(x_train, y_train)
@@ -80,14 +81,6 @@ def main(args=sys.argv[1:]):
     # Do save
     with open(args.out_file, "wb") as f:
         pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
-
-    # x_test = dat[ntrain:, 1:]
-    # y_test = dat[ntrain:, 0]
-    # predictions = model.predict(x_test)
-    # print("LOSSSS", np.mean(model.loss_pred(predictions, y_test)))
-    # logging.info("simple avg %f", y_train.mean())
-    # print("SRUPITD HINGE LOSS %f", np.mean(model.loss_pred(y_train.mean() *
-    #    np.ones((y_test.size, 2)), y_test)))
 
 
 if __name__ == "__main__":
