@@ -16,8 +16,8 @@ NUM_EPOCHS = 500
 
 MAX_TRAIN = 2000
 START_YEAR = 2008
-NUM_YEARS = 11
-NUM_MONTHS = 12
+NUM_YEARS = 1 #11
+NUM_MONTHS = 2 #12
 MAX_LOSS = 4
 HUMAN_LOSS = 1/MAX_LOSS
 CONTROL_FACTOR = 1.6
@@ -174,11 +174,6 @@ def run_meta_exp(env, outdir, c):
         sources,
         ' '.join(map(str, cmd)))
 
-nest.add(
-    'eta',
-    [1.5],
-    label_func=lambda c: 'eta_%.2f' % c)
-
 @nest.add_target_with_env(localenv)
 def run_meta_exp_small(env, outdir, c):
     targets = [
@@ -190,8 +185,8 @@ def run_meta_exp_small(env, outdir, c):
         'python run_approval.py',
         '--seed',
         c['seed'],
-        '--eta',
-        c['eta'],
+        '--human-max-loss',
+        HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name MetaExpWeightingSmall',
@@ -205,8 +200,13 @@ def run_meta_exp_small(env, outdir, c):
         ' '.join(map(str, cmd)))
 
 nest.add(
+    'eta',
+    [1.5],
+    label_func=lambda c: 'eta_%.2f' % c)
+
+nest.add(
     'alpha',
-    [0.5],
+    [0.3],
     label_func=lambda c: 'alpha_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
@@ -323,18 +323,22 @@ def plot_all_hists(env, outdir, c):
     targets = [
         join(outdir, 'approval_hist_loss.png'),
         join(outdir, 'approval_hist_human.png'),
+        join(outdir, 'approval_hist_log.txt'),
     ]
     history_files = ",".join(["experiment_yelp/%s" % s for s in c['approval_hists']])
     cmd = [
         'python plot_policies.py',
 	'--y-min',
-        0.18,
+        0.6,
 	'--y-max',
-        0.28,
+        1.4,
+	'--scale-loss',
+    MAX_LOSS,
 	'--history-files',
         history_files,
 	'--loss-plot ${TARGETS[0]}',
 	'--human-plot ${TARGETS[1]}',
+	'--log ${TARGETS[2]}',
     ]
 
     return env.Command(

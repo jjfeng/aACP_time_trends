@@ -66,6 +66,9 @@ class FixedProposer(Proposer):
 
 
 class FixedProposerFromFile(Proposer):
+    """
+    File here refers to the models in the file and the data in the files
+    """
     def __init__(self, model_files: List, criterion_str, max_loss: float):
         self.model_files = model_files
         self.proposal_history = []

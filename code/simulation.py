@@ -30,7 +30,7 @@ class Simulation:
         )
 
 
-    def run(self):
+    def run(self, hook_func):
         for t in range(self.total_time):
             logging.info("TIME STEP %d", t)
             print("TIME", t)
@@ -46,10 +46,8 @@ class Simulation:
             robot_weights, human_weight = self.policy.get_predict_weights(t)
 
             # Monitoring data
-            print("data collect")
             sub_trial_data = self.nature.get_trial_data(t + 1)
             obs_batch_data = sub_trial_data.batch_data[-1]
-            print("get preds")
             batch_preds, batch_target = self.proposer.get_model_preds_and_target(
                 obs_batch_data
             )
@@ -68,7 +66,6 @@ class Simulation:
                 pop_batch_target = batch_target
 
             # Score models
-            print("scoring")
             policy_loss_t = score_mixture_model(
                 human_weight,
                 robot_weights,
@@ -86,7 +83,6 @@ class Simulation:
                 self.human_max_loss,
             )
 
-            print("appending")
             self.approval_hist.append(
                 human_weight,
                 robot_weights,
@@ -105,3 +101,5 @@ class Simulation:
 
             if t < self.total_time - 1:
                 self.proposer.propose_model(sub_trial_data, self.approval_hist)
+
+            hook_func(self.approval_hist)

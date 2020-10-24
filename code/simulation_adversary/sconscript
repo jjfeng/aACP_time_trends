@@ -152,10 +152,6 @@ def run_meta_exp(env, outdir, c):
         targets,
         sources,
         ' '.join(map(str, cmd)))
-nest.add(
-    'eta',
-    [1.5],
-    label_func=lambda c: 'eta_%.2f' % c)
 
 @nest.add_target_with_env(localenv)
 def run_meta_exp_small(env, outdir, c):
@@ -168,8 +164,6 @@ def run_meta_exp_small(env, outdir, c):
         'python run_approval.py',
         '--seed',
         c['seed'],
-        '--eta',
-        c['eta'],
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name MetaExpWeightingSmall',
@@ -182,11 +176,9 @@ def run_meta_exp_small(env, outdir, c):
         sources,
         ' '.join(map(str, cmd)))
 
-nest.pop('eta')
-
 nest.add(
     'eta',
-    [1],
+    [1.5],
     label_func=lambda c: 'eta_%.2f' % c)
 
 nest.add(
@@ -252,6 +244,7 @@ def plot_all_hists(env, outdir, c):
     targets = [
         join(outdir, 'approval_hist_loss.png'),
         join(outdir, 'approval_hist_human.png'),
+        join(outdir, 'approval_hist_log.txt'),
     ]
     history_files = ",".join(["simulation_adversary/%s" % s for s in c['approval_hists']])
     cmd = [
@@ -264,6 +257,7 @@ def plot_all_hists(env, outdir, c):
         history_files,
 	'--loss-plot ${TARGETS[0]}',
 	'--human-plot ${TARGETS[1]}',
+	'--log ${TARGETS[2]}',
     ]
 
     return env.Command(

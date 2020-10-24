@@ -78,41 +78,33 @@ def create_policy(
             num_experts=num_experts,
             human_max_loss=human_max_loss,
         )
-    elif policy_name == "MetaExpWeightingSmall":
-        eta_list = [
-            (0, 0, 0, 1),  # baseline
-            (1.5, 0, 0.5, 0.05),  # online
-            (0, 0, 0.99, 0.0),  # blind
-            (0, 10000, 0.5, 0),  # t-test
-        ]
-        meta_weights = np.ones(len(eta_list)) * 16 / 4
-        meta_weights[0] = 1
-        policy = MetaExpWeightingList(
-            eta=args.eta,
-            eta_list=eta_list,
-            meta_weights=meta_weights,
-            num_experts=num_experts,
-            human_max_loss=human_max_loss,
-        )
-    elif policy_name == "MetaExpWeighting":
-        eta_list = [
-            (0, 0, 0, 1),  # baseline
-            # (1.5, 0, 0.5, 0.05),  # online
-            (0, 0, 0.99, 0.0),  # blind
-            (0, 10000, 0.5, 0),  # t-test
-            (10, 0, 0.10, 0),
-            (10, 1, 0.10, 0),
-            (10, 10, 0.10, 0),
-            (10, 100, 0.10, 0),
-            (10, 0, 0.3, 0),
-            (10, 1, 0.3, 0),
-            (10, 10, 0.3, 0),
-            (10, 100, 0.3, 0),
-            (10, 0, 0.5, 0),
-            (10, 1, 0.5, 0),
-            (10, 10, 0.5, 0),
-            (10, 100, 0.5, 0),
-        ]
+    elif policy_name.startswith("MetaExpWeighting"):
+        if policy_name == "MetaExpWeightingSmall":
+            eta_list = [
+                (0, 0, 0, 1),  # baseline
+                (1.5, 0, 0.3, 0.05),  # online
+                (0, 0, 0.99, 0.0),  # blind
+                (0, 10000, 0.5, 0),  # t-test
+            ]
+        elif policy_name == "MetaExpWeighting":
+            eta_list = [
+                (0, 0, 0, 1),  # baseline
+                # (1.5, 0, 0.5, 0.05),  # online
+                (0, 0, 0.99, 0.0),  # blind
+                (0, 10000, 0.5, 0),  # t-test
+                (10, 0, 0.10, 0),
+                (10, 1, 0.10, 0),
+                (10, 10, 0.10, 0),
+                (10, 100, 0.10, 0),
+                (10, 0, 0.3, 0),
+                (10, 1, 0.3, 0),
+                (10, 10, 0.3, 0),
+                (10, 100, 0.3, 0),
+                (10, 0, 0.5, 0),
+                (10, 1, 0.5, 0),
+                (10, 10, 0.5, 0),
+                (10, 100, 0.5, 0),
+            ]
         meta_weights = np.ones(len(eta_list))
         lambdas = np.exp(np.arange(-6, 2, 0.02))
         regret_bounds = get_regret_bounds(
@@ -205,7 +197,7 @@ def main(args=sys.argv[1:]):
     sim = Simulation(
         nature, proposer, policy, args.human_max_loss, num_test_obs=args.num_test_obs
     )
-    sim.run()
+    sim.run(lambda approval_hist: pickle_to_file(approval_hist, args.out_file))
     logging.info(sim.approval_hist)
     print(sim.approval_hist)
     logging.info("run time %d", time.time() - st_time)
