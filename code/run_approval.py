@@ -40,6 +40,7 @@ def parse_args(args):
         help="name of approval policy",
     )
     parser.add_argument("--human-max-loss", type=float, default=None)
+    parser.add_argument("--drift-scale", type=float, default=1)
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
     parser.add_argument(
@@ -63,7 +64,7 @@ def parse_args(args):
 
 
 def create_policy(
-    policy_name, args, human_max_loss, total_time, num_experts, batch_size
+    policy_name, args, human_max_loss, drift, total_time, num_experts, batch_size
 ):
     logging.info("MEAN BATCH SIZE %.2f", batch_size)
     if policy_name == "MarkovHedge":
@@ -120,7 +121,7 @@ def create_policy(
             m=len(eta_list),
             T=total_time,
             delta=human_max_loss,
-            drift=human_max_loss,
+            drift=drift,
             lambdas=lambdas,
             n=batch_size,
         )
@@ -208,6 +209,7 @@ def main(args=sys.argv[1:]):
         args.policy_name,
         args,
         human_max_loss=args.human_max_loss,
+        drift=args.human_max_loss * args.drift_scale,
         total_time=nature.total_time,
         num_experts=nature.total_time,
         batch_size=np.mean(nature.batch_sizes[1:]),

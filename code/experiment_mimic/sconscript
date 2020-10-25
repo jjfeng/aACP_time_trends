@@ -17,8 +17,9 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 START_YEAR = 2009
-NUM_YEARS = 11
-HUMAN_LOSS = 0.11
+NUM_YEARS = 1 #11
+HUMAN_LOSS = 0.1
+DRIFT_SCALE = 0.25
 CONTROL_FACTOR = 1.6
 MIN_BATCH_SIZE = 20
 CI_ALPHA = 0.1
@@ -181,6 +182,8 @@ def run_meta_exp(env, outdir, c):
         NUM_BACK_BATCHES,
         '--human-max-loss',
         HUMAN_LOSS,
+        '--drift-scale',
+        DRIFT_SCALE,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--prefetched-file ${SOURCES[2]}',
@@ -213,6 +216,8 @@ def run_meta_exp_small(env, outdir, c):
         CI_ALPHA,
         '--human-max-loss',
         HUMAN_LOSS,
+        '--drift-scale',
+        DRIFT_SCALE,
 	    '--num-back-batches',
         NUM_BACK_BATCHES,
         '--nature-file ${SOURCES[0]}',
