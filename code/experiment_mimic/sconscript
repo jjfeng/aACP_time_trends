@@ -17,11 +17,11 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 START_YEAR = 2009
-NUM_YEARS = 1 #11
-HUMAN_LOSS = 0.1
+NUM_YEARS = 11
+HUMAN_LOSS = 0.11
 CONTROL_FACTOR = 1.6
 MIN_BATCH_SIZE = 20
-CI_ALPHA = 0.05
+CI_ALPHA = 0.1
 
 @nest.add_target_with_env(localenv)
 def create_nature(env, outdir, c):
@@ -127,7 +127,7 @@ def run_meta_exp(env, outdir, c):
         CONTROL_FACTOR,
         '--ci-alpha',
         CI_ALPHA,
-	    '--num-back-batches 6',
+	    '--num-back-batches 8',
         '--human-max-loss',
         HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',

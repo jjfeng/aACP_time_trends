@@ -182,8 +182,8 @@ class ValidationPolicy(Policy):
             / num_batches_list
         )
         var_list = (
-            np.mean(self.var_loss_histories[: time_t + 1, -self.num_back_batches
-                :], axis=1)
+            np.sum(self.var_loss_histories[: time_t + 1, -self.num_back_batches
+                :], axis=1)/num_batches_list
         )
         batch_sizes = np.array([np.sum(self.batch_sizes[-int(b):]) for b in
             num_batches_list])
@@ -192,9 +192,9 @@ class ValidationPolicy(Policy):
             var_list / batch_sizes
         )
         predictions = mean_loss + inflation
-        print("INF", inflation)
-        print("pre", predictions)
-        print("mean", mean_loss)
+        #print("INF", inflation)
+        #print("pre", predictions)
+        #print("mean", mean_loss)
         # TODO: Give some reasonable prediction for newest model
         predictions[-1] = predictions[-2]
 
@@ -255,7 +255,7 @@ class MetaExpWeightingList(Policy):
         self.eta_indexes = np.arange(len(eta_list))
         print("ETA INDEX", self.eta_indexes)
         pred_t_factor = scipy.stats.norm().ppf(1 - ci_alpha)
-        print("pred t factor", pred_t_factor)
+        logging.info("pred t factor %f, ci_alpha %f", pred_t_factor, ci_alpha)
 
         self.policy_dict = {}
         for idx, etas in enumerate(eta_list):
