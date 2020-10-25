@@ -44,7 +44,6 @@ def main(args=sys.argv[1:]):
     for year in range(args.start_year, args.start_year + args.num_years):
         for split_idx in range(args.start_num_year_splits, args.end_num_year_splits):
             prefetch_file = args.path_template % (year, split_idx)
-            print(os.path.exists(prefetch_file))
             model_preds_and_targets = pickle_from_file(prefetch_file)
             agg_model_preds_and_targets.append(model_preds_and_targets)
 
