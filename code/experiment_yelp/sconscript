@@ -17,7 +17,7 @@ NUM_EPOCHS = 500
 MAX_TRAIN = 2000
 START_YEAR = 2008
 NUM_YEARS = 11
-NUM_MONTHS = 4 #12
+NUM_MONTHS = 12
 MAX_LOSS = 4
 HUMAN_LOSS = 1/MAX_LOSS
 CONTROL_FACTOR = 1.6
@@ -147,9 +147,9 @@ def prefetch_predictions(env, outdir, c):
     ]
     c['prefetch_list'].append(targets[0])
     cmd = [
-        #'python run_script.py',
-        #'${TARGETS[0]}',
-        'python prefetch_yelp_model_preds_and_targets.py',
+        'python run_script.py',
+        '${TARGETS[0]}',
+        'prefetch_yelp_model_preds_and_targets.py',
 	'--model-file',
         '"experiment_yelp/%s"' % model_template,
 	'--nature-file ${SOURCES[0]}',

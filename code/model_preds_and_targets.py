@@ -40,11 +40,9 @@ class AggModelPredsAndTargets:
             self.model_preds = model_preds_and_targets.model_preds
         else:
             for time_t in range(self.num_models, self.tot_time):
-                print("old", self.model_preds[time_t].shape)
                 self.model_preds[time_t] = np.concatenate(
                     [
                         self.model_preds[time_t],
                         model_preds_and_targets.model_preds[time_t],
                     ]
                 )
-                print("new", self.model_preds[time_t].shape)
