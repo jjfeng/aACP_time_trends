@@ -80,14 +80,22 @@ def plot_losses(approval_histories, fig_name, alpha, scale_loss, ymin, ymax,
         raw_ymin = min(np.min(running_avg), raw_ymin)
     mean_data = pd.concat(mean_data_frames)
     raw_data = pd.concat(raw_data_frames)
-    sns.lmplot(
-        x="Time",
-        y="Loss",
-        hue="Policy",
-        data=mean_data if plot_mean else raw_data,
-        lowess=True,
-        scatter=False,
-    )
+    if plot_mean:
+        sns.lineplot(
+            x="Time",
+            y="Loss",
+            hue="Policy",
+            data=mean_data,
+        )
+    else:
+        sns.lmplot(
+            x="Time",
+            y="Loss",
+            hue="Policy",
+            data=raw_data,
+            lowess=True,
+            scatter=False,
+        )
     plt.ylabel("Loss" if not plot_mean else "Cum avg Loss")
     plt.xlabel("Time")
     plt.hlines(y=alpha, xmin=0, xmax=T)
