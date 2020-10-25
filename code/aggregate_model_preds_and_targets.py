@@ -3,7 +3,6 @@ import time
 import os
 import shutil
 import argparse
-import logging
 import numpy as np
 import scipy.stats
 from numpy import ndarray
@@ -27,8 +26,8 @@ def parse_args(args):
     parser.add_argument("--max-loss", type=float, default=4)
     parser.add_argument("--start-year", type=int, default=2008)
     parser.add_argument("--num-years", type=int, default=1)
-    parser.add_argument("--num-year-splits", type=int, default=1)
-    parser.add_argument("--log-file", type=str, default="_output/log.txt")
+    parser.add_argument("--start-num-year-splits", type=int, default=0)
+    parser.add_argument("--end-num-year-splits", type=int, default=1)
     parser.add_argument(
         "--out-file", type=str, default="_output/model_preds_and_targets.pkl"
     )
@@ -41,18 +40,14 @@ def parse_args(args):
 def main(args=sys.argv[1:]):
     args = parse_args(args)
 
-    args = parse_args(args)
-
     agg_model_preds_and_targets = AggModelPredsAndTargets()
     for year in range(args.start_year, args.start_year + args.num_years):
-        for split_idx in range(1, 1 + args.num_year_splits):
+        for split_idx in range(args.start_num_year_splits, args.end_num_year_splits):
             prefetch_file = args.path_template % (year, split_idx)
             print(os.path.exists(prefetch_file))
             model_preds_and_targets = pickle_from_file(prefetch_file)
             agg_model_preds_and_targets.append(model_preds_and_targets)
 
-    print("num target", len(agg_model_preds_and_targets.targets))
-    print(agg_model_preds_and_targets.model_preds)
     pickle_to_file(agg_model_preds_and_targets, args.out_file)
 
 

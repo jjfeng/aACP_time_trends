@@ -56,12 +56,10 @@ class FixedProposer(Proposer):
     def num_models(self):
         return len(self.proposal_history)
 
-    def propose_model(self, trial_data: TrialData, approval_hist=None, do_append=True):
-        if do_append:
-            self.proposal_history = self.pretrained_proposal_history[
-                : (self.num_models + 1)
-            ]
-        return self.pretrained_proposal_history[self.num_models]
+    def propose_model(self, trial_data: TrialData = None, approval_hist=None):
+        self.proposal_history = self.pretrained_proposal_history[
+            : self.num_models + 1
+        ]
 
 
 class FixedProposerFromFile(Proposer):
@@ -89,24 +87,21 @@ class FixedProposerFromFile(Proposer):
         self,
         trial_data: TrialData,
         approval_hist: ApprovalHistory = None,
-        do_append: bool = True,
     ):
         model_dict = torch.load(
             self.model_files[approval_hist.size if approval_hist is not None else 0]
         )
-        if do_append:
-            fields = model_dict["fields"]
-            TEXT = fields["text"][1]
-            model = TextSentiment(
-                vocab_size=len(TEXT.vocab),
-                vocab=TEXT.vocab,
-                embed_dim=50,
-                num_class=1,
-                num_hidden=model_dict["num_hidden"],
-            )
-            model.load_state_dict(model_dict["state_dict"])
-            self.proposal_history.append({"model": model, "fields": fields})
-        return model
+        fields = model_dict["fields"]
+        TEXT = fields["text"][1]
+        model = TextSentiment(
+            vocab_size=len(TEXT.vocab),
+            vocab=TEXT.vocab,
+            embed_dim=50,
+            num_class=1,
+            num_hidden=model_dict["num_hidden"],
+        )
+        model.load_state_dict(model_dict["state_dict"])
+        self.proposal_history.append({"model": model, "fields": fields})
 
     def _run_test(self, model_dict, path, test_size, target_func=None):
         test_data = data.TabularDataset(

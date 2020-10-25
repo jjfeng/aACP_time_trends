@@ -38,7 +38,10 @@ def main(args=sys.argv[1:]):
             model_file = args.path_template % (year, quarter)
             print("model", model_file)
             assert os.path.exists(model_file)
-            models.append(pickle_from_file(model_file))
+            if len(models) == 0:
+                models.append(pickle_from_file(model_file))
+            else:
+                models.append(model_file)
 
     proposer = FixedProposer(models)
 

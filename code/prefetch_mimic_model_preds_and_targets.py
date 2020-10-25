@@ -3,7 +3,6 @@ import time
 import os
 import shutil
 import argparse
-import logging
 import numpy as np
 import scipy.stats
 from numpy import ndarray
@@ -25,7 +24,6 @@ def parse_args(args):
     parser.add_argument("--max-loss", type=float, default=1)
     parser.add_argument("--nature-file", type=str, default="_output/nature.pkl")
     parser.add_argument("--model-file", type=str, default="_output/model.pkl")
-    parser.add_argument("--log-file", type=str, default="_output/log.txt")
     parser.add_argument(
         "--out-file", type=str, default="_output/model_preds_and_targets.pkl"
     )
@@ -39,15 +37,12 @@ def main(args=sys.argv[1:]):
     args = parse_args(args)
 
     nature = pickle_from_file(args.nature_file)
-    logging.info("BATCH SIZES %s", nature.batch_sizes)
 
     # TODO: check that nature and propower are all fixed
 
     approval_hist = ApprovalHistory(human_max_loss=1, policy_name="Placeholder")
     model = pickle_from_file(args.model_file)
-    proposer = FixedProposer(
-        [model],
-    )
+    proposer = FixedProposer([model])
 
     # begin simulation
     # introduce the singleton model

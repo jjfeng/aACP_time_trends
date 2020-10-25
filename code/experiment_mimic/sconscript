@@ -23,6 +23,7 @@ CONTROL_FACTOR = 1.6
 MIN_BATCH_SIZE = 20
 CI_ALPHA = 0.1
 NUM_BACK_BATCHES = 8
+N_TREES = 5 # 5000
 
 @nest.add_target_with_env(localenv)
 def create_nature(env, outdir, c):
@@ -74,16 +75,17 @@ def fit_mimic_year_model(env, outdir, c):
         join(outdir, 'model_log.txt')]
     c['proposer_list'].append(targets[0])
     cmd = [
-        'python run_script.py',
-        '${TARGETS[0]}',
-        'fit_mimic_year_model.py',
+        #'python run_script.py',
+        #'${TARGETS[0]}',
+        'python fit_mimic_year_model.py',
 	'--num-back-years',
     c['num_back_years'],
 	'--year',
         c['year'],
 	'--quarter',
         c['quarter'],
-	'--n-trees 5000',
+	'--n-trees',
+    N_TREES,
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
     return env.Command(
@@ -96,7 +98,6 @@ def prefetch_predictions(env, outdir, c):
     sources = c['create_nature'][:1] + c['fit_mimic_year_model']
     targets = [
         join(outdir, 'model_preds_and_target.pkl'),
-        join(outdir, 'model_preds_and_target_log.txt')
     ]
     c['prefetch_list'].append(targets[0])
     cmd = [
@@ -105,8 +106,7 @@ def prefetch_predictions(env, outdir, c):
         'python prefetch_mimic_model_preds_and_targets.py',
 	'--nature-file ${SOURCES[0]}',
 	'--model-file ${SOURCES[1]}',
-	'--out-file ${TARGETS[0]}',
-	'--log-file ${TARGETS[1]}']
+	'--out-file ${TARGETS[0]}']
     return env.Command(
         targets,
         sources,
@@ -114,34 +114,33 @@ def prefetch_predictions(env, outdir, c):
 
 nest.pop('year')
 
-#@nest.add_target_with_env(localenv)
-#def create_proposer(env, outdir, c):
-#    targets = [
-#        join(outdir, 'proposer.pkl')]
-#    model_template = c['proposer_list'][0].replace("year_%d" % START_YEAR,
-#    "year_%d").replace("quarter_0", "quarter_%d")
-#    cmd = [
-#        'python create_mimic_proposer.py',
-#        '"experiment_mimic/%s"' % model_template,
-#        '--start-year',
-#        START_YEAR,
-#        '--num-years',
-#        NUM_YEARS,
-#		'--out-file ${TARGETS[0]}']
-#    return env.Command(
-#        targets,
-#        c['proposer_list'],
-#        ' '.join(map(str, cmd)))
+@nest.add_target_with_env(localenv)
+def create_proposer(env, outdir, c):
+    targets = [
+        join(outdir, 'proposer.pkl')]
+    model_template = c['proposer_list'][0].replace("year_%d" % START_YEAR,
+    "year_%d").replace("quarter_0", "quarter_%d")
+    cmd = [
+        'python create_mimic_proposer.py',
+        '"experiment_mimic/%s"' % model_template,
+        '--start-year',
+        START_YEAR,
+        '--num-years',
+        NUM_YEARS,
+		'--out-file ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        c['proposer_list'],
+        ' '.join(map(str, cmd)))
 
 @nest.add_target_with_env(localenv)
 def agg_prefetched_predictions(env, outdir, c):
     sources = c['prefetch_list']
     targets = [
         join(outdir, 'model_preds_and_target.pkl'),
-        join(outdir, 'model_preds_and_target_log.txt')
     ]
     model_template = c['prefetch_list'][0].replace("year_%d" % START_YEAR,
-    "year_%d").replace("quarter_1", "quarter_%d")
+    "year_%d").replace("quarter_0", "quarter_%d")
     cmd = [
         'python aggregate_model_preds_and_targets.py',
         '"experiment_mimic/%s"' % model_template,
@@ -149,48 +148,50 @@ def agg_prefetched_predictions(env, outdir, c):
         START_YEAR,
         '--num-years',
         NUM_YEARS,
-        '--num-year-splits 4',
-	'--out-file ${TARGETS[0]}',
-	'--log-file ${TARGETS[1]}']
+        '--start-num-year-splits 0',
+        '--end-num-year-splits 4',
+	'--out-file ${TARGETS[0]}']
     return env.Command(
         targets,
         sources,
         ' '.join(map(str, cmd)))
 
-#nest.add_aggregate('approval_hists', list)
-#
-#@nest.add_target_with_env(localenv)
-#def run_meta_exp(env, outdir, c):
-#    targets = [
-#        join(outdir, 'meta_exp_approval_hist.pkl'),
-#        join(outdir, 'meta_exp_approval_hist_log.txt'),
-#    ]
-#    c['approval_hists'].append(targets[0])
-#    cmd = [
-#        'python run_approval.py',
-#        '--seed',
-#        c['seed'],
-#        '--control-error-factor',
-#        CONTROL_FACTOR,
-#        '--ci-alpha',
-#        CI_ALPHA,
-#	    '--num-back-batches',
-#        NUM_BACK_BATCHES,
-#        '--human-max-loss',
-#        HUMAN_LOSS,
-#        '--nature-file ${SOURCES[0]}',
-#        '--proposer-file ${SOURCES[1]}',
-#        '--policy-name MetaExpWeighting',
-#	'--out-file ${TARGETS[0]}',
-#	'--log-file ${TARGETS[1]}']
-#
-#    sources = [c['create_nature'][0], c['create_proposer'][0]]
-#    return env.Command(
-#        targets,
-#        sources,
-#        ' '.join(map(str, cmd)))
-#
-#
+nest.add_aggregate('approval_hists', list)
+
+@nest.add_target_with_env(localenv)
+def run_meta_exp(env, outdir, c):
+    targets = [
+        join(outdir, 'meta_exp_approval_hist_test.pkl'),
+        join(outdir, 'meta_exp_approval_hist_test_log.txt'),
+    ]
+    c['approval_hists'].append(targets[0])
+    cmd = [
+        'python run_approval.py',
+        '--seed',
+        c['seed'],
+        '--control-error-factor',
+        CONTROL_FACTOR,
+        '--ci-alpha',
+        CI_ALPHA,
+	    '--num-back-batches',
+        NUM_BACK_BATCHES,
+        '--human-max-loss',
+        HUMAN_LOSS,
+        '--nature-file ${SOURCES[0]}',
+        '--proposer-file ${SOURCES[1]}',
+        '--prefetched-file ${SOURCES[2]}',
+        '--policy-name MetaExpWeighting',
+	'--out-file ${TARGETS[0]}',
+	'--log-file ${TARGETS[1]}']
+
+    sources = [c['create_nature'][0], c['create_proposer'][0],
+    c['agg_prefetched_predictions'][0]]
+    return env.Command(
+        targets,
+        sources,
+        ' '.join(map(str, cmd)))
+
+
 #@nest.add_target_with_env(localenv)
 #def run_meta_exp_small(env, outdir, c):
 #    targets = [
