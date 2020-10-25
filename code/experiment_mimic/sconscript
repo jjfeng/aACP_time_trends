@@ -50,11 +50,17 @@ nest.add(
     label_func=lambda c: 'num_back_years_%d' % c)
 
 nest.add(
+    'num_trees',
+    [5000],
+    label_func=lambda c: 'num_trees_%d' % c)
+
+nest.add(
     'seed',
     range(1),
     label_func=lambda c: 'seed_%d' % c)
 
 nest.add_aggregate('proposer_list', list)
+nest.add_aggregate('prefetch_list', list)
 
 nest.add(
     'year',
@@ -73,21 +79,41 @@ def fit_mimic_year_model(env, outdir, c):
         join(outdir, 'model_log.txt')]
     c['proposer_list'].append(targets[0])
     cmd = [
-        'python run_script.py',
-        '${TARGETS[0]}',
-        'fit_mimic_year_model.py',
+        #'python run_script.py',
+        #'${TARGETS[0]}',
+        'python fit_mimic_year_model.py',
 	'--num-back-years',
     c['num_back_years'],
 	'--year',
         c['year'],
 	'--quarter',
         c['quarter'],
-	'--n-trees 5000',
+	'--n-trees',
+    c['num_trees'],
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
     return env.Command(
         targets,
         [],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def prefetch_predictions(env, outdir, c):
+    sources = c['create_nature'][:1] + c['fit_mimic_year_model']
+    targets = [
+        join(outdir, 'model_preds_and_target.pkl'),
+    ]
+    c['prefetch_list'].append(targets[0])
+    cmd = [
+        #'python run_script.py',
+        #'${TARGETS[0]}',
+        'python prefetch_mimic_model_preds_and_targets.py',
+	'--nature-file ${SOURCES[0]}',
+	'--model-file ${SOURCES[1]}',
+	'--out-file ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        sources,
         ' '.join(map(str, cmd)))
 
 nest.pop('year')
@@ -109,6 +135,29 @@ def create_proposer(env, outdir, c):
     return env.Command(
         targets,
         c['proposer_list'],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
+def agg_prefetched_predictions(env, outdir, c):
+    sources = c['prefetch_list']
+    targets = [
+        join(outdir, 'model_preds_and_target.pkl'),
+    ]
+    model_template = c['prefetch_list'][0].replace("year_%d" % START_YEAR,
+    "year_%d").replace("quarter_0", "quarter_%d")
+    cmd = [
+        'python aggregate_model_preds_and_targets.py',
+        '"experiment_mimic/%s"' % model_template,
+        '--start-year',
+        START_YEAR,
+        '--num-years',
+        NUM_YEARS,
+        '--start-num-year-splits 0',
+        '--end-num-year-splits 4',
+	'--out-file ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        sources,
         ' '.join(map(str, cmd)))
 
 nest.add_aggregate('approval_hists', list)
@@ -134,11 +183,13 @@ def run_meta_exp(env, outdir, c):
         HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
+        '--prefetched-file ${SOURCES[2]}',
         '--policy-name MetaExpWeighting',
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
 
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    sources = [c['create_nature'][0], c['create_proposer'][0],
+    c['agg_prefetched_predictions'][0]]
     return env.Command(
         targets,
         sources,
@@ -166,11 +217,13 @@ def run_meta_exp_small(env, outdir, c):
         NUM_BACK_BATCHES,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
+        '--prefetched-file ${SOURCES[2]}',
         '--policy-name MetaExpWeightingSmall',
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
 
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    sources = [c['create_nature'][0], c['create_proposer'][0],
+    c['agg_prefetched_predictions'][0]]
     return env.Command(
         targets,
         sources,
@@ -205,11 +258,13 @@ def run_online(env, outdir, c):
         HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
+        '--prefetched-file ${SOURCES[2]}',
         '--policy-name MarkovHedge',
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
 
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    sources = [c['create_nature'][0], c['create_proposer'][0],
+    c['agg_prefetched_predictions'][0]]
     return env.Command(
         targets,
         sources,
@@ -234,11 +289,13 @@ def run_ttest_approval(env, outdir, c):
         CI_ALPHA,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
+        '--prefetched-file ${SOURCES[2]}',
         '--policy-name TTestApproval',
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
 
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    sources = [c['create_nature'][0], c['create_proposer'][0],
+    c['agg_prefetched_predictions'][0]]
     return env.Command(
         targets,
         sources,
@@ -260,11 +317,13 @@ def run_blind_approval(env, outdir, c):
         HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
+        '--prefetched-file ${SOURCES[2]}',
         '--policy-name BlindApproval',
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
 
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    sources = [c['create_nature'][0], c['create_proposer'][0],
+    c['agg_prefetched_predictions'][0]]
     return env.Command(
         targets,
         sources,
@@ -287,10 +346,12 @@ def run_fixed_approval(env, outdir, c):
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name FixedPolicy',
+        '--prefetched-file ${SOURCES[2]}',
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
 
-    sources = [c['create_nature'][0], c['create_proposer'][0]]
+    sources = [c['create_nature'][0], c['create_proposer'][0],
+    c['agg_prefetched_predictions'][0]]
     return env.Command(
         targets,
         sources,

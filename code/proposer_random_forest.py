@@ -14,7 +14,7 @@ class RandomForestWrap(RandomForestClassifier):
         return np.maximum(0, 1 - margin) / 3
 
     def predict(self, X, t=None):
-        return super().predict_proba(X)[:,1]
+        return super().predict_proba(X)[:, 1]
 
     def loss(self, dataset):
         pred = self.predict_proba(dataset.x)

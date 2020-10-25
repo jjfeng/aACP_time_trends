@@ -63,7 +63,7 @@ def score_mixture_model(
     Score the ensemble model
     """
     if np.sum(robot_weights) > 0:
-        weights = np.reshape(robot_weights / np.sum(robot_weights), (-1,1))
+        weights = np.reshape(robot_weights / np.sum(robot_weights), (-1, 1))
         avg_predictions = np.sum(batch_preds * weights, axis=0)
         mixture_loss_t = criterion(avg_predictions, batch_target)
         return human_max_loss * human_weight + np.mean(mixture_loss_t) * (

@@ -139,7 +139,7 @@ class AdversarialNature(Nature):
         if self.data_gen is not None:
             return self.data_gen.create_data(num_obs, time_t, self.coefs[time_t])
         else:
-            return None 
+            return None
 
     def to_fixed(self):
         return FixedNature(self.data_gen, self.trial_data, self.coefs)

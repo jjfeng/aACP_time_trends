@@ -21,7 +21,7 @@ def parse_args(args):
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument("path_template", type=str)
-    parser.add_argument("--max-loss", type=float, default=5)
+    parser.add_argument("--max-loss", type=float, default=4)
     parser.add_argument("--start-year", type=int, default=2008)
     parser.add_argument("--num-years", type=int, default=1)
     parser.add_argument("--num-months", type=int, default=1)
@@ -45,8 +45,7 @@ def main(args=sys.argv[1:]):
     for year in YEARS:
         for month in MONTHS:
             model_file = args.path_template % (year, month)
-            print("model", model_file)
-            print(os.path.exists(model_file))
+            print("model", model_file, os.path.exists(model_file))
             if not os.path.exists(model_file):
                 model_paths.append(prev_model_file)
             else:

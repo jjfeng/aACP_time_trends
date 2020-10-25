@@ -36,9 +36,7 @@ def parse_args(args):
     parser.add_argument(
         "--human-plot", type=str, default="_output/approver_history_human.png"
     )
-    parser.add_argument(
-        "--log-file", type=str, default="_output/log.txt"
-    )
+    parser.add_argument("--log-file", type=str, default="_output/log.txt")
     parser.set_defaults()
     args = parser.parse_args()
 
@@ -47,8 +45,7 @@ def parse_args(args):
     return args
 
 
-def plot_losses(approval_histories, fig_name, alpha, scale_loss, ymin, ymax,
-        plot_mean):
+def plot_losses(approval_histories, fig_name, alpha, scale_loss, ymin, ymax, plot_mean):
     plt.clf()
     raw_ymin = ymax if ymin is None else ymin
     mean_data_frames = []
@@ -59,19 +56,25 @@ def plot_losses(approval_histories, fig_name, alpha, scale_loss, ymin, ymax,
         loss_history = np.array(approval_history.expected_policy_loss_history)
         T = loss_history.size + 1
         running_avg = np.cumsum(loss_history) / np.arange(1, T)
-        policy_label = (approval_history.policy_name
+        policy_label = (
+            approval_history.policy_name
             if approval_history.policy_name != "ValidationPolicy"
-            else "MarkovHedge")
-        mean_data = pd.DataFrame({
-            "Time":np.arange(T - 1),
-            "Loss": running_avg * scale_loss,
-            "Policy": policy_label,
-            })
-        raw_data = pd.DataFrame({
-            "Time":np.arange(T - 1),
-            "Loss": loss_history * scale_loss,
-            "Policy": policy_label,
-            })
+            else "MarkovHedge"
+        )
+        mean_data = pd.DataFrame(
+            {
+                "Time": np.arange(T - 1),
+                "Loss": running_avg * scale_loss,
+                "Policy": policy_label,
+            }
+        )
+        raw_data = pd.DataFrame(
+            {
+                "Time": np.arange(T - 1),
+                "Loss": loss_history * scale_loss,
+                "Policy": policy_label,
+            }
+        )
         mean_data_frames.append(mean_data)
         raw_data_frames.append(raw_data)
         print(approval_history.policy_name)
@@ -101,7 +104,6 @@ def plot_losses(approval_histories, fig_name, alpha, scale_loss, ymin, ymax,
     plt.hlines(y=alpha, xmin=0, xmax=T)
     plt.ylim(max(raw_ymin - 0.05, 0) if ymin is None else ymin, ymax)
     plt.savefig(fig_name)
-
 
     mean_loss = raw_data.groupby("Policy").mean().reset_index()
     print(mean_loss.to_latex())
