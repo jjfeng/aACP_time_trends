@@ -182,19 +182,20 @@ class ValidationPolicy(Policy):
             / num_batches_list
         )
         var_list = (
-            np.sum(self.var_loss_histories[: time_t + 1, -self.num_back_batches
-                :], axis=1)/num_batches_list
+            np.sum(
+                self.var_loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
+            )
+            / num_batches_list
         )
-        batch_sizes = np.array([np.sum(self.batch_sizes[-int(b):]) for b in
-            num_batches_list])
+        batch_sizes = np.array(
+            [np.sum(self.batch_sizes[-int(b) :]) for b in num_batches_list]
+        )
 
-        inflation = self.pred_t_factor * np.sqrt(
-            var_list / batch_sizes
-        )
+        inflation = self.pred_t_factor * np.sqrt(var_list / batch_sizes)
         predictions = mean_loss + inflation
-        #print("INF", inflation)
-        #print("pre", predictions)
-        #print("mean", mean_loss)
+        # print("INF", inflation)
+        # print("pre", predictions)
+        # print("mean", mean_loss)
         # TODO: Give some reasonable prediction for newest model
         predictions[-1] = predictions[-2]
 

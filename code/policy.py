@@ -96,8 +96,9 @@ class TTestApproval(Policy):
     def __str__(self):
         return "T-Test"
 
-    def __init__(self, num_experts: int, human_max_loss: float, ci_alpha: float =
-            0.025):
+    def __init__(
+        self, num_experts: int, human_max_loss: float, ci_alpha: float = 0.025
+    ):
         self.human_max_loss = human_max_loss
         self.curr_num_experts = 0
         self.num_experts = num_experts

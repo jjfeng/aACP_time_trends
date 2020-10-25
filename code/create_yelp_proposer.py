@@ -21,7 +21,7 @@ def parse_args(args):
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument("path_template", type=str)
-    parser.add_argument("--max-loss", type=float, default=5)
+    parser.add_argument("--max-loss", type=float, default=4)
     parser.add_argument("--start-year", type=int, default=2008)
     parser.add_argument("--num-years", type=int, default=1)
     parser.add_argument("--num-months", type=int, default=1)

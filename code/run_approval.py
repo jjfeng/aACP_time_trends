@@ -10,7 +10,7 @@ from numpy import ndarray
 from typing import List
 import pandas as pd
 
-from simulation import Simulation
+from simulation import *
 from nature import Nature
 from proposer import Proposer
 from approval_history import ApprovalHistory
@@ -33,6 +33,7 @@ def parse_args(args):
     )
     parser.add_argument("--nature-file", type=str, default="_output/nature.pkl")
     parser.add_argument("--proposer-file", type=str, default="_output/proposer.pkl")
+    parser.add_argument("--prefetched-file", type=str, default=None)
     parser.add_argument(
         "--policy-name",
         type=str,
@@ -41,9 +42,14 @@ def parse_args(args):
     parser.add_argument("--human-max-loss", type=float, default=None)
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
-    parser.add_argument("--ci-alpha", type=float, default=0.025, help="""This will
+    parser.add_argument(
+        "--ci-alpha",
+        type=float,
+        default=0.025,
+        help="""This will
             be the z-factor used (<0.5 means using lower bound, > 0.5 means
-            using upper bound""")
+            using upper bound""",
+    )
     parser.add_argument("--num-back-batches", type=int, default=3)
     parser.add_argument("--control-error-factor", type=float, default=1.5)
     parser.add_argument("--num-test-obs", type=int, default=1000)
@@ -126,15 +132,21 @@ def create_policy(
             best_bound,
             human_max_loss * args.control_error_factor,
         )
-        #assert best_bound < human_max_loss * args.control_error_factor
+        # assert best_bound < human_max_loss * args.control_error_factor
         loss_diffs = human_max_loss * args.control_error_factor - regret_bounds
         print("BATCH SIZE", batch_size)
         if np.all(loss_diffs < 0):
             eta_idx = np.argmin(regret_bounds)
-            logging.info("lambda %f with smallest bound %f", lambdas[eta_idx], regret_bounds[eta_idx])
+            logging.info(
+                "lambda %f with smallest bound %f",
+                lambdas[eta_idx],
+                regret_bounds[eta_idx],
+            )
         else:
             eta_idx = np.max(np.where(loss_diffs >= 0))
-            logging.info("closest lambda %f, bound %f", lambdas[eta_idx], regret_bounds[eta_idx])
+            logging.info(
+                "closest lambda %f, bound %f", lambdas[eta_idx], regret_bounds[eta_idx]
+            )
         eta = lambdas[eta_idx]
         policy = MetaExpWeightingList(
             eta=eta,
@@ -155,7 +167,9 @@ def create_policy(
         policy = FixedPolicy(human_max_loss)
     elif policy_name == "TTestApproval":
         policy = TTestApproval(
-            num_experts, human_max_loss=human_max_loss, ci_alpha=args.ci_alpha,
+            num_experts,
+            human_max_loss=human_max_loss,
+            ci_alpha=args.ci_alpha,
         )
     elif policy_name == "Oracle":
         policy = OracleApproval(human_max_loss=human_max_loss)
@@ -183,8 +197,9 @@ def main(args=sys.argv[1:]):
     model = proposer.propose_model(nature.get_trial_data(0), None)
     if args.human_max_loss is None:
         args.human_max_loss = np.mean(
-            proposer.score_models(nature.create_test_data(time_t = 0,
-                num_obs=args.num_test_obs))[0]
+            proposer.score_models(
+                nature.create_test_data(time_t=0, num_obs=args.num_test_obs)
+            )[0]
         )
         logging.info("HUMAN MAX %f", args.human_max_loss)
 
@@ -199,9 +214,24 @@ def main(args=sys.argv[1:]):
     )
 
     st_time = time.time()
-    sim = Simulation(
-        nature, proposer, policy, args.human_max_loss, num_test_obs=args.num_test_obs
-    )
+    if args.prefetched_file is None:
+        sim = Simulation(
+            nature,
+            proposer,
+            policy,
+            args.human_max_loss,
+            num_test_obs=args.num_test_obs,
+        )
+    else:
+        prefetched = pickle_from_file(args.prefetched_file)
+        sim = SimulationPrefetched(
+            nature,
+            proposer,
+            prefetched,
+            policy,
+            args.human_max_loss,
+            num_test_obs=args.num_test_obs,
+        )
     sim.run(lambda approval_hist: pickle_to_file(approval_hist, args.out_file))
     logging.info(sim.approval_hist)
     print(sim.approval_hist)

@@ -11,8 +11,6 @@ from approval_history import ApprovalHistory
 
 
 class Simulation:
-    """"""
-
     def __init__(
         self, nature, proposer, policy, human_max_loss, num_test_obs: int = 1000
     ):
@@ -28,7 +26,6 @@ class Simulation:
         self.approval_hist = ApprovalHistory(
             human_max_loss=self.human_max_loss, policy_name=str(self.policy)
         )
-
 
     def run(self, hook_func):
         for t in range(self.total_time):
@@ -47,10 +44,7 @@ class Simulation:
 
             # Monitoring data
             sub_trial_data = self.nature.get_trial_data(t + 1)
-            obs_batch_data = sub_trial_data.batch_data[-1]
-            batch_preds, batch_target = self.proposer.get_model_preds_and_target(
-                obs_batch_data
-            )
+            batch_preds, batch_target = self.get_model_preds_and_targets(t)
             self.batch_model_preds.append(batch_preds)
             self.batch_targets.append(batch_target)
 
@@ -103,3 +97,31 @@ class Simulation:
                 self.proposer.propose_model(sub_trial_data, self.approval_hist)
 
             hook_func(self.approval_hist)
+
+    def get_model_preds_and_targets(self, t: int):
+        sub_trial_data = self.nature.get_trial_data(t + 1)
+        obs_batch_data = sub_trial_data.batch_data[-1]
+        batch_preds, batch_target = self.proposer.get_model_preds_and_target(
+            obs_batch_data
+        )
+        return batch_preds, batch_target
+
+
+class SimulationPrefetched(Simulation):
+    def __init__(
+        self,
+        nature,
+        proposer,
+        model_pred_targets,
+        policy,
+        human_max_loss,
+        num_test_obs: int = 1000,
+    ):
+        super().__init__(nature, proposer, policy, human_max_loss, num_test_obs)
+        self.model_pred_targets = model_pred_targets
+
+    def get_model_preds_and_targets(self, t: int):
+        print("TIMET", t)
+        batch_preds = self.model_pred_targets.model_preds[t]
+        batch_target = self.model_pred_targets.targets[t]
+        return batch_preds, batch_target
