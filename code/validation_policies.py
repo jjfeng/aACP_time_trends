@@ -254,7 +254,7 @@ class MetaExpWeightingList(Policy):
 
         self.eta_indexes = np.arange(len(eta_list))
         print("ETA INDEX", self.eta_indexes)
-        pred_t_factor = scipy.stats.norm().ppf(1 - ci_alpha)
+        pred_t_factor = scipy.stats.norm().ppf(ci_alpha)
         logging.info("pred t factor %f, ci_alpha %f", pred_t_factor, ci_alpha)
 
         self.policy_dict = {}

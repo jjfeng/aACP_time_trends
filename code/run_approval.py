@@ -41,7 +41,9 @@ def parse_args(args):
     parser.add_argument("--human-max-loss", type=float, default=None)
     parser.add_argument("--eta", type=float, default=1)
     parser.add_argument("--alpha", type=float, default=0)
-    parser.add_argument("--ci-alpha", type=float, default=0.025)
+    parser.add_argument("--ci-alpha", type=float, default=0.025, help="""This will
+            be the z-factor used (<0.5 means using lower bound, > 0.5 means
+            using upper bound""")
     parser.add_argument("--num-back-batches", type=int, default=3)
     parser.add_argument("--control-error-factor", type=float, default=1.5)
     parser.add_argument("--num-test-obs", type=int, default=1000)

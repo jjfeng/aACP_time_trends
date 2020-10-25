@@ -19,7 +19,7 @@ NUM_BATCHES = 50
 NUM_COEFS = 15
 COEF_SCALE = 10
 CONTROL_FACTOR = 1.6
-CI_ALPHA = 0.05
+CI_ALPHA = 0.1
 
 nest.add(
     'seed',
