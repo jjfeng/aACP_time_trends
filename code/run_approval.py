@@ -127,7 +127,6 @@ def create_policy(
         #assert best_bound < human_max_loss * args.control_error_factor
         loss_diffs = human_max_loss * args.control_error_factor - regret_bounds
         print("BATCH SIZE", batch_size)
-        print(loss_diffs)
         if np.all(loss_diffs < 0):
             eta_idx = np.argmin(regret_bounds)
             logging.info("lambda %f with smallest bound %f", lambdas[eta_idx], regret_bounds[eta_idx])
@@ -154,7 +153,7 @@ def create_policy(
         policy = FixedPolicy(human_max_loss)
     elif policy_name == "TTestApproval":
         policy = TTestApproval(
-            num_experts, human_max_loss=human_max_loss
+            num_experts, human_max_loss=human_max_loss, ci_alpha=args.ci_alpha,
         )
     elif policy_name == "Oracle":
         policy = OracleApproval(human_max_loss=human_max_loss)
@@ -174,16 +173,20 @@ def main(args=sys.argv[1:]):
 
     nature = pickle_from_file(args.nature_file)
     logging.info("BATCH SIZES %s", nature.batch_sizes)
+    print("NATURED")
     proposer = pickle_from_file(args.proposer_file)
+    print("CONFUSED")
 
     nature.next(None)
     model = proposer.propose_model(nature.get_trial_data(0), None)
     if args.human_max_loss is None:
         args.human_max_loss = np.mean(
-            proposer.score_models(nature.create_test_data(0))[0]
+            proposer.score_models(nature.create_test_data(time_t = 0,
+                num_obs=args.num_test_obs))[0]
         )
         logging.info("HUMAN MAX %f", args.human_max_loss)
 
+    print("POLICY")
     policy = create_policy(
         args.policy_name,
         args,

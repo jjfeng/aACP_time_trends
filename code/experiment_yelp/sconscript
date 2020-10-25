@@ -21,6 +21,7 @@ NUM_MONTHS = 2 #12
 MAX_LOSS = 4
 HUMAN_LOSS = 1/MAX_LOSS
 CONTROL_FACTOR = 1.6
+CI_ALPHA = 0.05
 
 nest.add(
     'seed',
@@ -159,7 +160,8 @@ def run_meta_exp(env, outdir, c):
         c['seed'],
         '--control-error-factor',
         CONTROL_FACTOR,
-        '--ci-alpha 0.025',
+        '--ci-alpha',
+        CI_ALPHA,
         '--human-max-loss',
         HUMAN_LOSS,
         '--nature-file ${SOURCES[0]}',
@@ -253,6 +255,8 @@ def run_ttest_approval(env, outdir, c):
         c['seed'],
         '--human-max-loss',
         HUMAN_LOSS,
+        '--ci-alpha',
+        CI_ALPHA,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name TTestApproval',

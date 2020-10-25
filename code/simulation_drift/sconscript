@@ -19,6 +19,7 @@ NUM_BATCHES = 50
 NUM_COEFS = 15
 COEF_SCALE = 10
 CONTROL_FACTOR = 1.6
+CI_ALPHA = 0.05
 
 nest.add(
     'drift_speed',
@@ -139,7 +140,8 @@ def run_meta_exp(env, outdir, c):
         c['seed'],
         '--control-error-factor',
         CONTROL_FACTOR,
-        '--ci-alpha 0.025',
+        '--ci-alpha',
+        CI_ALPHA,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name MetaExpWeighting',
@@ -229,6 +231,8 @@ def run_ttest_approval(env, outdir, c):
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name TTestApproval',
+        '--ci-alpha',
+        CI_ALPHA,
 	'--out-file ${TARGETS[0]}',
 	'--log-file ${TARGETS[1]}']
 
@@ -275,6 +279,7 @@ def plot_all_hists(env, outdir, c):
         0.05,
 	'--y-max',
         0.2,
+	'--plot-mean',
 	'--history-files',
         history_files,
 	'--loss-plot ${TARGETS[0]}',

@@ -26,6 +26,7 @@ def parse_args(args):
     parser.add_argument("--y-max", type=float, default=10)
     parser.add_argument("--y-min", type=float, default=None)
     parser.add_argument("--scale-loss", type=float, default=1)
+    parser.add_argument("--plot-mean", action="store_true")
     parser.add_argument(
         "--history-files", type=str, help="comma separated pickle files"
     )
@@ -46,10 +47,12 @@ def parse_args(args):
     return args
 
 
-def plot_losses(approval_histories, fig_name, alpha, scale_loss, ymin, ymax):
+def plot_losses(approval_histories, fig_name, alpha, scale_loss, ymin, ymax,
+        plot_mean):
     plt.clf()
     raw_ymin = ymax if ymin is None else ymin
-    data_frames = []
+    mean_data_frames = []
+    raw_data_frames = []
     for approval_history in approval_histories:
         # plt.plot(np.arange(T - 1), approval_history, "g-")
         print(approval_history.policy_name)
@@ -59,41 +62,40 @@ def plot_losses(approval_histories, fig_name, alpha, scale_loss, ymin, ymax):
         policy_label = (approval_history.policy_name
             if approval_history.policy_name != "ValidationPolicy"
             else "MarkovHedge")
-        data = pd.DataFrame({
+        mean_data = pd.DataFrame({
             "Time":np.arange(T - 1),
-            "Loss":loss_history * scale_loss,
+            "Loss": running_avg * scale_loss,
             "Policy": policy_label,
             })
-        data_frames.append(data)
-        #plt.plot(
-        #    np.arange(T - 1),
-        #    #running_avg,
-        #    loss_history,
-        #    label=approval_history.policy_name
-        #    if approval_history.policy_name != "ValidationPolicy"
-        #    else "MarkovHedge",
-        #)
+        raw_data = pd.DataFrame({
+            "Time":np.arange(T - 1),
+            "Loss": loss_history * scale_loss,
+            "Policy": policy_label,
+            })
+        mean_data_frames.append(mean_data)
+        raw_data_frames.append(raw_data)
         print(approval_history.policy_name)
         print(loss_history)
         print(running_avg)
         raw_ymin = min(np.min(running_avg), raw_ymin)
-    all_data = pd.concat(data_frames)
+    mean_data = pd.concat(mean_data_frames)
+    raw_data = pd.concat(raw_data_frames)
     sns.lmplot(
         x="Time",
         y="Loss",
         hue="Policy",
-        data=all_data,
+        data=mean_data if plot_mean else raw_data,
         lowess=True,
         scatter=False,
     )
-    plt.ylabel("Loss")
+    plt.ylabel("Loss" if not plot_mean else "Cum avg Loss")
     plt.xlabel("Time")
     plt.hlines(y=alpha, xmin=0, xmax=T)
     plt.ylim(max(raw_ymin - 0.05, 0) if ymin is None else ymin, ymax)
     plt.savefig(fig_name)
 
 
-    mean_loss = all_data.groupby("Policy").mean().reset_index()
+    mean_loss = raw_data.groupby("Policy").mean().reset_index()
     print(mean_loss.to_latex())
     logging.info(mean_loss[["Policy", "Loss"]].to_latex(index=False))
 
@@ -144,6 +146,7 @@ def main(args=sys.argv[1:]):
         scale_loss=args.scale_loss,
         ymin=args.y_min,
         ymax=min(approval_histories[0].human_max_loss * 5, args.y_max),
+        plot_mean=args.plot_mean,
     )
     plot_human_uses(
         approval_histories,

@@ -165,15 +165,33 @@ class ValidationPolicy(Policy):
         self.baseline_weights = np.maximum(self.baseline_weights, 0)
         self.const_baseline_weight = np.maximum(self.const_baseline_weight, 0)
 
-        # TODO: fix up the standard error estimate
-        predictions = np.mean(
-            self.loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
-        ) + self.pred_t_factor * np.sqrt(
-            np.mean(
-                self.var_loss_histories[: time_t + 1, -self.num_back_batches :], axis=1
+        # Create predictions for future performance
+        num_batches_list = (
+            np.concatenate(
+                [
+                    np.ones(time_t - self.num_back_batches) * self.num_back_batches,
+                    np.arange(self.num_back_batches, 0, step=-1),
+                    [1],
+                ]
             )
-            / np.sum(self.batch_sizes[-self.num_back_batches :])
+            if (time_t > self.num_back_batches)
+            else np.concatenate([np.arange(time_t, 0, step=-1), [1]])
         )
+        mean_loss = (
+            np.sum(self.loss_histories[: time_t + 1, -self.num_back_batches :], axis=1)
+            / num_batches_list
+        )
+        var_list = (
+            np.sum(self.var_loss_histories[: time_t + 1, -self.num_back_batches
+                :], axis=1)
+        )
+        batch_sizes = np.array([np.sum(self.batch_sizes[-int(b):]) for b in
+            num_batches_list])
+
+        inflation = self.pred_t_factor * np.sqrt(
+            var_list / batch_sizes
+        )
+        predictions = mean_loss + inflation
         # TODO: Give some reasonable prediction for newest model
         predictions[-1] = predictions[-2]
 
@@ -265,7 +283,7 @@ class MetaExpWeightingList(Policy):
         criterion,
         batch_preds: np.ndarray,
         target: np.ndarray,
-        policy: Policy
+        policy: Policy,
     ):
         robot_weights, human_weight = policy.weight_history[time_t]
         assert np.isclose(robot_weights.sum() + human_weight, 1)
@@ -339,7 +357,7 @@ class MetaExpWeightingList(Policy):
         return robot_weights, human_weight
 
 
-#class MetaGridSearch(MetaExpWeightingList):
+# class MetaGridSearch(MetaExpWeightingList):
 #    """
 #    Meta grid search
 #    """

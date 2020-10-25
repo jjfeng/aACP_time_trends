@@ -1,6 +1,7 @@
 import logging
 from typing import List, Dict
 
+import scipy.stats
 import numpy as np
 
 
@@ -95,13 +96,14 @@ class TTestApproval(Policy):
     def __str__(self):
         return "T-Test"
 
-    def __init__(self, num_experts: int, human_max_loss: float, factor: float = 1.96):
+    def __init__(self, num_experts: int, human_max_loss: float, ci_alpha: float =
+            0.025):
         self.human_max_loss = human_max_loss
         self.curr_num_experts = 0
         self.num_experts = num_experts
         self.loss_histories = [[] for i in range(self.num_experts)]
         self.curr_approved_idx = 0
-        self.factor = factor
+        self.factor = scipy.stats.norm().ppf(1 - ci_alpha)
 
     def add_expert(self, time_t):
         self.curr_num_experts += 1
