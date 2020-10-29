@@ -36,9 +36,11 @@ nest.add(
     [0.6],
     label_func=lambda c: 'revert_drift_%.2f' % c)
 
+nest.add_aggregate('all_hists', list)
+
 nest.add(
     'seed',
-    range(1),
+    range(15),
     label_func=lambda c: 'seed_%d' % c)
 
 @nest.add_target_with_env(localenv)
@@ -47,7 +49,9 @@ def create_nature(env, outdir, c):
         join(outdir, 'nature.pkl'),
         join(outdir, 'nature_log.txt')]
     cmd = [
-        'python create_fixed_nature.py',
+        'python run_script.py',
+        '${TARGETS[0]}',
+        'create_fixed_nature.py',
         '--density-parametric',
         DENSITY,
         '--first-batch',
@@ -86,7 +90,9 @@ def create_proposer(env, outdir, c):
         join(outdir, 'proposer_log.txt')]
     batches = [4 for i in range(NUM_BATCHES)]
     cmd = [
-        'python create_lasso_proposer.py',
+        'python run_script.py',
+        '${TARGETS[0]}',
+        'create_lasso_proposer.py',
         '--density-parametric',
         DENSITY,
         '--proposer-cv 3',
@@ -135,7 +141,9 @@ def run_meta_exp(env, outdir, c):
     ]
     c['approval_hists'].append(targets[0])
     cmd = [
-        'python run_approval.py',
+        'python run_script.py',
+        '${TARGETS[0]}',
+        'run_approval.py',
         '--seed',
         c['seed'],
         '--control-error-factor',
@@ -162,7 +170,9 @@ def run_meta_exp_small(env, outdir, c):
     ]
     c['approval_hists'].append(targets[0])
     cmd = [
-        'python run_approval.py',
+        'python run_script.py',
+        '${TARGETS[0]}',
+        'run_approval.py',
         '--seed',
         c['seed'],
         '--control-error-factor',
@@ -200,7 +210,9 @@ def run_online(env, outdir, c):
     ]
     c['approval_hists'].append(targets[0])
     cmd = [
-        'python run_approval.py',
+        'python run_script.py',
+        '${TARGETS[0]}',
+        'run_approval.py',
         '--seed',
         c['seed'],
         '--eta',
@@ -229,7 +241,9 @@ def run_ttest_approval(env, outdir, c):
     ]
     c['approval_hists'].append(targets[0])
     cmd = [
-        'python run_approval.py',
+        'python run_script.py',
+        '${TARGETS[0]}',
+        'run_approval.py',
         '--seed',
         c['seed'],
         '--nature-file ${SOURCES[0]}',
@@ -254,7 +268,9 @@ def run_blind_approval(env, outdir, c):
     ]
     c['approval_hists'].append(targets[0])
     cmd = [
-        'python run_approval.py',
+        'python run_script.py',
+        '${TARGETS[0]}',
+        'run_approval.py',
         '--seed',
         c['seed'],
         '--nature-file ${SOURCES[0]}',
@@ -270,13 +286,34 @@ def run_blind_approval(env, outdir, c):
         ' '.join(map(str, cmd)))
 
 @nest.add_target_with_env(localenv)
+def agg_all_hists(env, outdir, c):
+    targets = [
+        join(outdir, 'approval_hist_agg.pkl'),
+    ]
+    history_files = ",".join(["simulation_drift/%s" % s for s in c['approval_hists']])
+    c['all_hists'].append(targets[0])
+    cmd = [
+        'python aggregate_histories.py',
+	'--history-files',
+        history_files,
+	'--out ${TARGETS[0]}',
+    ]
+
+    return env.Command(
+        targets,
+        c['approval_hists'],
+        ' '.join(map(str, cmd)))
+
+nest.pop('seed')
+
+@nest.add_target_with_env(localenv)
 def plot_all_hists(env, outdir, c):
     targets = [
         join(outdir, 'approval_hist_loss.png'),
         join(outdir, 'approval_hist_human.png'),
         join(outdir, 'approval_hist_log.txt'),
     ]
-    history_files = ",".join(["simulation_drift/%s" % s for s in c['approval_hists']])
+    history_files = ",".join(["simulation_drift/%s" % s for s in c['all_hists']])
     cmd = [
         'python plot_policies.py',
 	'--y-min',
@@ -293,5 +330,5 @@ def plot_all_hists(env, outdir, c):
 
     return env.Command(
         targets,
-        c['approval_hists'],
+        c['all_hists'],
         ' '.join(map(str, cmd)))
