@@ -169,7 +169,7 @@ def plot_human_uses(approval_history_dict, fig_name, plot_mean: bool, key_order,
             legend=False,
         )
     plt.ylim(0, 1)
-    plt.ylabel("Fail-safe-prob" if not plot_mean else "Cum avg Fail-safe prob")
+    plt.ylabel("Abstention -prob" if not plot_mean else "Cum avg abstention prob")
     plt.xlabel("Time")
     if x_start is not None:
         tick_locs = np.arange(0, np.max(mean_data.Time), x_skip)
