@@ -110,6 +110,7 @@ def plot_losses(approval_history_dict, fig_name, alpha, scale_loss, ymin, ymax,
         tick_locs = np.arange(0, np.max(mean_data.Time), x_skip)
         plt.xticks(tick_locs,
                 np.arange(x_start, x_start + tick_locs.size))
+        plt.xlabel("Year")
     plt.legend([labeler(k) for k in key_order])
     plt.tight_layout()
     plt.savefig(fig_name)
@@ -119,7 +120,8 @@ def plot_losses(approval_history_dict, fig_name, alpha, scale_loss, ymin, ymax,
     logging.info(mean_loss[["Policy", "Loss"]].to_latex(index=False))
 
 
-def plot_human_uses(approval_history_dict, fig_name, plot_mean: bool, key_order):
+def plot_human_uses(approval_history_dict, fig_name, plot_mean: bool, key_order,
+        x_start: int = None, x_skip: int = None):
     plt.clf()
     # plt.figure(figsize=(6, 6))
     raw_data_frames = []
@@ -169,6 +171,11 @@ def plot_human_uses(approval_history_dict, fig_name, plot_mean: bool, key_order)
     plt.ylim(0, 1)
     plt.ylabel("Fail-safe-prob" if not plot_mean else "Cum avg Fail-safe prob")
     plt.xlabel("Time")
+    if x_start is not None:
+        tick_locs = np.arange(0, np.max(mean_data.Time), x_skip)
+        plt.xticks(tick_locs,
+                np.arange(x_start, x_start + tick_locs.size))
+        plt.xlabel("Year")
     plt.legend([labeler(k) for k in key_order])
     plt.tight_layout()
     plt.savefig(fig_name)
@@ -221,6 +228,8 @@ def main(args=sys.argv[1:]):
         args.human_plot,
         plot_mean=args.plot_mean,
         key_order=ordered_approval_history_keys,
+        x_start=args.x_start,
+        x_skip=args.x_skip,
     )
 
 
