@@ -47,6 +47,8 @@ def parse_args(args):
     return args
 
 def labeler(label):
+    if label.startswith("Learning-to-Approve"):
+        return label.replace("Learning-to-Approve", "L2A")
     return label if label != "ValidationPolicy" else "MarkovHedge"
 
 def plot_losses(approval_history_dict, fig_name, alpha, scale_loss, ymin, ymax,
@@ -67,7 +69,7 @@ def plot_losses(approval_history_dict, fig_name, alpha, scale_loss, ymin, ymax,
                     "Time": np.arange(T - 1),
                     "Loss": running_avg * scale_loss,
                     "Policy": policy_label,
-                    "Policy_type": not policy_label.startswith("Learning-to-Approve"),
+                    "Policy_type": not policy_label.startswith("L2A"),
                 }
             )
             raw_data = pd.DataFrame(
@@ -75,7 +77,7 @@ def plot_losses(approval_history_dict, fig_name, alpha, scale_loss, ymin, ymax,
                     "Time": np.arange(T - 1),
                     "Loss": loss_history * scale_loss,
                     "Policy": policy_label,
-                    "Policy_type": not policy_label.startswith("Learning-to-Approve"),
+                    "Policy_type": not policy_label.startswith("L2A"),
                 }
             )
             mean_data_frames.append(mean_data)
@@ -136,7 +138,7 @@ def plot_human_uses(approval_history_dict, fig_name, plot_mean: bool, key_order,
                     "Time": np.arange(T - 1),
                     "prob": np.cumsum(human_history) / np.arange(1, T),
                     "Policy": policy_label,
-                    "Policy_type": not policy_label.startswith("Learning-to-Approve"),
+                    "Policy_type": not policy_label.startswith("L2A"),
                 }
             ))
             raw_data_frames.append(pd.DataFrame(
@@ -144,7 +146,7 @@ def plot_human_uses(approval_history_dict, fig_name, plot_mean: bool, key_order,
                     "Time": np.arange(T - 1),
                     "prob": human_history,
                     "Policy": policy_label,
-                    "Policy_type": not policy_label.startswith("Learning-to-Approve"),
+                    "Policy_type": not policy_label.startswith("L2A"),
                 }
             ))
     mean_data = pd.concat(mean_data_frames)
