@@ -12,7 +12,7 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 DENSITY = "bernoulli"
-INIT_BATCH_SIZE = 50
+INIT_BATCH_SIZE = 75
 NUM_P = 40
 BATCH_SIZE = 75
 NUM_BATCHES = 50

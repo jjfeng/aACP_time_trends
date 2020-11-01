@@ -49,7 +49,12 @@ def parse_args(args):
 def labeler(label):
     if label.startswith("Learning-to-Approve"):
         return label.replace("Learning-to-Approve", "L2A")
-    return label if label != "ValidationPolicy" else "MarkovHedge"
+    elif label == "Fixed":
+        return "Locked"
+    elif label == "ValidationPolicy":
+        return "MarkovHedge"
+    else:
+        return label
 
 def plot_losses(approval_history_dict, fig_name, alpha, scale_loss, ymin, ymax,
         plot_mean, key_order: List[str], x_start: int = None, x_skip: int = None):
@@ -104,7 +109,7 @@ def plot_losses(approval_history_dict, fig_name, alpha, scale_loss, ymin, ymax,
             lowess=True,
             scatter=False,
         )
-    plt.ylabel("Loss" if not plot_mean else "Cum avg Loss")
+    plt.ylabel("Risk" if not plot_mean else "Cum avg risk")
     plt.xlabel("Time")
     plt.hlines(y=alpha, xmin=0, xmax=T, colors='black')
     plt.ylim(max(raw_ymin - 0.05, 0) if ymin is None else ymin, ymax)

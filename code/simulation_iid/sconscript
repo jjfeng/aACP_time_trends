@@ -13,8 +13,8 @@ nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 DENSITY = "bernoulli"
 NUM_P = 40
-INIT_BATCH_SIZE = 50
-BATCH_SIZE = 50
+INIT_BATCH_SIZE = 75
+BATCH_SIZE = 75
 NUM_BATCHES = 50
 NUM_COEFS = 15
 COEF_SCALE = 10
@@ -272,7 +272,7 @@ def plot_all_hists(env, outdir, c):
     cmd = [
         'python plot_policies.py',
 	'--y-max',
-        0.25,
+        0.2,
 	'--history-files',
     history_files,
 	'--plot-mean',

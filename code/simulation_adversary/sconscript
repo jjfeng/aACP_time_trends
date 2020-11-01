@@ -296,7 +296,7 @@ def plot_all_hists(env, outdir, c):
 	'--y-min',
         0.05,
 	'--y-max',
-        0.25,
+        0.2,
 	'--plot-mean',
 	'--history-files',
         history_files,

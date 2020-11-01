@@ -397,7 +397,7 @@ def plot_all_hists(env, outdir, c):
 	'--y-min',
         0.05,
 	'--y-max',
-        0.15,
+        0.13,
 	'--x-start',
     START_YEAR,
 	'--x-skip 4',
