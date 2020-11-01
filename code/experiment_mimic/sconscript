@@ -55,6 +55,7 @@ nest.add(
     [5000],
     label_func=lambda c: 'num_trees_%d' % c)
 
+nest.add_aggregate('all_hists', list)
 nest.add(
     'seed',
     range(1),
@@ -362,6 +363,26 @@ def run_fixed_approval(env, outdir, c):
         sources,
         ' '.join(map(str, cmd)))
 
+@nest.add_target_with_env(localenv)
+def agg_all_hists(env, outdir, c):
+    targets = [
+        join(outdir, 'approval_hist_agg.pkl'),
+    ]
+    history_files = ",".join(["experiment_mimic/%s" % s for s in c['approval_hists']])
+    c['all_hists'].append(targets[0])
+    cmd = [
+        'python aggregate_histories.py',
+	'--history-files',
+        history_files,
+	'--out ${TARGETS[0]}',
+    ]
+
+    return env.Command(
+        targets,
+        c['approval_hists'],
+        ' '.join(map(str, cmd)))
+
+nest.pop('seed')
 
 @nest.add_target_with_env(localenv)
 def plot_all_hists(env, outdir, c):
@@ -370,13 +391,16 @@ def plot_all_hists(env, outdir, c):
         join(outdir, 'approval_hist_human.png'),
         join(outdir, 'approval_hist_log.txt'),
     ]
-    history_files = ",".join(["experiment_mimic/%s" % s for s in c['approval_hists']])
+    history_files = ",".join(["experiment_mimic/%s" % s for s in c['all_hists']])
     cmd = [
         'python plot_policies.py',
 	'--y-min',
         0.05,
 	'--y-max',
         0.15,
+	'--x-start',
+    START_YEAR,
+	'--x-skip 4',
 	'--history-files',
         history_files,
     '--plot-mean',
@@ -387,5 +411,5 @@ def plot_all_hists(env, outdir, c):
 
     return env.Command(
         targets,
-        c['approval_hists'],
+        c['all_hists'],
         ' '.join(map(str, cmd)))

@@ -16,13 +16,14 @@ NUM_EPOCHS = 500
 
 MAX_TRAIN = 2000
 START_YEAR = 2008
-NUM_YEARS = 11
+NUM_YEARS = 1 #11
 NUM_MONTHS = 12
 MAX_LOSS = 4
 HUMAN_LOSS = 1/MAX_LOSS
 CONTROL_FACTOR = 1.6
 CI_ALPHA = 0.1
 
+nest.add_aggregate('all_hists', list)
 nest.add(
     'seed',
     range(1),
@@ -403,6 +404,27 @@ def run_fixed_approval(env, outdir, c):
         sources,
         ' '.join(map(str, cmd)))
 
+@nest.add_target_with_env(localenv)
+def agg_all_hists(env, outdir, c):
+    targets = [
+        join(outdir, 'approval_hist_agg.pkl'),
+    ]
+    history_files = ",".join(["experiment_yelp/%s" % s for s in c['approval_hists']])
+    c['all_hists'].append(targets[0])
+    cmd = [
+        'python aggregate_histories.py',
+	'--history-files',
+        history_files,
+	'--out ${TARGETS[0]}',
+    ]
+
+    return env.Command(
+        targets,
+        c['approval_hists'],
+        ' '.join(map(str, cmd)))
+
+nest.pop('seed')
+
 
 @nest.add_target_with_env(localenv)
 def plot_all_hists(env, outdir, c):
@@ -411,7 +433,7 @@ def plot_all_hists(env, outdir, c):
         join(outdir, 'approval_hist_human.png'),
         join(outdir, 'approval_hist_log.txt'),
     ]
-    history_files = ",".join(["experiment_yelp/%s" % s for s in c['approval_hists']])
+    history_files = ",".join(["experiment_yelp/%s" % s for s in c['all_hists']])
     cmd = [
         'python plot_policies.py',
 	'--y-min',
@@ -430,5 +452,5 @@ def plot_all_hists(env, outdir, c):
 
     return env.Command(
         targets,
-        c['approval_hists'],
+        c['all_hists'],
         ' '.join(map(str, cmd)))
