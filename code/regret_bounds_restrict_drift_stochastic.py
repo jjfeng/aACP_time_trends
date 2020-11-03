@@ -9,7 +9,7 @@ def get_regret_bounds(alpha, m, T, delta, drift, lambdas, n=50, sigma_max=0.5):
     raw_bound = -np.log(
         np.exp(-lambdas * delta * T) + (m - 1) * np.exp(-lambdas * (delta + drift) * T)
     ) + np.log(m)
-    standard_error = sigma_max / np.sqrt(n) / T * 1.96
+    standard_error = sigma_max / np.sqrt(n) / np.sqrt(T) * 1.96
     bounds = raw_bound / denom / T
     best_idx = np.argmin(bounds + standard_error)
     print("SE", standard_error, "bound", bounds[best_idx])
