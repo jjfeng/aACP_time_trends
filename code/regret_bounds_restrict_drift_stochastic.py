@@ -4,12 +4,14 @@ import numpy as np
 from scipy.stats import norm
 
 
-def get_regret_bounds(m, T, delta, drift, lambdas, n=50, sigma_max=0.5):
+def get_regret_bounds(meta_weights, T, delta, drift, lambdas, n=50, sigma_max=0.5):
+    assert np.isclose(np.sum(meta_weights), 1)
     print("DRIFT", drift)
+    baseline_weight = meta_weights[0]
     factor = (delta + drift)/(1 - np.exp(-lambdas * (delta + drift)))
     raw_bound = -np.log(
-        np.exp(-lambdas * delta * T) + (m - 1) * np.exp(-lambdas * (delta + drift) * T)
-    ) + np.log(m)
+        baseline_weight * np.exp(-lambdas * delta * T) + (1 - baseline_weight) * np.exp(-lambdas * (delta + drift) * T)
+    )
     standard_error = sigma_max / np.sqrt(n) / np.sqrt(T) * 1.9
 
     bounds = raw_bound * factor / T
@@ -30,7 +32,8 @@ def main(args=sys.argv[1:]):
     for delta in deltas:
         drift = delta * 2
         baseline_weight = 1 / m
-        bounds = get_regret_bounds(m, T, delta, drift, lambdas)
+        meta_weights = np.ones(m)/m
+        bounds = get_regret_bounds(meta_weights, T, delta, drift, lambdas)
         best_bound = np.min(bounds)
         best_idx = np.argmin(bounds)
         best_lambda = lambdas[best_idx]
