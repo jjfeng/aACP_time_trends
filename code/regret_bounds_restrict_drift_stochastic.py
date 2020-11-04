@@ -4,13 +4,15 @@ import numpy as np
 from scipy.stats import norm
 
 
-def get_regret_bounds(alpha, m, T, delta, drift, lambdas, n=50, sigma_max=0.5):
-    denom = -(np.exp(-lambdas * (delta + drift)) - 1) / (delta + drift)
+def get_regret_bounds(m, T, delta, drift, lambdas, n=50, sigma_max=0.5):
+    print("DRIFT", drift)
+    factor = (delta + drift)/(1 - np.exp(-lambdas * (delta + drift)))
     raw_bound = -np.log(
         np.exp(-lambdas * delta * T) + (m - 1) * np.exp(-lambdas * (delta + drift) * T)
     ) + np.log(m)
-    standard_error = sigma_max / np.sqrt(n) / np.sqrt(T) * 1.96
-    bounds = raw_bound / denom / T
+    standard_error = sigma_max / np.sqrt(n) / np.sqrt(T) * 1.9
+
+    bounds = raw_bound * factor / T
     best_idx = np.argmin(bounds + standard_error)
     print("SE", standard_error, "bound", bounds[best_idx])
     return bounds + standard_error
@@ -28,16 +30,12 @@ def main(args=sys.argv[1:]):
     for delta in deltas:
         drift = delta * 2
         baseline_weight = 1 / m
-        bounds = get_regret_bounds(alpha, m, T, delta, drift, lambdas)
+        bounds = get_regret_bounds(m, T, delta, drift, lambdas)
         best_bound = np.min(bounds)
         best_idx = np.argmin(bounds)
         best_lambda = lambdas[best_idx]
 
-        print(np.where(bounds < 0.3)[0])
-        closest_idx = np.max(np.where(bounds < 0.3)[0])
-        # print("%.3f" % delta, "%.3f" % (delta + drift), "%.3f" % best_bound)
-        print((bounds - 0.3)[closest_idx], closest_idx)
-        print("%.3f" % delta, lambdas[closest_idx])
+        print("%.3f" % delta)
         # Create the plot
         plt.plot(lambdas, bounds, label="d=%.2f" % delta)
 
