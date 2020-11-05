@@ -34,12 +34,12 @@ nest.add(
 
 nest.add(
     'drift_cycle',
-    [4],
+    [3],
     label_func=lambda c: 'drift_cycle_%d' % c)
 
 nest.add(
     'revert_drift',
-    [0.6],
+    [0],
     label_func=lambda c: 'revert_drift_%.2f' % c)
 
 nest.add_aggregate('all_hists', list)
@@ -91,11 +91,10 @@ def create_nature(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def create_proposer(env, outdir, c):
-    # TODO: create a lasso proposer that only trains on the most recent data
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
-    batches = [4 for i in range(NUM_BATCHES)]
+    batches = [((i + 2) % 3 + 1) for i in range(NUM_BATCHES)]
     cmd = [
         'python run_script.py',
         c['is_debug'],

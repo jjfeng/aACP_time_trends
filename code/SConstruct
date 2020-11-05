@@ -1,6 +1,8 @@
 #!/usr/bin/env scons
+#
+# To run things, do "scons  --clusters=prod  -j 123 --seeds=1"
+#
 
-# Simulate data under various different settings and fit models
 
 import os
 
