@@ -20,8 +20,8 @@ NUM_COEFS = 15
 COEF_SCALE = 10
 CONTROL_FACTOR = 1.6
 CI_ALPHA = 0.1
-RUN_STATUS = 'debug'
-NUM_SEEDS = 15 if RUN_STATUS else 1
+RUN_STATUS = 'prod'
+NUM_SEEDS = 15 if RUN_STATUS == 'prod' else 1
 
 nest.add(
     'is_debug',

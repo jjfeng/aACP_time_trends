@@ -24,10 +24,12 @@ NUM_COEFS = 15
 COEF_SCALE = 10
 
 YMAX = 0.35
+RUN_STATUS = 'prod'
+NUM_SEEDS = 15 if RUN_STATUS == 'prod' else 1
 
 nest.add(
     'is_debug',
-    ['prod'])
+    [RUN_STATUS])
 
 nest.add(
     'num_drift',
@@ -43,7 +45,7 @@ nest.add_aggregate('all_hists', list)
 
 nest.add(
     'seed',
-    range(15),
+    range(NUM_SEEDS),
     label_func=lambda c: 'seed_%d' % c)
 
 @nest.add_target_with_env(localenv)
