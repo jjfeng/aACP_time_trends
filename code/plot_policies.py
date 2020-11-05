@@ -154,6 +154,7 @@ def plot_human_uses(approval_history_dict, fig_name, plot_mean: bool, key_order,
                     "Policy_type": not policy_label.startswith("L2A"),
                 }
             ))
+            print(policy_label, "SHAPE", mean_data_frames[-1].shape)
     mean_data = pd.concat(mean_data_frames)
     raw_data = pd.concat(raw_data_frames)
     if plot_mean:

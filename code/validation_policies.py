@@ -21,7 +21,7 @@ class ValidationPolicy(Policy):
         num_experts: int,
         etas: np.ndarray,
         human_max_loss: float,
-        pred_t_factor: float = 1,
+        ci_alpha: float = 0.1,
         const_baseline_weight: float = 1e-10,
         num_back_batches: int = 3,
     ):
@@ -38,7 +38,7 @@ class ValidationPolicy(Policy):
         self.const_baseline_weight = np.ones(1) * const_baseline_weight
         self.const_baseline_optim_weight = np.ones(1) * const_baseline_weight
 
-        self.pred_t_factor = pred_t_factor
+        self.ci_alpha = ci_alpha
         self.batch_sizes = []
         # print("self.const_baseline_weight", self.const_baseline_weight)
 
@@ -191,7 +191,8 @@ class ValidationPolicy(Policy):
             [np.sum(self.batch_sizes[-int(b) :]) for b in num_batches_list]
         )
 
-        inflation = self.pred_t_factor * np.sqrt(var_list / batch_sizes)
+        pred_t_factor = scipy.stats.norm.ppf(1 - self.ci_alpha/mean_loss.size)
+        inflation = pred_t_factor * np.sqrt(var_list / batch_sizes)
         predictions = mean_loss + inflation
         # print("INF", inflation)
         # print("pre", predictions)
@@ -255,16 +256,13 @@ class MetaExpWeightingList(Policy):
 
         self.eta_indexes = np.arange(len(eta_list))
         print("ETA INDEX", self.eta_indexes)
-        pred_t_factor = scipy.stats.norm().ppf(1 - ci_alpha)
-        logging.info("pred t factor %f, ci_alpha %f", pred_t_factor, ci_alpha)
-
         self.policy_dict = {}
         for idx, etas in enumerate(eta_list):
             self.policy_dict[etas] = ValidationPolicy(
                 num_experts,
                 np.array(etas),
                 human_max_loss,
-                pred_t_factor=pred_t_factor,
+                ci_alpha=ci_alpha,
                 num_back_batches=num_back_batches,
             )
 

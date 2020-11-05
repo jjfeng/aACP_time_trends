@@ -20,8 +20,8 @@ NUM_COEFS = 15
 COEF_SCALE = 10
 CONTROL_FACTOR = 1.6
 CI_ALPHA = 0.1
-RUN_STATUS = 'prod'
-NUM_SEEDS = 15 if RUN_STATUS == 'prod' else 1
+RUN_STATUS = localenv['clusters']
+NUM_SEEDS = localenv['num_seeds']
 
 nest.add(
     'is_debug',
@@ -98,7 +98,7 @@ nest.add_aggregate('approval_hists', list)
 @nest.add_target_with_env(localenv)
 def run_meta_exp(env, outdir, c):
     targets = [
-        join(outdir, 'meta_exp_approval_hist_final.pkl'),
+        join(outdir, 'meta_exp_approval_hist.pkl'),
         join(outdir, 'meta_exp_approval_hist_log.txt'),
     ]
     c['approval_hists'].append(targets[0])

@@ -24,8 +24,8 @@ NUM_COEFS = 15
 COEF_SCALE = 10
 
 YMAX = 0.35
-RUN_STATUS = 'prod'
-NUM_SEEDS = 15 if RUN_STATUS == 'prod' else 1
+RUN_STATUS = localenv['clusters']
+NUM_SEEDS = localenv['num_seeds']
 
 nest.add(
     'is_debug',
