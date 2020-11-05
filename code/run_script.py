@@ -10,12 +10,18 @@ import subprocess
 
 
 def main(args=sys.argv[1:]):
-    target_file = args[0]
-    run_line = " ".join(args[1:])
-    output = subprocess.check_output(
-        "qsub -cwd run_script.sh %s" % run_line, stderr=subprocess.STDOUT, shell=True
-    )
-    print(output)
+    is_debug = args[0] == "debug"
+    target_file = args[1]
+    run_line = " ".join(args[2:])
+    if is_debug:
+        subprocess.check_output(
+            "python %s" % run_line, stderr=subprocess.STDOUT, shell=True
+        )
+    else:
+        output = subprocess.check_output(
+            "qsub -cwd run_script.sh %s" % run_line, stderr=subprocess.STDOUT, shell=True
+        )
+        print(output)
 
     while not os.path.exists(target_file):
         time.sleep(10)

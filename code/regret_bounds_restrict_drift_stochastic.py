@@ -26,16 +26,10 @@ def get_regret_bounds(meta_weights, T, delta, drift, lambdas, n, alpha, sigma_ma
     eps = drift
     print(delta + drift + eps)
     factor1 = (1 - np.exp(-lambdas * (delta + drift)))/(delta + drift)
-    factor2 = (1 - np.exp(-lambdas * (delta + drift + eps)))/(delta + drift + eps)
-    factor3 = 1 - np.exp(-lambdas)
+    factor2 = 1 - np.exp(-lambdas)
     alpha1 = 1 - alpha
-    alpha3 = alpha/2
-    alpha2 = alpha - alpha3
-    alpha3 = alpha
-    alpha2 = 0
-    print(factor1[50], factor2[50], factor3[50])
-    print(alpha1, alpha2, alpha3)
-    factor = 1/(factor1 * alpha1 + factor2 * alpha2 + factor3 * alpha3)
+    alpha2 = alpha
+    factor = 1/(factor1 * alpha1 + factor2 * alpha2)
 
     raw_bound = -np.log(
         #baseline_weight * np.exp(-lambdas * delta * T) + (1 - baseline_weight) * np.exp(-lambdas * T)

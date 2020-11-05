@@ -115,15 +115,21 @@ def create_policy(
                 (10, 100, 0.5, 0),
             ]
         meta_weights = np.ones(len(eta_list))
+        # Set baseline to be one-tenth of the total
+        meta_weights[1:] = meta_weights[0] * 9/(len(eta_list) - 1)
+        meta_weights /= np.sum(meta_weights)
+        print(meta_weights)
+        assert np.isclose(meta_weights[0], 0.1)
         lambdas = np.exp(np.arange(-6, 2, 0.02))
         regret_bounds = get_regret_bounds(
-            alpha=args.ci_alpha,
-            m=len(eta_list),
+            #m=len(eta_list),
+            meta_weights=meta_weights,
             T=total_time,
             delta=human_max_loss,
             drift=drift,
             lambdas=lambdas,
             n=batch_size,
+            alpha=args.ci_alpha,
         )
         best_bound = np.min(regret_bounds)
         logging.info("baseline_weight %f", meta_weights[0] / np.sum(meta_weights))
@@ -133,7 +139,7 @@ def create_policy(
             best_bound,
             human_max_loss * args.control_error_factor,
         )
-        # assert best_bound < human_max_loss * args.control_error_factor
+        assert best_bound < human_max_loss * args.control_error_factor
         loss_diffs = human_max_loss * args.control_error_factor - regret_bounds
         print("BATCH SIZE", batch_size)
         if np.all(loss_diffs < 0):
@@ -199,7 +205,7 @@ def main(args=sys.argv[1:]):
     if args.human_max_loss is None:
         args.human_max_loss = np.mean(
             proposer.score_models(
-                nature.create_test_data(time_t=0, num_obs=args.num_test_obs)
+                nature.create_test_data(time_t=0, num_obs=args.num_test_obs * 10)
             )[0]
         )
         logging.info("HUMAN MAX %f", args.human_max_loss)

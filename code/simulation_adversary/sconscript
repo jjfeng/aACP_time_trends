@@ -16,7 +16,7 @@ NUM_P = 40
 INIT_BATCH_SIZE = 75
 BATCH_SIZE = 75
 NUM_BATCHES = 50
-TRAIN_NUM_BATCHES = 4
+TRAIN_NUM_BATCHES = 1
 CONTROL_FACTOR = 1.6
 CI_ALPHA = 0.1
 
@@ -24,6 +24,10 @@ NUM_COEFS = 15
 COEF_SCALE = 10
 
 YMAX = 0.35
+
+nest.add(
+    'is_debug',
+    ['prod'])
 
 nest.add(
     'num_drift',
@@ -49,6 +53,7 @@ def create_nature(env, outdir, c):
         join(outdir, 'nature_log.txt')]
     cmd = [
         'python run_script.py',
+        c['is_debug'],
         '${TARGETS[0]}',
         'create_adversarial_nature.py',
         '--density-parametric',
@@ -84,10 +89,10 @@ def create_proposer(env, outdir, c):
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
-    #batches = [TRAIN_NUM_BATCHES] * (NUM_BATCHES + 1)
-    batches = [(i % 3) + 1 for i in range(NUM_BATCHES + 1)]
+    batches = [TRAIN_NUM_BATCHES] * (NUM_BATCHES + 1)
     cmd = [
         'python run_script.py',
+        c['is_debug'],
         '${TARGETS[0]}',
         'create_lasso_proposer.py',
         '--density-parametric',
@@ -117,6 +122,7 @@ def run_adversary_approval(env, outdir, c):
     c['approval_hists'].append(targets[0])
     cmd = [
         'python run_script.py',
+        c['is_debug'],
         '${TARGETS[0]}',
         'run_approval.py',
         '--seed',
@@ -146,6 +152,7 @@ def run_meta_exp(env, outdir, c):
     c['approval_hists'].append(targets[0])
     cmd = [
         'python run_script.py',
+        c['is_debug'],
         '${TARGETS[0]}',
         'run_approval.py',
         '--seed',
@@ -175,6 +182,7 @@ def run_meta_exp_small(env, outdir, c):
     c['approval_hists'].append(targets[0])
     cmd = [
         'python run_script.py',
+        c['is_debug'],
         '${TARGETS[0]}',
         'run_approval.py',
         '--seed',
@@ -214,6 +222,7 @@ def run_online(env, outdir, c):
     c['approval_hists'].append(targets[0])
     cmd = [
         'python run_script.py',
+        c['is_debug'],
         '${TARGETS[0]}',
         'run_approval.py',
         '--seed',
@@ -245,6 +254,7 @@ def run_blind_approval(env, outdir, c):
     c['approval_hists'].append(targets[0])
     cmd = [
         'python run_script.py',
+        c['is_debug'],
         '${TARGETS[0]}',
         'run_approval.py',
         '--seed',
