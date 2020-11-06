@@ -199,7 +199,7 @@ def main(args=sys.argv[1:]):
 
     # Load policy histories
     all_approval_histories = [
-        pickle_from_file(history_file) for history_file in args.history_files
+        pickle_from_file(history_file) for history_file in args.history_files if os.path.exists(history_file)
     ]
     approval_history_dict = {x: [] for x in all_approval_histories[0].keys()}
     approval_history_keys = list(approval_history_dict.keys())

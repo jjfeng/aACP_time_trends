@@ -23,17 +23,22 @@ from scipy.stats import norm
 def get_regret_bounds(meta_weights, T, delta, drift, lambdas, n, alpha, sigma_max=0.5):
     assert np.isclose(np.sum(meta_weights), 1)
     baseline_weight = meta_weights[0]
-    eps = drift
-    print(delta + drift + eps)
+    # TODO: optimize over all possible epsilon values
+    eps = 0.5 * np.sqrt(n)
     factor1 = (1 - np.exp(-lambdas * (delta + drift)))/(delta + drift)
-    factor2 = 1 - np.exp(-lambdas)
-    alpha1 = 1 - alpha
+    factor2 = (1 - np.exp(-lambdas * (delta + drift +
+        eps * sigma_max/np.sqrt(n))))/(delta + drift + eps * sigma_max/np.sqrt(n))
+    factor3 = 1 - np.exp(-lambdas)
     alpha2 = alpha
-    factor = 1/(factor1 * alpha1 + factor2 * alpha2)
+    alpha3 = T * np.exp(-2 * np.power(eps, 2) * np.power(sigma_max, 2))
+    print(alpha3)
+    assert alpha3 < 1
+    alpha1 = 1 - alpha3 - alpha2
+    assert alpha1 > 0
+    factor = 1/(factor1 * alpha1 + factor2 * alpha2 + factor3 * alpha3)
 
     raw_bound = -np.log(
-        #baseline_weight * np.exp(-lambdas * delta * T) + (1 - baseline_weight) * np.exp(-lambdas * T)
-        baseline_weight * np.exp(-lambdas * delta * T)
+        baseline_weight * np.exp(-lambdas * delta * T) + (1 - baseline_weight) * np.exp(-lambdas * T)
     )
     error = np.power(lambdas, 2)/8/n * T
 

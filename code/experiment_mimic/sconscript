@@ -17,8 +17,8 @@ localenv = env.Clone()
 nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 START_YEAR = 2009
-NUM_YEARS = 1 #11
-HUMAN_LOSS = 0.1
+NUM_YEARS = 1 # 11
+HUMAN_LOSS = 0.11
 DRIFT_SCALE = 0.25
 CONTROL_FACTOR = 1.6
 MIN_BATCH_SIZE = 20
@@ -81,7 +81,7 @@ def fit_mimic_year_model(env, outdir, c):
         join(outdir, 'model_log.txt')]
     c['proposer_list'].append(targets[0])
     cmd = [
-        'python run_script.py',
+        'python run_script.py prod',
         '${TARGETS[0]}',
         'fit_mimic_year_model.py',
 	'--num-back-years',
@@ -107,7 +107,7 @@ def prefetch_predictions(env, outdir, c):
     ]
     c['prefetch_list'].append(targets[0])
     cmd = [
-        'python run_script.py',
+        'python run_script.py prod',
         '${TARGETS[0]}',
         'prefetch_mimic_model_preds_and_targets.py',
 	'--nature-file ${SOURCES[0]}',

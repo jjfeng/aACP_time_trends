@@ -116,17 +116,17 @@ def create_policy(
             ]
         meta_weights = np.ones(len(eta_list))
         # Set baseline to be one-tenth of the total
-        meta_weights[1:] = meta_weights[0] * 9/(len(eta_list) - 1)
+        #meta_weights[1:] = meta_weights[0] * 9/(len(eta_list) - 1)
         meta_weights /= np.sum(meta_weights)
         print(meta_weights)
-        assert np.isclose(meta_weights[0], 0.1)
         lambdas = np.exp(np.arange(-6, 2, 0.02))
+        ni_margin = (args.control_error_factor - 1) * human_max_loss
+        print("NI MAR", ni_margin)
         regret_bounds = get_regret_bounds(
-            #m=len(eta_list),
             meta_weights=meta_weights,
             T=total_time,
             delta=human_max_loss,
-            drift=drift,
+            drift=drift + ni_margin,
             lambdas=lambdas,
             n=batch_size,
             alpha=args.ci_alpha,
@@ -139,7 +139,7 @@ def create_policy(
             best_bound,
             human_max_loss * args.control_error_factor,
         )
-        assert best_bound < human_max_loss * args.control_error_factor
+        assert best_bound < (human_max_loss * args.control_error_factor)
         loss_diffs = human_max_loss * args.control_error_factor - regret_bounds
         print("BATCH SIZE", batch_size)
         if np.all(loss_diffs < 0):
@@ -154,6 +154,7 @@ def create_policy(
             logging.info(
                 "closest lambda %f, bound %f", lambdas[eta_idx], regret_bounds[eta_idx]
             )
+        1/0
         eta = lambdas[eta_idx]
         policy = MetaExpWeightingList(
             eta=eta,
@@ -163,6 +164,7 @@ def create_policy(
             human_max_loss=human_max_loss,
             ci_alpha=args.ci_alpha,
             num_back_batches=args.num_back_batches,
+            ni_margin=ni_margin,
         )
     elif policy_name == "BaselinePolicy":
         policy = BaselinePolicy(human_max_loss=human_max_loss)
@@ -196,9 +198,7 @@ def main(args=sys.argv[1:]):
 
     nature = pickle_from_file(args.nature_file)
     logging.info("BATCH SIZES %s", nature.batch_sizes)
-    print("NATURED")
     proposer = pickle_from_file(args.proposer_file)
-    print("CONFUSED")
 
     nature.next(None)
     model = proposer.propose_model(nature.get_trial_data(0), None)

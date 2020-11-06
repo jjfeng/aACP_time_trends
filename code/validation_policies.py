@@ -24,8 +24,10 @@ class ValidationPolicy(Policy):
         ci_alpha: float = 0.1,
         const_baseline_weight: float = 1e-10,
         num_back_batches: int = 3,
+        ni_margin: float = 0,
     ):
         self.human_max_loss = human_max_loss
+        self.ni_margin = ni_margin
 
         self.etas = etas[:-2]
         self.alpha = etas[-2]
@@ -194,9 +196,9 @@ class ValidationPolicy(Policy):
         pred_t_factor = scipy.stats.norm.ppf(1 - self.ci_alpha/mean_loss.size)
         inflation = pred_t_factor * np.sqrt(var_list / batch_sizes)
         predictions = mean_loss + inflation
-        # print("INF", inflation)
-        # print("pre", predictions)
-        # print("mean", mean_loss)
+        #print("INF", inflation)
+        #print("pre", predictions)
+        #print("mean", mean_loss)
         # TODO: Give some reasonable prediction for newest model
         predictions[-1] = predictions[-2]
 
@@ -218,7 +220,7 @@ class ValidationPolicy(Policy):
         self.const_baseline_optim_weight = all_optim_weights[-1:]
 
         # Impose constraint
-        self.optim_weights *= predictions <= self.human_max_loss
+        self.optim_weights *= predictions <= (self.human_max_loss + self.ni_margin)
 
     def get_predict_weights(self, time_t: int):
         denom = (
@@ -249,6 +251,7 @@ class MetaExpWeightingList(Policy):
         human_max_loss: float,
         ci_alpha: float = 0.05,
         num_back_batches: int = 3,
+        ni_margin: float = 0,
     ):
         self.eta = eta
         self.eta_list = eta_list
@@ -264,6 +267,7 @@ class MetaExpWeightingList(Policy):
                 human_max_loss,
                 ci_alpha=ci_alpha,
                 num_back_batches=num_back_batches,
+                ni_margin=ni_margin,
             )
 
         self.loss_ts = np.zeros(len(eta_list))
