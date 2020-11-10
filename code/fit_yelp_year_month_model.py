@@ -66,9 +66,7 @@ def main(args=sys.argv[1:]):
     np.random.seed(args.seed)
 
     model, fields = train_rating_model_year_month(
-        args.train_file,
-        n_epochs=args.epochs,
-        num_hidden=args.num_hidden,
+        args.train_file, n_epochs=args.epochs, num_hidden=args.num_hidden,
     )
     # Do save
     model_state_dict = {

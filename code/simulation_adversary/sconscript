@@ -18,6 +18,7 @@ BATCH_SIZE = 75
 NUM_BATCHES = 50
 TRAIN_NUM_BATCHES = 1
 CONTROL_FACTOR = 1.6
+CONSTRAINT_FACTOR = 0.2
 CI_ALPHA = 0.1
 
 NUM_COEFS = 15
@@ -161,6 +162,8 @@ def run_meta_exp(env, outdir, c):
         c['seed'],
         '--control-error-factor',
         CONTROL_FACTOR,
+        '--constraint-factor',
+        CONSTRAINT_FACTOR,
         '--ci-alpha',
         CI_ALPHA,
         '--nature-file ${SOURCES[0]}',
@@ -191,6 +194,8 @@ def run_meta_exp_small(env, outdir, c):
         c['seed'],
         '--control-error-factor',
         CONTROL_FACTOR,
+        '--constraint-factor',
+        CONSTRAINT_FACTOR,
         '--ci-alpha',
         CI_ALPHA,
         '--nature-file ${SOURCES[0]}',

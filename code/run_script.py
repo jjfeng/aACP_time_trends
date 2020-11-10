@@ -19,7 +19,9 @@ def main(args=sys.argv[1:]):
         )
     else:
         output = subprocess.check_output(
-            "qsub -cwd run_script.sh %s" % run_line, stderr=subprocess.STDOUT, shell=True
+            "qsub -cwd run_script.sh %s" % run_line,
+            stderr=subprocess.STDOUT,
+            shell=True,
         )
         print(output)
 

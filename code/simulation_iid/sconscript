@@ -19,6 +19,7 @@ NUM_BATCHES = 50
 NUM_COEFS = 15
 COEF_SCALE = 10
 CONTROL_FACTOR = 1.6
+CONSTRAINT_FACTOR = 0.2
 CI_ALPHA = 0.1
 RUN_STATUS = localenv['clusters']
 NUM_SEEDS = localenv['num_seeds']
@@ -111,6 +112,8 @@ def run_meta_exp(env, outdir, c):
         c['seed'],
         '--control-error-factor',
         CONTROL_FACTOR,
+        '--constraint-factor',
+        CONSTRAINT_FACTOR,
         '--ci-alpha',
         CI_ALPHA,
         '--nature-file ${SOURCES[0]}',
@@ -141,6 +144,8 @@ def run_meta_exp_small(env, outdir, c):
         c['seed'],
         '--control-error-factor',
         CONTROL_FACTOR,
+        '--constraint-factor',
+        CONSTRAINT_FACTOR,
         '--ci-alpha',
         CI_ALPHA,
         '--nature-file ${SOURCES[0]}',

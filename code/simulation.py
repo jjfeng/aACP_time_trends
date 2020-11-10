@@ -78,10 +78,7 @@ class Simulation:
             )
 
             self.approval_hist.append(
-                human_weight,
-                robot_weights,
-                policy_loss_t,
-                pop_policy_loss_t,
+                human_weight, robot_weights, policy_loss_t, pop_policy_loss_t,
             )
 
             # Let nature adapt if it wants

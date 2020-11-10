@@ -12,6 +12,7 @@ from typing import List
 from approval_history import ApprovalHistory
 from common import pickle_from_file, process_params
 
+
 def parse_args(args):
     """ parse command line arguments """
 
@@ -46,6 +47,7 @@ def parse_args(args):
 
     return args
 
+
 def labeler(label):
     if label.startswith("Learning-to-Approve"):
         return label.replace("Learning-to-Approve", "L2A")
@@ -56,8 +58,19 @@ def labeler(label):
     else:
         return label
 
-def plot_losses(approval_history_dict, fig_name, alpha, scale_loss, ymin, ymax,
-        plot_mean, key_order: List[str], x_start: int = None, x_skip: int = None):
+
+def plot_losses(
+    approval_history_dict,
+    fig_name,
+    alpha,
+    scale_loss,
+    ymin,
+    ymax,
+    plot_mean,
+    key_order: List[str],
+    x_start: int = None,
+    x_skip: int = None,
+):
     plt.clf()
     raw_ymin = ymax if ymin is None else ymin
     mean_data_frames = []
@@ -111,12 +124,11 @@ def plot_losses(approval_history_dict, fig_name, alpha, scale_loss, ymin, ymax,
         )
     plt.ylabel("Risk" if not plot_mean else "Cum avg risk")
     plt.xlabel("Time")
-    plt.hlines(y=alpha, xmin=0, xmax=T, colors='black')
+    plt.hlines(y=alpha, xmin=0, xmax=T, colors="black")
     plt.ylim(max(raw_ymin - 0.05, 0) if ymin is None else ymin, ymax)
     if x_start is not None:
         tick_locs = np.arange(0, np.max(mean_data.Time), x_skip)
-        plt.xticks(tick_locs,
-                np.arange(x_start, x_start + tick_locs.size))
+        plt.xticks(tick_locs, np.arange(x_start, x_start + tick_locs.size))
         plt.xlabel("Year")
     plt.legend([labeler(k) for k in key_order])
     plt.tight_layout()
@@ -127,8 +139,14 @@ def plot_losses(approval_history_dict, fig_name, alpha, scale_loss, ymin, ymax,
     logging.info(mean_loss[["Policy", "Loss"]].to_latex(index=False))
 
 
-def plot_human_uses(approval_history_dict, fig_name, plot_mean: bool, key_order,
-        x_start: int = None, x_skip: int = None):
+def plot_human_uses(
+    approval_history_dict,
+    fig_name,
+    plot_mean: bool,
+    key_order,
+    x_start: int = None,
+    x_skip: int = None,
+):
     plt.clf()
     # plt.figure(figsize=(6, 6))
     raw_data_frames = []
@@ -138,22 +156,26 @@ def plot_human_uses(approval_history_dict, fig_name, plot_mean: bool, key_order,
         for approval_history in approval_history_dict[policy_key]:
             human_history = np.array(approval_history.human_history)
             T = human_history.size + 1
-            mean_data_frames.append(pd.DataFrame(
-                {
-                    "Time": np.arange(T - 1),
-                    "prob": np.cumsum(human_history) / np.arange(1, T),
-                    "Policy": policy_label,
-                    "Policy_type": not policy_label.startswith("L2A"),
-                }
-            ))
-            raw_data_frames.append(pd.DataFrame(
-                {
-                    "Time": np.arange(T - 1),
-                    "prob": human_history,
-                    "Policy": policy_label,
-                    "Policy_type": not policy_label.startswith("L2A"),
-                }
-            ))
+            mean_data_frames.append(
+                pd.DataFrame(
+                    {
+                        "Time": np.arange(T - 1),
+                        "prob": np.cumsum(human_history) / np.arange(1, T),
+                        "Policy": policy_label,
+                        "Policy_type": not policy_label.startswith("L2A"),
+                    }
+                )
+            )
+            raw_data_frames.append(
+                pd.DataFrame(
+                    {
+                        "Time": np.arange(T - 1),
+                        "prob": human_history,
+                        "Policy": policy_label,
+                        "Policy_type": not policy_label.startswith("L2A"),
+                    }
+                )
+            )
             print(policy_label, "SHAPE", mean_data_frames[-1].shape)
     mean_data = pd.concat(mean_data_frames)
     raw_data = pd.concat(raw_data_frames)
@@ -181,8 +203,7 @@ def plot_human_uses(approval_history_dict, fig_name, plot_mean: bool, key_order,
     plt.xlabel("Time")
     if x_start is not None:
         tick_locs = np.arange(0, np.max(mean_data.Time), x_skip)
-        plt.xticks(tick_locs,
-                np.arange(x_start, x_start + tick_locs.size))
+        plt.xticks(tick_locs, np.arange(x_start, x_start + tick_locs.size))
         plt.xlabel("Year")
     plt.legend([labeler(k) for k in key_order])
     plt.tight_layout()
@@ -199,7 +220,9 @@ def main(args=sys.argv[1:]):
 
     # Load policy histories
     all_approval_histories = [
-        pickle_from_file(history_file) for history_file in args.history_files if os.path.exists(history_file)
+        pickle_from_file(history_file)
+        for history_file in args.history_files
+        if os.path.exists(history_file)
     ]
     approval_history_dict = {x: [] for x in all_approval_histories[0].keys()}
     approval_history_keys = list(approval_history_dict.keys())
@@ -212,10 +235,12 @@ def main(args=sys.argv[1:]):
     print("HUMAN MAX", human_max_loss)
 
     # Sort keys
-    sorted_keys = sorted([k for k in approval_history_keys if not
-        k.startswith("Learning-to-Approve")])
-    ordered_approval_history_keys = ["Learning-to-Approve-4",
-            "Learning-to-Approve-15"] + [k for k in sorted_keys if k != "Fixed"]
+    sorted_keys = sorted(
+        [k for k in approval_history_keys if not k.startswith("Learning-to-Approve")]
+    )
+    ordered_approval_history_keys = [
+        k for k in approval_history_keys if k.startswith("Learning-to-Approve")
+    ] + [k for k in sorted_keys if k != "Fixed"]
     if "Fixed" in sorted_keys:
         ordered_approval_history_keys.append("Fixed")
 

@@ -35,9 +35,7 @@ def parse_args(args):
     parser.add_argument("--proposer-file", type=str, default="_output/proposer.pkl")
     parser.add_argument("--prefetched-file", type=str, default=None)
     parser.add_argument(
-        "--policy-name",
-        type=str,
-        help="name of approval policy",
+        "--policy-name", type=str, help="name of approval policy",
     )
     parser.add_argument("--human-max-loss", type=float, default=None)
     parser.add_argument("--drift-scale", type=float, default=1)
@@ -53,6 +51,7 @@ def parse_args(args):
     )
     parser.add_argument("--num-back-batches", type=int, default=3)
     parser.add_argument("--control-error-factor", type=float, default=1.5)
+    parser.add_argument("--constraint-factor", type=float, default=None)
     parser.add_argument("--num-test-obs", type=int, default=1000)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
     parser.add_argument("--out-file", type=str, default="_output/approver_history.pkl")
@@ -60,6 +59,8 @@ def parse_args(args):
     parser.set_defaults()
     args = parser.parse_args()
 
+    if args.constraint_factor is None:
+        args.constraint_factor = args.control_error_factor - 1
     return args
 
 
@@ -67,6 +68,7 @@ def create_policy(
     policy_name, args, human_max_loss, drift, total_time, num_experts, batch_size
 ):
     logging.info("MEAN BATCH SIZE %.2f", batch_size)
+    constraint_ni_margin = args.constraint_factor * human_max_loss
     if policy_name == "MarkovHedge":
         policy = ValidationPolicy(
             num_experts=num_experts,
@@ -91,42 +93,35 @@ def create_policy(
         if policy_name == "MetaExpWeightingSmall":
             eta_list = [
                 (0, 0, 0, 1),  # baseline
-                (1.5, 0, 0.3, 0.05),  # online
                 (0, 0, 0.99, 0.0),  # blind
                 (0, 10000, 0.5, 0),  # t-test
+                (1.5, 0, 0.3, 0.05),  # online
             ]
         elif policy_name == "MetaExpWeighting":
             eta_list = [
                 (0, 0, 0, 1),  # baseline
-                # (1.5, 0, 0.5, 0.05),  # online
-                (0, 0, 0.99, 0.0),  # blind
+                (0, 0, 0.999, 0.0),  # blind
                 (0, 10000, 0.5, 0),  # t-test
-                (10, 0, 0.10, 0),
-                (10, 1, 0.10, 0),
-                (10, 10, 0.10, 0),
-                (10, 100, 0.10, 0),
                 (10, 0, 0.3, 0),
-                (10, 1, 0.3, 0),
                 (10, 10, 0.3, 0),
                 (10, 100, 0.3, 0),
                 (10, 0, 0.5, 0),
-                (10, 1, 0.5, 0),
                 (10, 10, 0.5, 0),
                 (10, 100, 0.5, 0),
+                (10, 0, 0.8, 0),
+                (10, 10, 0.8, 0),
+                (10, 100, 0.8, 0),
             ]
         meta_weights = np.ones(len(eta_list))
-        # Set baseline to be one-tenth of the total
-        #meta_weights[1:] = meta_weights[0] * 9/(len(eta_list) - 1)
         meta_weights /= np.sum(meta_weights)
         print(meta_weights)
         lambdas = np.exp(np.arange(-6, 2, 0.02))
-        ni_margin = (args.control_error_factor - 1) * human_max_loss
-        print("NI MAR", ni_margin)
         regret_bounds = get_regret_bounds(
             meta_weights=meta_weights,
             T=total_time,
             delta=human_max_loss,
-            drift=drift + ni_margin,
+            ni_margin=constraint_ni_margin,
+            drift=drift,
             lambdas=lambdas,
             n=batch_size,
             alpha=args.ci_alpha,
@@ -139,6 +134,7 @@ def create_policy(
             best_bound,
             human_max_loss * args.control_error_factor,
         )
+        print("BOUNDS...", best_bound, human_max_loss * args.control_error_factor)
         assert best_bound < (human_max_loss * args.control_error_factor)
         loss_diffs = human_max_loss * args.control_error_factor - regret_bounds
         print("BATCH SIZE", batch_size)
@@ -154,8 +150,8 @@ def create_policy(
             logging.info(
                 "closest lambda %f, bound %f", lambdas[eta_idx], regret_bounds[eta_idx]
             )
-        1/0
         eta = lambdas[eta_idx]
+        print("ETAS", eta)
         policy = MetaExpWeightingList(
             eta=eta,
             eta_list=eta_list,
@@ -164,7 +160,7 @@ def create_policy(
             human_max_loss=human_max_loss,
             ci_alpha=args.ci_alpha,
             num_back_batches=args.num_back_batches,
-            ni_margin=ni_margin,
+            ni_margin=constraint_ni_margin,
         )
     elif policy_name == "BaselinePolicy":
         policy = BaselinePolicy(human_max_loss=human_max_loss)
@@ -179,6 +175,7 @@ def create_policy(
             num_experts,
             human_max_loss=human_max_loss,
             ci_alpha=args.ci_alpha,
+            ni_margin=constraint_ni_margin,
         )
     elif policy_name == "Oracle":
         policy = OracleApproval(human_max_loss=human_max_loss)

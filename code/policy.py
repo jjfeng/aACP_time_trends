@@ -97,15 +97,22 @@ class TTestApproval(Policy):
         return "T-Test"
 
     def __init__(
-        self, num_experts: int, human_max_loss: float, ci_alpha: float = 0.025
+        self,
+        num_experts: int,
+        human_max_loss: float,
+        ci_alpha: float = 0.025,
+        ni_margin: float = 0,
     ):
         self.human_max_loss = human_max_loss
+        self.ni_margin = ni_margin
         self.curr_num_experts = 0
         self.num_experts = num_experts
         self.loss_histories = [[] for i in range(self.num_experts)]
         self.curr_approved_idx = 0
         assert ci_alpha < 0.5
-        self.factor = scipy.stats.norm().ppf(ci_alpha)
+        self.factor = scipy.stats.norm().ppf(1 - ci_alpha)
+        print(self.factor)
+        assert self.factor > 0
 
     def add_expert(self, time_t):
         self.curr_num_experts += 1
@@ -133,17 +140,18 @@ class TTestApproval(Policy):
             self.loss_histories[i].append([])
 
     def get_predict_weights(self, time_t: int):
+        print("TTEST BATCH COUNT", time_t - self.curr_approved_idx)
         best_model_idx = self.curr_approved_idx
         best_diff_ci = 0
         differences = []
         for i in range(self.curr_approved_idx + 1, self.curr_num_experts - 1):
             new_model_loss = np.concatenate(self.loss_histories[i][i:])
 
-            # lower ci compare to human
-            ci_human_diff = np.mean(
-                new_model_loss - self.human_max_loss
-            ) + self.factor * np.sqrt(np.var(new_model_loss) / new_model_loss.size)
-            is_worse_than_human = ci_human_diff > 0
+            # upper ci compare to human + ni_margin
+            upper_ci_risk = np.mean(new_model_loss) + self.factor * np.sqrt(
+                np.var(new_model_loss) / new_model_loss.size
+            )
+            is_worse_than_human = upper_ci_risk > (self.human_max_loss + self.ni_margin)
 
             if is_worse_than_human:
                 continue
@@ -155,13 +163,15 @@ class TTestApproval(Policy):
             loss_improvement = new_model_loss - baseline_model_loss
             mean_improve = np.mean(loss_improvement)
             differences.append(mean_improve)
-            diff_ci_bound = mean_improve - self.factor * np.sqrt(
+            # upper ci of difference
+            diff_ci_bound = mean_improve + self.factor * np.sqrt(
                 np.var(loss_improvement) / new_model_loss.size
             )
             is_better = diff_ci_bound < 0
 
             if is_better and diff_ci_bound < best_diff_ci:
                 print("new model loss", np.mean(new_model_loss), self.human_max_loss)
+                print("model idx", i, new_model_loss.size)
                 best_model_idx = i
                 best_diff_ci = diff_ci_bound
 
@@ -174,9 +184,9 @@ class TTestApproval(Policy):
                 self.loss_histories[best_model_idx][best_model_idx:]
             )
             # lower ci check
-            ci_human_diff = np.mean(
-                best_model_loss - self.human_max_loss
-            ) + self.factor * np.sqrt(np.var(best_model_loss) / best_model_loss.size)
+            ci_human_diff = np.mean(best_model_loss) + self.factor * np.sqrt(
+                np.var(best_model_loss) / best_model_loss.size
+            )
             print(
                 "human diff lower ci",
                 ci_human_diff,
@@ -185,7 +195,7 @@ class TTestApproval(Policy):
                 "se",
                 np.sqrt(np.var(best_model_loss) / best_model_loss.size),
             )
-            is_worse_than_human = ci_human_diff > 0
+            is_worse_than_human = ci_human_diff > (self.human_max_loss + self.ni_margin)
 
             if is_worse_than_human:
                 print("ttest human")

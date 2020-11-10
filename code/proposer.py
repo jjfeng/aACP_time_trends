@@ -57,9 +57,7 @@ class FixedProposer(Proposer):
         return len(self.proposal_history)
 
     def propose_model(self, trial_data: TrialData = None, approval_hist=None):
-        self.proposal_history = self.pretrained_proposal_history[
-            : self.num_models + 1
-        ]
+        self.proposal_history = self.pretrained_proposal_history[: self.num_models + 1]
 
 
 class FixedProposerFromFile(Proposer):
@@ -84,9 +82,7 @@ class FixedProposerFromFile(Proposer):
         return len(self.proposal_history)
 
     def propose_model(
-        self,
-        trial_data: TrialData,
-        approval_hist: ApprovalHistory = None,
+        self, trial_data: TrialData, approval_hist: ApprovalHistory = None,
     ):
         model_dict = torch.load(
             self.model_files[approval_hist.size if approval_hist is not None else 0]

@@ -18,7 +18,7 @@ nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 START_YEAR = 2009
 NUM_YEARS = 1 # 11
-HUMAN_LOSS = 0.11
+HUMAN_LOSS = 0.1
 DRIFT_SCALE = 0.25
 CONTROL_FACTOR = 1.6
 MIN_BATCH_SIZE = 20
