@@ -40,6 +40,7 @@ def parse_args(args):
     parser.add_argument("--human-max-loss", type=float, default=None)
     parser.add_argument("--drift-scale", type=float, default=1)
     parser.add_argument("--eta", type=float, default=1)
+    parser.add_argument("--holdout-last-batch", type=float, default=0.2)
     parser.add_argument("--alpha", type=float, default=0)
     parser.add_argument(
         "--ci-alpha",
@@ -202,9 +203,10 @@ def main(args=sys.argv[1:]):
     if args.human_max_loss is None:
         args.human_max_loss = np.mean(
             proposer.score_models(
-                nature.create_test_data(time_t=0, num_obs=args.num_test_obs * 10)
+                nature.create_test_data(time_t=0, num_obs=args.num_test_obs)
             )[0]
         )
+        print("HUAM", args.human_max_loss)
         logging.info("HUMAN MAX %f", args.human_max_loss)
 
     print("POLICY")
@@ -226,6 +228,7 @@ def main(args=sys.argv[1:]):
             policy,
             args.human_max_loss,
             num_test_obs=args.num_test_obs,
+            holdout_last_batch=args.holdout_last_batch,
         )
     else:
         prefetched = pickle_from_file(args.prefetched_file)
@@ -236,6 +239,7 @@ def main(args=sys.argv[1:]):
             policy,
             args.human_max_loss,
             num_test_obs=args.num_test_obs,
+            holdout_last_batch=args.holdout_last_batch,
         )
     sim.run(lambda approval_hist: pickle_to_file(approval_hist, args.out_file))
     logging.info(sim.approval_hist)

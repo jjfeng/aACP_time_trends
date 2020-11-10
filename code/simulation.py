@@ -12,7 +12,8 @@ from approval_history import ApprovalHistory
 
 class Simulation:
     def __init__(
-        self, nature, proposer, policy, human_max_loss, num_test_obs: int = 1000
+        self, nature, proposer, policy, human_max_loss, num_test_obs: int =
+        1000, holdout_last_batch: float = 0.2
     ):
         self.nature = nature
         self.proposer = proposer
@@ -22,15 +23,18 @@ class Simulation:
         self.total_time = nature.total_time - 1
         self.batch_model_preds = []
         self.batch_targets = []
+        self.new_model_losses = []
+        self.new_holdout_batch = []
         self.criterion = self.proposer.criterion
         self.approval_hist = ApprovalHistory(
             human_max_loss=self.human_max_loss, policy_name=str(self.policy)
         )
+        self.holdout_last_batch = holdout_last_batch
 
     def run(self, hook_func):
         for t in range(self.total_time):
             logging.info("TIME STEP %d", t)
-            print("TIME", t)
+            print("TIME", t, self.total_time)
 
             # Let the policy adapt based on data
             self.policy.add_expert(t)
@@ -39,12 +43,15 @@ class Simulation:
                 self.criterion,
                 self.batch_model_preds[-1] if t > 0 else None,
                 self.batch_targets[-1] if t > 0 else None,
+                self.new_model_losses[-1] if t > 0 else None,
             )
             robot_weights, human_weight = self.policy.get_predict_weights(t)
 
             # Monitoring data
             sub_trial_data = self.nature.get_trial_data(t + 1)
             batch_preds, batch_target = self.get_model_preds_and_targets(t)
+            #holdout_size = int(self.holdout_last_batch * batch_target.size)
+            #train_size = batch_target.size - holdout_size
             self.batch_model_preds.append(batch_preds)
             self.batch_targets.append(batch_target)
 
@@ -91,7 +98,12 @@ class Simulation:
             logging.info("human weight %f", human_weight)
 
             if t < self.total_time - 1:
-                self.proposer.propose_model(sub_trial_data, self.approval_hist)
+                sub_train_trial_data = sub_trial_data.subset(end_index=None,
+                        holdout_last_batch=self.holdout_last_batch)
+                holdout_batch = sub_trial_data.batch_data[-1].get_holdout(self.holdout_last_batch)
+                new_model = self.proposer.propose_model(sub_train_trial_data, self.approval_hist)
+                self.new_holdout_batch.append(holdout_batch)
+                self.new_model_losses.append(self.get_new_model_losses(t))
 
             hook_func(self.approval_hist)
 
@@ -103,6 +115,11 @@ class Simulation:
         )
         return batch_preds, batch_target
 
+    def get_new_model_losses(self, t: int):
+        new_model = self.proposer.proposal_history[-1]
+        holdout_batch = self.new_holdout_batch[-1]
+        return self.criterion(new_model.predict(holdout_batch.x), holdout_batch.y)
+
 
 class SimulationPrefetched(Simulation):
     def __init__(
@@ -113,8 +130,10 @@ class SimulationPrefetched(Simulation):
         policy,
         human_max_loss,
         num_test_obs: int = 1000,
+holdout_last_batch: float = 0.2
     ):
-        super().__init__(nature, proposer, policy, human_max_loss, num_test_obs)
+        super().__init__(nature, proposer, policy, human_max_loss, num_test_obs,
+                holdout_last_batch)
         self.model_pred_targets = model_pred_targets
 
     def get_model_preds_and_targets(self, t: int):

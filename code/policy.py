@@ -22,6 +22,7 @@ class Policy:
         criterion,
         batch_model_preds: np.ndarray = None,
         batch_targets: np.ndarray = None,
+        new_model_weights: np.ndarray = None,
     ):
         return
 
@@ -123,6 +124,7 @@ class TTestApproval(Policy):
         criterion,
         batch_model_preds: np.ndarray = None,
         batch_targets: np.ndarray = None,
+        new_model_weights: np.ndarray = None,
     ):
         if batch_targets is None:
             return

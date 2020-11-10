@@ -70,7 +70,8 @@ class LassoProposer(Proposer):
         self.proposal_history = []
 
     def propose_model(
-        self, trial_data: TrialData, curr_model_idx: int = None, do_append: bool = True
+            self, trial_data: TrialData, curr_model_idx: int = None, do_append: bool
+        = True
     ):
         if self.sim_func_form == "gaussian":
             model = LassoModel(
@@ -90,7 +91,7 @@ class LassoProposer(Proposer):
         # num_train_batches = np.random.choice(self.num_back_batches)
         num_train_batches = self.num_back_batches[self.num_models]
         cum_data = trial_data.get_start_to_end_data(
-            start_index=max(0, trial_data.num_batches - num_train_batches)
+            start_index=max(0, trial_data.num_batches - num_train_batches),
         )
         model.fit(cum_data.x, cum_data.y.flatten())
 

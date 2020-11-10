@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 import logging
 from itertools import product
 from scipy import special
@@ -68,7 +68,8 @@ class ValidationPolicy(Policy):
             self.optim_weights = np.concatenate([self.optim_weights, [0]])
 
     def update_weights(
-        self, time_t, criterion, batch_preds: np.ndarray, targets: np.ndarray
+        self, time_t, criterion, batch_preds: np.ndarray, targets: np.ndarray,
+        new_model_losses: np.ndarray
     ):
         if batch_preds is None:
             return
@@ -195,12 +196,7 @@ class ValidationPolicy(Policy):
         inflation = pred_t_factor * np.sqrt(var_list)
         # Predictions using the mean
         predictions = mean_loss + inflation
-        # worst case using UCB
-        worst_case_predictions = mean_loss + inflation
-
-        # TODO: Give some reasonable prediction for newest model
-        predictions[-1] = predictions[-2]
-        worst_case_predictions[-1] = worst_case_predictions[-2]
+        predictions[-1] = np.mean(new_model_losses) + pred_t_factor * np.sqrt(np.var(new_model_losses)/new_model_losses.size)
 
         all_optim_weights = special.softmax(
             np.concatenate(
@@ -220,7 +216,7 @@ class ValidationPolicy(Policy):
         self.const_baseline_optim_weight = all_optim_weights[-1:]
 
         # Impose constraint
-        self.optim_weights *= worst_case_predictions <= (
+        self.optim_weights *= predictions <= (
             self.human_max_loss + self.ni_margin
         )
 
@@ -307,7 +303,8 @@ class MetaExpWeightingList(Policy):
         return policy_loss
 
     def update_weights(
-        self, time_t, criterion, batch_preds: np.ndarray, target: np.ndarray
+        self, time_t, criterion, batch_preds: np.ndarray, target: np.ndarray,
+        new_model_losses: np.ndarray
     ):
         if batch_preds is not None:
             # Update the meta policy weights first
@@ -322,7 +319,8 @@ class MetaExpWeightingList(Policy):
 
         # Let each policy update their own weights
         for policy in self.policy_dict.values():
-            policy.update_weights(time_t, criterion, batch_preds, target)
+            policy.update_weights(time_t, criterion, batch_preds, target,
+                    new_model_losses)
 
     def get_predict_weights(self, time_t):
         denom = np.sum(self.meta_weights)
