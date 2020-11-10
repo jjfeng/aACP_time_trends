@@ -45,7 +45,7 @@ class ValidationPolicy(Policy):
         # print("self.const_baseline_weight", self.const_baseline_weight)
 
         self.loss_histories = np.zeros((num_experts, 0))
-        self.var_loss_histories = np.zeros((num_experts,0))
+        self.var_loss_histories = np.zeros((num_experts, 0))
 
         self.num_back_batches = num_back_batches
 
@@ -82,24 +82,19 @@ class ValidationPolicy(Policy):
             model_losses_t = np.concatenate([model_losses_t, [0]])
             var_model_losses_t = np.concatenate([var_model_losses_t, [0]])
         new_losses = np.concatenate(
-            [
-                model_losses_t,
-                [0] * (self.num_experts - model_losses_t.size),
-            ]
+            [model_losses_t, [0] * (self.num_experts - model_losses_t.size),]
         ).reshape((-1, 1))
         var_new_losses = np.concatenate(
-            [
-                var_model_losses_t,
-                [0] * (self.num_experts - model_losses_t.size),
-            ]
+            [var_model_losses_t, [0] * (self.num_experts - model_losses_t.size),]
         ).reshape((-1, 1))
         self.loss_histories = np.concatenate([self.loss_histories, new_losses], axis=1)
         self.var_loss_histories = np.concatenate(
             [self.var_loss_histories, var_new_losses], axis=1
         )
         assert self.loss_histories.shape == self.var_loss_histories.shape
-        self.batch_sizes = np.concatenate([self.batch_sizes,
-            [indiv_robot_loss_t.shape[1]]])
+        self.batch_sizes = np.concatenate(
+            [self.batch_sizes, [indiv_robot_loss_t.shape[1]]]
+        )
         v_weights = self.weights * np.exp(-self.etas[0] * model_losses_t)
         # print(self.weights, model_losses_t)
         v_baseline_weights = self.baseline_weights * np.exp(
@@ -185,26 +180,39 @@ class ValidationPolicy(Policy):
             np.sum(self.loss_histories[: time_t + 1, -self.num_back_batches :], axis=1)
             / num_batches_list
         )
-        var_loss_histories = self.var_loss_histories[: time_t + 1, -self.num_back_batches:]
-        raw_mean_vars = var_loss_histories/self.batch_sizes[-self.num_back_batches:]
+        var_loss_histories = self.var_loss_histories[
+            : time_t + 1, -self.num_back_batches :
+        ]
+        raw_mean_vars = var_loss_histories / self.batch_sizes[-self.num_back_batches :]
         batch_sizes = np.array(
-            [np.concatenate([[0] * (min(self.num_back_batches,
-                var_loss_histories.shape[1]) - int(b)),
-                self.batch_sizes[-int(b) :]]) for b in num_batches_list]
+            [
+                np.concatenate(
+                    [
+                        [0]
+                        * (
+                            min(self.num_back_batches, var_loss_histories.shape[1])
+                            - int(b)
+                        ),
+                        self.batch_sizes[-int(b) :],
+                    ]
+                )
+                for b in num_batches_list
+            ]
         )
         tot_batch_sizes = np.sum(batch_sizes, axis=1, keepdims=True)
-        var_list = np.sum(raw_mean_vars * np.power(batch_sizes/tot_batch_sizes,
-            2), axis=1)
+        var_list = np.sum(
+            raw_mean_vars * np.power(batch_sizes / tot_batch_sizes, 2), axis=1
+        )
 
-        pred_t_factor = scipy.stats.norm.ppf(1 - self.ci_alpha/mean_loss.size)
+        pred_t_factor = scipy.stats.norm.ppf(1 - self.ci_alpha / mean_loss.size)
         inflation = pred_t_factor * np.sqrt(var_list)
         # Predictions using the mean?
         predictions = mean_loss
         # worst case using UCB???
         worst_case_predictions = mean_loss + inflation
-        #print("INF", inflation)
-        #print("pre", predictions)
-        #print("mean", mean_loss)
+        # print("INF", inflation)
+        # print("pre", predictions)
+        # print("mean", mean_loss)
         # TODO: Give some reasonable prediction for newest model
         predictions[-1] = predictions[-2]
         worst_case_predictions[-1] = worst_case_predictions[-2]
@@ -227,7 +235,9 @@ class ValidationPolicy(Policy):
         self.const_baseline_optim_weight = all_optim_weights[-1:]
 
         # Impose constraint
-        self.optim_weights *= worst_case_predictions <= (self.human_max_loss + self.ni_margin)
+        self.optim_weights *= worst_case_predictions <= (
+            self.human_max_loss + self.ni_margin
+        )
 
     def get_predict_weights(self, time_t: int):
         denom = (
@@ -323,8 +333,7 @@ class MetaExpWeightingList(Policy):
                 loss_t[idx] = self._get_policy_prev_loss(
                     time_t - 1, criterion, batch_preds, target, self.policy_dict[etas]
                 )
-                print("policy loss", etas, loss_t[idx], self.loss_ts[idx] +
-                        loss_t[idx])
+                print("policy loss", etas, loss_t[idx], self.loss_ts[idx] + loss_t[idx])
             self.loss_ts += loss_t
             self.meta_weights = self.meta_weights * np.exp(-self.eta * loss_t)
 

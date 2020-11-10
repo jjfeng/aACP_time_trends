@@ -19,9 +19,7 @@ for delta in deltas:
     print(delta, best_bound, best_lambda)
     # Create the plot
     plt.plot(
-        lambdas,
-        bounds,
-        label="d=%.2f" % (delta),
+        lambdas, bounds, label="d=%.2f" % (delta),
     )
 
 # Add X and y Label#

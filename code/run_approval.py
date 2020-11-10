@@ -35,9 +35,7 @@ def parse_args(args):
     parser.add_argument("--proposer-file", type=str, default="_output/proposer.pkl")
     parser.add_argument("--prefetched-file", type=str, default=None)
     parser.add_argument(
-        "--policy-name",
-        type=str,
-        help="name of approval policy",
+        "--policy-name", type=str, help="name of approval policy",
     )
     parser.add_argument("--human-max-loss", type=float, default=None)
     parser.add_argument("--drift-scale", type=float, default=1)

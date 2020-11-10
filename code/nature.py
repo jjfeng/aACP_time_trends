@@ -84,7 +84,7 @@ class AdversarialNature(Nature):
         self.last_coef_change = 0
 
     def next(self, approval_hist: ApprovalHistory = None):
-        #np.random.seed(len(self.coefs))
+        # np.random.seed(len(self.coefs))
         approval_direction = 0
         if approval_hist is not None and approval_hist.size > 2:
             curr_approv = np.sum(
