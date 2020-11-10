@@ -13,6 +13,7 @@ nest = SConsWrap(Nest(), localenv['output'], alias_environment=localenv)
 
 DENSITY = "bernoulli"
 NUM_P = 40
+HOLDOUT_FRAC = 0.5
 INIT_BATCH_SIZE = 75
 BATCH_SIZE = 75
 NUM_BATCHES = 50
@@ -20,6 +21,7 @@ NUM_COEFS = 15
 COEF_SCALE = 10
 CONTROL_FACTOR = 1.6
 CONSTRAINT_FACTOR = 0.2
+HOLDOUT_FACTOR = 0.5
 CI_ALPHA = 0.1
 RUN_STATUS = localenv['clusters']
 NUM_SEEDS = localenv['num_seeds']
@@ -114,6 +116,8 @@ def run_meta_exp(env, outdir, c):
         CONTROL_FACTOR,
         '--constraint-factor',
         CONSTRAINT_FACTOR,
+        '--holdout',
+        HOLDOUT_FACTOR,
         '--ci-alpha',
         CI_ALPHA,
         '--nature-file ${SOURCES[0]}',
@@ -146,6 +150,8 @@ def run_meta_exp_small(env, outdir, c):
         CONTROL_FACTOR,
         '--constraint-factor',
         CONSTRAINT_FACTOR,
+        '--holdout',
+        HOLDOUT_FACTOR,
         '--ci-alpha',
         CI_ALPHA,
         '--nature-file ${SOURCES[0]}',
@@ -189,6 +195,8 @@ def run_online(env, outdir, c):
         c['eta'],
         '--alpha',
         c['alpha'],
+        '--holdout',
+        HOLDOUT_FACTOR,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name MarkovHedge',
@@ -217,6 +225,8 @@ def run_blind_approval(env, outdir, c):
         'run_approval.py',
         '--seed',
         c['seed'],
+        '--holdout',
+        HOLDOUT_FACTOR,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name BlindApproval',
@@ -244,6 +254,8 @@ def run_ttest_approval(env, outdir, c):
         'run_approval.py',
         '--seed',
         c['seed'],
+        '--holdout',
+        HOLDOUT_FACTOR,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name TTestApproval',

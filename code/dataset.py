@@ -30,3 +30,15 @@ class Dataset:
 
     def subset(self, idxs):
         return Dataset(self.x[idxs], self.y[idxs], self.num_classes)
+
+    def get_train(self, holdout_frac: float):
+        num_train = int(self.num_obs * (1 -
+            holdout_frac))
+        idxs = np.arange(num_train)
+        return Dataset(self.x[idxs], self.y[idxs], self.num_classes)
+
+    def get_holdout(self, holdout_frac: float):
+        num_train = int(self.num_obs * (1 -
+            holdout_frac))
+        idxs = np.arange(num_train, self.num_obs)
+        return Dataset(self.x[idxs], self.y[idxs], self.num_classes)

@@ -2,7 +2,9 @@
 These classes just prefetch model predictions and targets
 """
 import numpy as np
+import collections
 
+PredsTarget = collections.namedtuple('PredsTarget', 'preds target')
 
 class ModelPredsAndTargets:
     def __init__(self):
@@ -12,6 +14,9 @@ class ModelPredsAndTargets:
     def append(self, new_model_preds, new_targets):
         self.model_preds.append(new_model_preds)
         self.targets.append(new_targets)
+    
+    def get(self, time_t: int):
+        return PredsTarget(self.model_preds[t], self.targets[t])
 
 
 class AggModelPredsAndTargets:
