@@ -36,7 +36,7 @@ nest.add(
 
 nest.add(
     'drift_cycle',
-    [3],
+    [4],
     label_func=lambda c: 'drift_cycle_%d' % c)
 
 nest.add(

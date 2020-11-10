@@ -40,7 +40,7 @@ nest.add(
 
 nest.add(
     'revert_drift',
-    [0],
+    [0.3],
     label_func=lambda c: 'revert_drift_%.2f' % c)
 
 nest.add_aggregate('all_hists', list)
