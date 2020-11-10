@@ -4,7 +4,7 @@ from typing import List, Dict, Tuple
 import scipy.stats
 import numpy as np
 
-from proposer import PredsTarget
+from model_preds_and_targets import PredsTarget
 
 
 class Policy:

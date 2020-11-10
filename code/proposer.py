@@ -1,6 +1,5 @@
 from typing import List, Dict
 import numpy as np
-import collections
 
 import torch
 from torch import nn
@@ -10,9 +9,8 @@ from model import TextSentiment
 from dataset import Dataset
 from trial_data import TrialData
 from approval_history import ApprovalHistory
+from model_preds_and_targets import PredsTarget
 
-
-PredsTarget = collections.namedtuple('PredsTarget', 'preds target')
 
 class Proposer:
     def __init__(self):

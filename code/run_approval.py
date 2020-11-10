@@ -136,7 +136,10 @@ def create_policy(
             human_max_loss * args.control_error_factor,
         )
         print("BOUNDS...", best_bound, human_max_loss * args.control_error_factor)
-        assert best_bound < (human_max_loss * args.control_error_factor)
+        if best_bound > (human_max_loss * args.control_error_factor):
+            logging.info("WARNING. regret bounds not satisfied: best %f < desired %f",
+                    best_bound, human_max_loss * args.control_error_factor)
+            print("WARNING: regret bounds not satisfies")
         loss_diffs = human_max_loss * args.control_error_factor - regret_bounds
         print("BATCH SIZE", batch_size)
         if np.all(loss_diffs < 0):

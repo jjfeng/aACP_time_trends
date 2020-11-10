@@ -6,7 +6,7 @@ import scipy.stats
 import numpy as np
 
 from policy import Policy
-from proposer import PredsTarget
+from model_preds_and_targets import PredsTarget
 from common import score_mixture_model
 
 

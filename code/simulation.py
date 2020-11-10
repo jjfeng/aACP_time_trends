@@ -8,6 +8,7 @@ import pandas as pd
 
 from common import score_mixture_model
 from approval_history import ApprovalHistory
+from model_preds_and_targets import PredsTarget
 
 
 class Simulation:
@@ -116,6 +117,9 @@ class Simulation:
 
 
 class SimulationPrefetched(Simulation):
+    """
+    This assumes that all trial data is holdout data
+    """
     def __init__(
         self,
         nature,
@@ -130,8 +134,13 @@ holdout_last_batch: float = 0.2
                 holdout_last_batch)
         self.model_pred_targets = model_pred_targets
 
-    def get_model_preds_and_targets(self, t: int):
+    def get_model_preds_and_targets(self, t: int) -> PredsTarget:
         print("TIMET", t)
-        batch_preds = self.model_pred_targets.model_preds[t]
-        batch_target = self.model_pred_targets.targets[t]
-        return batch_preds, batch_target
+        return  self.model_pred_targets.get(t)
+
+    def get_holdout_pred_target(self, t: int) -> PredsTarget:
+        """
+        This assumes that all trial data is holdout data
+        """
+        return self.get_model_preds_and_targets(t)
+
