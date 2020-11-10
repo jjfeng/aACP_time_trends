@@ -176,43 +176,28 @@ class ValidationPolicy(Policy):
             if (time_t > self.num_back_batches)
             else np.concatenate([np.arange(time_t, 0, step=-1), [1]])
         ).astype(int)
+        # estimate expected risk across mixture
         mean_loss = (
             np.sum(self.loss_histories[: time_t + 1, -self.num_back_batches :], axis=1)
             / num_batches_list
         )
+        # get standard error of our estimate for expected risk across mixture
         var_loss_histories = self.var_loss_histories[
             : time_t + 1, -self.num_back_batches :
         ]
         raw_mean_vars = var_loss_histories / self.batch_sizes[-self.num_back_batches :]
-        batch_sizes = np.array(
-            [
-                np.concatenate(
-                    [
-                        [0]
-                        * (
-                            min(self.num_back_batches, var_loss_histories.shape[1])
-                            - int(b)
-                        ),
-                        self.batch_sizes[-int(b) :],
-                    ]
-                )
-                for b in num_batches_list
-            ]
-        )
-        tot_batch_sizes = np.sum(batch_sizes, axis=1, keepdims=True)
-        var_list = np.sum(
-            raw_mean_vars * np.power(batch_sizes / tot_batch_sizes, 2), axis=1
-        )
+        var_list = np.sum(raw_mean_vars *
+                np.power(1/num_batches_list.reshape((-1,1)), 2),
+                axis=1)
 
+        # Note the bonferonni correction
         pred_t_factor = scipy.stats.norm.ppf(1 - self.ci_alpha / mean_loss.size)
         inflation = pred_t_factor * np.sqrt(var_list)
-        # Predictions using the mean?
+        # Predictions using the mean
         predictions = mean_loss
-        # worst case using UCB???
+        # worst case using UCB
         worst_case_predictions = mean_loss + inflation
-        # print("INF", inflation)
-        # print("pre", predictions)
-        # print("mean", mean_loss)
+
         # TODO: Give some reasonable prediction for newest model
         predictions[-1] = predictions[-2]
         worst_case_predictions[-1] = worst_case_predictions[-2]
@@ -275,8 +260,6 @@ class MetaExpWeightingList(Policy):
         self.eta_list_size = len(eta_list)
 
         self.eta_indexes = np.arange(len(eta_list))
-        print("ETA INDEX", self.eta_indexes)
-        print("BATCHERS BACK", num_back_batches)
         self.policy_dict = {}
         for idx, etas in enumerate(eta_list):
             self.policy_dict[etas] = ValidationPolicy(
