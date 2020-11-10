@@ -53,6 +53,7 @@ def parse_args(args):
     )
     parser.add_argument("--num-back-batches", type=int, default=3)
     parser.add_argument("--control-error-factor", type=float, default=1.5)
+    parser.add_argument("--constraint-factor", type=float, default=None)
     parser.add_argument("--num-test-obs", type=int, default=1000)
     parser.add_argument("--log-file", type=str, default="_output/log.txt")
     parser.add_argument("--out-file", type=str, default="_output/approver_history.pkl")
@@ -60,6 +61,8 @@ def parse_args(args):
     parser.set_defaults()
     args = parser.parse_args()
 
+    if args.constraint_factor is None:
+        args.constraint_factor = args.control_error_factor - 1
     return args
 
 
@@ -67,7 +70,7 @@ def create_policy(
     policy_name, args, human_max_loss, drift, total_time, num_experts, batch_size
 ):
     logging.info("MEAN BATCH SIZE %.2f", batch_size)
-    constraint_ni_margin = (args.control_error_factor - 1)/5 * human_max_loss
+    constraint_ni_margin = args.constraint_factor * human_max_loss
     if policy_name == "MarkovHedge":
         policy = ValidationPolicy(
             num_experts=num_experts,
@@ -92,37 +95,29 @@ def create_policy(
         if policy_name == "MetaExpWeightingSmall":
             eta_list = [
                 (0, 0, 0, 1),  # baseline
-                (1.5, 0, 0.3, 0.05),  # online
                 (0, 0, 0.99, 0.0),  # blind
                 (0, 10000, 0.5, 0),  # t-test
+                (1.5, 0, 0.3, 0.05),  # online
             ]
         elif policy_name == "MetaExpWeighting":
             eta_list = [
-                #(0, 0, 0, 1),  # baseline
-                ## (1.5, 0, 0.5, 0.05),  # online
-                #(0, 0, 0.99, 0.0),  # blind
+                (0, 0, 0, 1),  # baseline
+                (0, 0, 0.999, 0.0),  # blind
                 (0, 10000, 0.5, 0),  # t-test
-                #(10, 0, 0.10, 0),
-                #(10, 1, 0.10, 0),
-                #(10, 10, 0.10, 0),
-                #(10, 100, 0.10, 0),
-                #(10, 0, 0.3, 0),
-                #(10, 1, 0.3, 0),
-                #(10, 10, 0.3, 0),
-                #(10, 100, 0.3, 0),
-                #(10, 0, 0.5, 0),
-                #(10, 1, 0.5, 0),
-                #(10, 10, 0.5, 0),
-                #(10, 100, 0.5, 0),
+                (10, 0, 0.3, 0),
+                (10, 10, 0.3, 0),
+                (10, 100, 0.3, 0),
+                (10, 0, 0.5, 0),
+                (10, 10, 0.5, 0),
+                (10, 100, 0.5, 0),
+                (10, 0, 0.8, 0),
+                (10, 10, 0.8, 0),
+                (10, 100, 0.8, 0),
             ]
         meta_weights = np.ones(len(eta_list))
-        # Set baseline to be one-tenth of the total
-        #meta_weights[1:] = meta_weights[0] * 9/(len(eta_list) - 1)
         meta_weights /= np.sum(meta_weights)
         print(meta_weights)
         lambdas = np.exp(np.arange(-6, 2, 0.02))
-        #constraint_ni_margin = 0.65 * human_max_loss
-        print("constraint NI MAR", constraint_ni_margin)
         regret_bounds = get_regret_bounds(
             meta_weights=meta_weights,
             T=total_time,
@@ -158,7 +153,7 @@ def create_policy(
                 "closest lambda %f, bound %f", lambdas[eta_idx], regret_bounds[eta_idx]
             )
         eta = lambdas[eta_idx]
-        print("ERTA", eta)
+        print("ETAS", eta)
         policy = MetaExpWeightingList(
             eta=eta,
             eta_list=eta_list,

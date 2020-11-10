@@ -197,10 +197,9 @@ class ValidationPolicy(Policy):
             2), axis=1)
 
         pred_t_factor = scipy.stats.norm.ppf(1 - self.ci_alpha/mean_loss.size)
-        pred_t_factor = scipy.stats.norm.ppf(1 - self.ci_alpha)
         inflation = pred_t_factor * np.sqrt(var_list)
-        # Predictions using LCB??? the mean?
-        predictions = mean_loss #+ inflation
+        # Predictions using the mean?
+        predictions = mean_loss
         # worst case using UCB???
         worst_case_predictions = mean_loss + inflation
         #print("INF", inflation)
@@ -300,6 +299,8 @@ class MetaExpWeightingList(Policy):
         target: np.ndarray,
         policy: Policy,
     ):
+        assert time_t == (len(policy.weight_history) - 1)
+
         robot_weights, human_weight = policy.weight_history[time_t]
         assert np.isclose(robot_weights.sum() + human_weight, 1)
         policy_loss = score_mixture_model(
@@ -322,7 +323,8 @@ class MetaExpWeightingList(Policy):
                 loss_t[idx] = self._get_policy_prev_loss(
                     time_t - 1, criterion, batch_preds, target, self.policy_dict[etas]
                 )
-                # print("policy loss", etas, loss_t[idx])
+                print("policy loss", etas, loss_t[idx], self.loss_ts[idx] +
+                        loss_t[idx])
             self.loss_ts += loss_t
             self.meta_weights = self.meta_weights * np.exp(-self.eta * loss_t)
 

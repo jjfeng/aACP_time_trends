@@ -214,8 +214,9 @@ def main(args=sys.argv[1:]):
     # Sort keys
     sorted_keys = sorted([k for k in approval_history_keys if not
         k.startswith("Learning-to-Approve")])
-    ordered_approval_history_keys = ["Learning-to-Approve-4",
-            "Learning-to-Approve-15"] + [k for k in sorted_keys if k != "Fixed"]
+    ordered_approval_history_keys = [
+            k for k in approval_history_keys if
+            k.startswith("Learning-to-Approve")] + [k for k in sorted_keys if k != "Fixed"]
     if "Fixed" in sorted_keys:
         ordered_approval_history_keys.append("Fixed")
 
