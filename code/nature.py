@@ -78,7 +78,7 @@ class AdversarialNature(Nature):
         self.batch_sizes = batch_sizes
         self.num_p = data_gen.num_p
         self.init_coef = init_coef
-        self.trial_data = TrialData(self.batch_sizes)
+        self.trial_data = TrialData([])
         self.coefs = [self.init_coef]
         self.prob_revert_drift = prob_revert_drift
         self.last_coef_change = 0

@@ -206,8 +206,8 @@ def main(args=sys.argv[1:]):
                 nature.create_test_data(time_t=0, num_obs=args.num_test_obs)
             )[0]
         )
-        print("HUAM", args.human_max_loss)
         logging.info("HUMAN MAX %f", args.human_max_loss)
+    nature.next(None)
 
     print("POLICY")
     policy = create_policy(

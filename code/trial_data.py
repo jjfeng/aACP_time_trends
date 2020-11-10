@@ -43,13 +43,12 @@ class TrialData:
         """
         if end_index is None:
             end_index = len(self.batch_data)
-
         sub_last_batch = self.batch_data[end_index - 1].get_train(
             holdout_last_batch)
         num_last = sub_last_batch.num_obs
         if end_index >= 2:
-            new_batch_data = self.batch_data[:end_index - 2] + [sub_last_batch]
-            batch_sizes = self.batch_sizes[:end_index - 2] + [num_last]
+            new_batch_data = self.batch_data[:end_index - 1] + [sub_last_batch]
+            batch_sizes = self.batch_sizes[:end_index - 1] + [num_last]
         else:
             new_batch_data = [sub_last_batch]
             batch_sizes = [num_last]

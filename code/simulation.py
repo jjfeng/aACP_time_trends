@@ -50,8 +50,6 @@ class Simulation:
             # Monitoring data
             sub_trial_data = self.nature.get_trial_data(t + 1)
             batch_preds, batch_target = self.get_model_preds_and_targets(t)
-            #holdout_size = int(self.holdout_last_batch * batch_target.size)
-            #train_size = batch_target.size - holdout_size
             self.batch_model_preds.append(batch_preds)
             self.batch_targets.append(batch_target)
 
@@ -88,9 +86,6 @@ class Simulation:
                 human_weight, robot_weights, policy_loss_t, pop_policy_loss_t,
             )
 
-            # Let nature adapt if it wants
-            self.nature.next(self.approval_hist)
-
             logging.info("losses %s", pop_policy_loss_t)
             logging.info(
                 "robot weights %s (max %d)", robot_weights, np.argmax(robot_weights)
@@ -98,6 +93,9 @@ class Simulation:
             logging.info("human weight %f", human_weight)
 
             if t < self.total_time - 1:
+                # Let nature adapt if it wants
+                self.nature.next(self.approval_hist)
+
                 sub_train_trial_data = sub_trial_data.subset(end_index=None,
                         holdout_last_batch=self.holdout_last_batch)
                 holdout_batch = sub_trial_data.batch_data[-1].get_holdout(self.holdout_last_batch)
