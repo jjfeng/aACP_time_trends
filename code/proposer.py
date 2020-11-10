@@ -1,5 +1,6 @@
 from typing import List, Dict
 import numpy as np
+import collections
 
 import torch
 from torch import nn
@@ -10,6 +11,8 @@ from dataset import Dataset
 from trial_data import TrialData
 from approval_history import ApprovalHistory
 
+
+PredsTarget = collections.namedtuple('PredsTarget', 'preds target')
 
 class Proposer:
     def __init__(self):
@@ -41,7 +44,7 @@ class Proposer:
         predictions = np.array(
             [model.predict(dataset.x) for model in self.proposal_history]
         )
-        return predictions, dataset.y
+        return PredsTarget(predictions, dataset.y)
 
 
 class FixedProposer(Proposer):
@@ -140,4 +143,4 @@ class FixedProposerFromFile(Proposer):
         for model_dict in self.proposal_history:
             preds, targets = self._run_test(model_dict, dataset_file, test_size)
             predictions.append(preds)
-        return np.array(predictions), targets
+        return PredsTarget(np.array(predictions), targets)

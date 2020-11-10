@@ -1,8 +1,10 @@
 import logging
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import scipy.stats
 import numpy as np
+
+from proposer import PredsTarget
 
 
 class Policy:
@@ -20,9 +22,8 @@ class Policy:
         self,
         time_t,
         criterion,
-        batch_model_preds: np.ndarray = None,
-        batch_targets: np.ndarray = None,
-        new_model_weights: np.ndarray = None,
+        batch_model_preds_targets: PredsTarget = None,
+        holdout_preds_target: PredsTarget = None,
     ):
         return
 
@@ -114,25 +115,48 @@ class TTestApproval(Policy):
         self.factor = scipy.stats.norm().ppf(1 - ci_alpha)
         print(self.factor)
         assert self.factor > 0
+        self.robot_weights = np.array([1])
+        self.human_weight = 0
 
     def add_expert(self, time_t):
         self.curr_num_experts += 1
+
+    def _get_upper_ci_risk(self, new_model_loss):
+        """
+        @return upper ci of the model's risk given an array of losses
+        """
+        upper_ci_risk = np.mean(new_model_loss) + self.factor * np.sqrt(
+            np.var(new_model_loss) / new_model_loss.size
+        )
+        return upper_ci_risk
+
+    def _get_upper_ci_diff(self, new_model_loss, baseline_model_loss):
+        loss_improvement = new_model_loss - baseline_model_loss
+        mean_improve = np.mean(loss_improvement)
+        # upper ci of difference
+        diff_ci_bound = mean_improve + self.factor * np.sqrt(
+            np.var(loss_improvement) / new_model_loss.size
+        )
+        return diff_ci_bound
+
+    def _can_approve(self, upper_ci_risk, diff_ci_bound):
+        return (upper_ci_risk <= (self.human_max_loss + self.ni_margin)) and (diff_ci_bound <= 0)
 
     def update_weights(
         self,
         time_t,
         criterion,
-        batch_model_preds: np.ndarray = None,
-        batch_targets: np.ndarray = None,
-        new_model_weights: np.ndarray = None,
+        batch_model_preds_target: PredsTarget = None,
+        holdout_pred_target: PredsTarget = None,
     ):
-        if batch_targets is None:
+        if batch_model_preds_target is None:
             return
 
         indiv_robot_loss_t = np.array(
             [
-                criterion(batch_model_preds[i, :], batch_targets)
-                for i in range(batch_model_preds.shape[0])
+                criterion(batch_model_preds_target.preds[i, :],
+                    batch_model_preds_target.target)
+                for i in range(batch_model_preds_target.preds.shape[0])
             ]
         )
         num_updates = min(self.curr_num_experts, indiv_robot_loss_t.shape[0])
@@ -141,69 +165,50 @@ class TTestApproval(Policy):
         for i in range(num_updates, self.num_experts):
             self.loss_histories[i].append([])
 
-    def get_predict_weights(self, time_t: int):
-        print("TTEST BATCH COUNT", time_t - self.curr_approved_idx)
         best_model_idx = self.curr_approved_idx
+        # Check that the baseline model is not inferior to human
+        best_upper_ci = self._get_upper_ci_risk(np.concatenate(self.loss_histories[self.curr_approved_idx][self.curr_approved_idx:]))
+        best_can_approve = self._can_approve(best_upper_ci, 0)
+
+        # Compare all other models to the baseline model
         best_diff_ci = 0
-        differences = []
         for i in range(self.curr_approved_idx + 1, self.curr_num_experts - 1):
             new_model_loss = np.concatenate(self.loss_histories[i][i:])
 
             # upper ci compare to human + ni_margin
-            upper_ci_risk = np.mean(new_model_loss) + self.factor * np.sqrt(
-                np.var(new_model_loss) / new_model_loss.size
-            )
-            is_worse_than_human = upper_ci_risk > (self.human_max_loss + self.ni_margin)
-
-            if is_worse_than_human:
-                continue
+            upper_ci_risk = self._get_upper_ci_risk(new_model_loss)
 
             # upper ci compare to currently approved
             baseline_model_loss = np.concatenate(
                 self.loss_histories[self.curr_approved_idx][i:]
             )
-            loss_improvement = new_model_loss - baseline_model_loss
-            mean_improve = np.mean(loss_improvement)
-            differences.append(mean_improve)
-            # upper ci of difference
-            diff_ci_bound = mean_improve + self.factor * np.sqrt(
-                np.var(loss_improvement) / new_model_loss.size
-            )
-            is_better = diff_ci_bound < 0
-
-            if is_better and diff_ci_bound < best_diff_ci:
-                print("new model loss", np.mean(new_model_loss), self.human_max_loss)
-                print("model idx", i, new_model_loss.size)
+            diff_ci_bound = self._get_upper_ci_diff(new_model_loss, baseline_model_loss)
+            if self._can_approve(upper_ci_risk, diff_ci_bound)and diff_ci_bound < best_diff_ci:
                 best_model_idx = i
                 best_diff_ci = diff_ci_bound
+                best_can_approve = True
 
-        a = np.zeros(self.curr_num_experts)
-        if len(self.loss_histories[0]) == 0:
-            a[0] = 1
-            return a, 0
+        # TTest the latest model also!
+        new_model_loss = criterion(holdout_pred_target.preds[-1], holdout_pred_target.target)
+        upper_ci_risk = self._get_upper_ci_risk(new_model_loss)
+        baseline_model_loss = criterion(holdout_pred_target.preds[self.curr_approved_idx], holdout_pred_target.target)
+        diff_ci_bound = self._get_upper_ci_diff(new_model_loss, baseline_model_loss)
+        if self._can_approve(upper_ci_risk, diff_ci_bound) and (diff_ci_bound < best_diff_ci):
+            print(diff_ci_bound, best_diff_ci)
+            best_model_idx = self.curr_num_experts - 1
+            best_can_approve = True
+            print("USING THE LATEST MODEL", best_model_idx)
+
+        if best_can_approve:
+            self.curr_approved_idx = best_model_idx
+            self.robot_weights = np.zeros(self.curr_num_experts)
+            self.robot_weights[best_model_idx] = 1
+            self.human_weight = 0
+            logging.info("TTEST %d approved %d", time_t, self.curr_approved_idx)
         else:
-            best_model_loss = np.concatenate(
-                self.loss_histories[best_model_idx][best_model_idx:]
-            )
-            # lower ci check
-            ci_human_diff = np.mean(best_model_loss) + self.factor * np.sqrt(
-                np.var(best_model_loss) / best_model_loss.size
-            )
-            print(
-                "human diff lower ci",
-                ci_human_diff,
-                np.mean(best_model_loss),
-                self.human_max_loss,
-                "se",
-                np.sqrt(np.var(best_model_loss) / best_model_loss.size),
-            )
-            is_worse_than_human = ci_human_diff > (self.human_max_loss + self.ni_margin)
+            # worse than human
+            self.robot_weights = np.zeros(self.curr_num_experts)
+            self.human_weight = 1
 
-            if is_worse_than_human:
-                print("ttest human")
-                return a, 1
-            else:
-                self.curr_approved_idx = best_model_idx
-                a[best_model_idx] = 1
-                logging.info("TTEST %d approved %d", time_t, self.curr_approved_idx)
-                return a, 0
+    def get_predict_weights(self, time_t: int):
+        return self.robot_weights, self.human_weight

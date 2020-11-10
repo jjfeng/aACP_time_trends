@@ -6,6 +6,7 @@ import scipy.stats
 import numpy as np
 
 from policy import Policy
+from proposer import PredsTarget
 from common import score_mixture_model
 
 
@@ -68,14 +69,16 @@ class ValidationPolicy(Policy):
             self.optim_weights = np.concatenate([self.optim_weights, [0]])
 
     def update_weights(
-        self, time_t, criterion, batch_preds: np.ndarray, targets: np.ndarray,
-        new_model_losses: np.ndarray
+        self, time_t, criterion, batch_preds_target: PredsTarget,
+        holdout_preds_target: PredsTarget
     ):
-        if batch_preds is None:
+        if batch_preds_target is None:
             return
 
         indiv_robot_loss_t = np.array(
-            [criterion(batch_preds[i, :], targets) for i in range(batch_preds.shape[0])]
+            [criterion(batch_preds_target.preds[i, :],
+                batch_preds_target.target) for i in
+                range(batch_preds_target.preds.shape[0])]
         )
         model_losses_t = np.mean(indiv_robot_loss_t, axis=1)
         var_model_losses_t = np.var(indiv_robot_loss_t, axis=1)
@@ -196,6 +199,9 @@ class ValidationPolicy(Policy):
         inflation = pred_t_factor * np.sqrt(var_list)
         # Predictions using the mean
         predictions = mean_loss + inflation
+        # Also add a prediction for the newest model using the holdout data
+        new_model_losses = criterion(holdout_preds_target.preds[-1],
+                holdout_preds_target.target)
         predictions[-1] = np.mean(new_model_losses) + pred_t_factor * np.sqrt(np.var(new_model_losses)/new_model_losses.size)
 
         all_optim_weights = special.softmax(
@@ -284,8 +290,7 @@ class MetaExpWeightingList(Policy):
         self,
         time_t: int,
         criterion,
-        batch_preds: np.ndarray,
-        target: np.ndarray,
+        batch_preds_target: PredsTarget,
         policy: Policy,
     ):
         assert time_t == (len(policy.weight_history) - 1)
@@ -296,22 +301,23 @@ class MetaExpWeightingList(Policy):
             human_weight,
             robot_weights,
             criterion,
-            batch_preds,
-            target,
+            batch_preds_target.preds,
+            batch_preds_target.target,
             self.human_max_loss,
         )
         return policy_loss
 
     def update_weights(
-        self, time_t, criterion, batch_preds: np.ndarray, target: np.ndarray,
-        new_model_losses: np.ndarray
+        self, time_t, criterion, batch_preds_target: PredsTarget,
+        holdout_preds_target: PredsTarget
     ):
-        if batch_preds is not None:
+        if batch_preds_target is not None:
             # Update the meta policy weights first
             loss_t = np.zeros(self.eta_list_size)
             for idx, etas in enumerate(self.eta_list):
                 loss_t[idx] = self._get_policy_prev_loss(
-                    time_t - 1, criterion, batch_preds, target, self.policy_dict[etas]
+                    time_t - 1, criterion, batch_preds_target,
+                    self.policy_dict[etas]
                 )
                 #print("policy loss", etas, loss_t[idx], self.loss_ts[idx] + loss_t[idx])
             self.loss_ts += loss_t
@@ -319,8 +325,8 @@ class MetaExpWeightingList(Policy):
 
         # Let each policy update their own weights
         for policy in self.policy_dict.values():
-            policy.update_weights(time_t, criterion, batch_preds, target,
-                    new_model_losses)
+            policy.update_weights(time_t, criterion, batch_preds_target,
+                    holdout_preds_target)
 
     def get_predict_weights(self, time_t):
         denom = np.sum(self.meta_weights)

@@ -75,7 +75,7 @@ def create_proposer(env, outdir, c):
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
-    batches = [i if i % 4 == 1 else 1 for i in range(NUM_BATCHES)]
+    batches = [i if i % 4 == 1 else 2 for i in range(NUM_BATCHES)]
     cmd = [
         'python run_script.py',
         c['is_debug'],
