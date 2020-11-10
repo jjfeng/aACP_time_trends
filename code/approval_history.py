@@ -38,3 +38,28 @@ class ApprovalHistory:
             np.array_str(np.array(self.human_history), precision=2),
             np.mean(self.human_history),
         )
+
+    @property
+    def currently_approved_idx(self):
+        """
+        @return average idx of the currently approved robot (normalized by robot weight,
+        not total weight)
+        """
+        robot_weights = self.expert_weights_history[-1]
+        if np.sum(robot_weights) > 0:
+            return np.sum(np.arange(self.size) * robot_weights)/robot_weights.sum()
+        else:
+            return None
+
+    @property
+    def last_approved_idx(self):
+        """
+        @return average idx of the previously approved robot (normalized by robot weight,
+        not total weight)
+        """
+        for i in range(2, len(self.expert_weights_history)):
+            robot_weights = self.expert_weights_history[-i]
+            if np.sum(robot_weights) > 0:
+                return np.sum(np.arange(robot_weights.size) * robot_weights)/robot_weights.sum()
+        return None
+

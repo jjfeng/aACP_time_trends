@@ -27,7 +27,7 @@ def main(args=sys.argv[1:]):
 
     while not os.path.exists(target_file):
         time.sleep(10)
-    time.sleep(10)
+    time.sleep(20)
 
 
 if __name__ == "__main__":

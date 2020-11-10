@@ -140,6 +140,7 @@ def create_policy(
             logging.info("WARNING. regret bounds not satisfied: best %f < desired %f",
                     best_bound, human_max_loss * args.control_error_factor)
             print("WARNING: regret bounds not satisfies")
+            #raise ValueError("This is bad regret")
         loss_diffs = human_max_loss * args.control_error_factor - regret_bounds
         print("BATCH SIZE", batch_size)
         if np.all(loss_diffs < 0):

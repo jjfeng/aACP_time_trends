@@ -85,20 +85,15 @@ class AdversarialNature(Nature):
 
     def next(self, approval_hist: ApprovalHistory = None):
         # np.random.seed(len(self.coefs))
-        approval_direction = 0
+        curr_approv = 0
+        prev_approv = 0
         if approval_hist is not None and approval_hist.size > 2:
-            curr_approv = np.sum(
-                np.arange(approval_hist.size) * approval_hist.expert_weights_history[-1]
-            )
-            prev_approv = np.sum(
-                np.arange(approval_hist.size - 1)
-                * approval_hist.expert_weights_history[-2]
-            )
-            approval_direction = curr_approv - prev_approv
+            curr_approv = approval_hist.currently_approved_idx
+            prev_approv = approval_hist.last_approved_idx
 
-        if approval_direction >= 1.0:
-            # do drift
-            print("time", self.curr_time, "DO DRIFT", approval_direction)
+        if curr_approv is not None and prev_approv is not None and curr_approv - prev_approv > 1:
+            # do drift because the approval history approved something new
+            print("time", self.curr_time, "DO DRIFT", curr_approv, prev_approv)
             new_coef = np.copy(self.coefs[-1])
             to0_rand_idx = np.random.choice(
                 np.where(np.abs(new_coef) > 0)[0], size=self.num_coef_drift
