@@ -13,7 +13,7 @@ def get_regret_bounds(meta_weights, T, delta, drift, ni_margin, lambdas, n, alph
     eps = np.exp(np.arange(-3,0,0.02))
     _alpha3 = T * np.exp(-2 * np.power(eps, 2) * np.power(sigma_max, 2) * n)
     eps_mask = ((delta + ni_margin + drift + eps * sigma_max) < 1) & (_alpha3 +
-            alpha < 1) 
+            alpha < 1)
     eps = eps[eps_mask].reshape((-1,1))
 
     factor1 = _get_bernstein_factor(delta + ni_margin + drift, lambdas)
@@ -36,7 +36,7 @@ def get_regret_bounds(meta_weights, T, delta, drift, ni_margin, lambdas, n, alph
     best_idx = np.where(bounds == np.min(bounds))
     best_eps_idx = best_idx[0][0]
     best_lambda_idx = best_idx[1][0]
-    print("best eps", eps.flatten()[best_eps_idx], "vs", 1/np.sqrt(n))
+    #print("best eps", eps.flatten()[best_eps_idx], "vs", 1/np.sqrt(n))
     bounds = np.min(bounds, axis=0)
     return bounds
 
@@ -44,8 +44,8 @@ def get_regret_bounds(meta_weights, T, delta, drift, ni_margin, lambdas, n, alph
 def main(args=sys.argv[1:]):
     NI_FACTOR = 0.1
     max_loss = 1
-    n = 75
-    m = 15
+    n = 750000
+    m = 10
     T = 50
     lambdas = np.exp(np.arange(-6, 2, 0.05))
     deltas = np.arange(0.03, min(max_loss, 0.2), 0.03)
@@ -53,7 +53,7 @@ def main(args=sys.argv[1:]):
     for delta in deltas:
         print("======================")
         print("%.3f" % delta)
-        drift = delta
+        drift = delta * 2
         meta_weights = np.ones(m)/m
         bounds = get_regret_bounds(
                 meta_weights,
@@ -65,14 +65,16 @@ def main(args=sys.argv[1:]):
         best_bound = np.min(bounds)
         best_idx = np.argmin(bounds)
         best_lambda = lambdas[best_idx]
+        print(delta, best_bound, best_lambda)
+        print(delta, delta * 2, lambdas[np.max(np.where(bounds < delta * 2)[0])])
 
         # Create the plot
         plt.plot(lambdas, bounds, label="d=%.2f" % delta)
 
     # Add X and y Label#
     plt.ylim(0, min(1, max_loss * 2))
-    plt.xlabel("lambda")
-    plt.ylabel("average loss bound")
+    plt.xlabel("Lambda")
+    plt.ylabel("Average risk bound")
 
     # Add a Legend
     plt.legend()

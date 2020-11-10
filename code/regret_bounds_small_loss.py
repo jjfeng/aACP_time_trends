@@ -16,6 +16,7 @@ for delta in deltas:
     ) / T
     best_bound = np.min(bounds)
     best_lambda = lambdas[np.argmin(bounds)]
+    print(delta, best_bound, best_lambda)
     # Create the plot
     plt.plot(
         lambdas,
@@ -25,8 +26,8 @@ for delta in deltas:
 
 # Add X and y Label#
 plt.ylim(0, min(1, max_loss * 2))
-plt.xlabel("lambda")
-plt.ylabel("average loss bound")
+plt.xlabel("Lambda")
+plt.ylabel("Average risk bound")
 
 # Add a Legend
 plt.legend()
