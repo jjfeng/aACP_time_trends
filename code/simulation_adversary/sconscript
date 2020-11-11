@@ -35,7 +35,7 @@ nest.add(
 
 nest.add(
     'num_drift',
-    [7],
+    [3,5],
     label_func=lambda c: 'num_drift_%d' % c)
 
 nest.add(
@@ -93,7 +93,7 @@ def create_proposer(env, outdir, c):
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
-    batches = [TRAIN_NUM_BATCHES] * (NUM_BATCHES + 1)
+    batches = [1 if i % 4 == 3 else 2 for i in range(NUM_BATCHES)]
     cmd = [
         'python run_script.py',
         c['is_debug'],
