@@ -35,12 +35,12 @@ nest.add(
 
 nest.add(
     'num_drift',
-    [5],
+    [7],
     label_func=lambda c: 'num_drift_%d' % c)
 
 nest.add(
     'revert_drift',
-    [0.1],
+    [0],
     label_func=lambda c: 'revert_drift_%.2f' % c)
 
 nest.add_aggregate('all_hists', list)
@@ -136,6 +136,8 @@ def run_adversary_approval(env, outdir, c):
         '--policy-name TTestApproval',
         '--ci-alpha',
         CI_ALPHA,
+        '--holdout',
+        HOLDOUT_FACTOR,
 	'--out-file ${TARGETS[0]}',
 	'--out-nature-file ${TARGETS[1]}',
 	'--log-file ${TARGETS[2]}']
@@ -243,6 +245,8 @@ def run_online(env, outdir, c):
         c['eta'],
         '--alpha',
         c['alpha'],
+        '--holdout',
+        HOLDOUT_FACTOR,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name MarkovHedge',
@@ -271,6 +275,8 @@ def run_blind_approval(env, outdir, c):
         'run_approval.py',
         '--seed',
         c['seed'],
+        '--holdout',
+        HOLDOUT_FACTOR,
         '--nature-file ${SOURCES[0]}',
         '--proposer-file ${SOURCES[1]}',
         '--policy-name BlindApproval',

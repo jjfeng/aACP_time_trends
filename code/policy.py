@@ -113,7 +113,6 @@ class TTestApproval(Policy):
         self.curr_approved_idx = 0
         assert ci_alpha < 0.5
         self.factor = scipy.stats.norm().ppf(1 - ci_alpha)
-        print(self.factor)
         assert self.factor > 0
         self.robot_weights = np.array([1])
         self.human_weight = 0
@@ -183,7 +182,8 @@ class TTestApproval(Policy):
                 self.loss_histories[self.curr_approved_idx][i:]
             )
             diff_ci_bound = self._get_upper_ci_diff(new_model_loss, baseline_model_loss)
-            if self._can_approve(upper_ci_risk, diff_ci_bound)and diff_ci_bound < best_diff_ci:
+            print("diff model", i, diff_ci_bound)
+            if self._can_approve(upper_ci_risk, diff_ci_bound) and diff_ci_bound < best_diff_ci:
                 best_model_idx = i
                 best_diff_ci = diff_ci_bound
                 best_can_approve = True
@@ -194,7 +194,6 @@ class TTestApproval(Policy):
         baseline_model_loss = criterion(holdout_pred_target.preds[self.curr_approved_idx], holdout_pred_target.target)
         diff_ci_bound = self._get_upper_ci_diff(new_model_loss, baseline_model_loss)
         if self._can_approve(upper_ci_risk, diff_ci_bound) and (diff_ci_bound < best_diff_ci):
-            print(diff_ci_bound, best_diff_ci)
             best_model_idx = self.curr_num_experts - 1
             best_can_approve = True
             print("USING THE LATEST MODEL", best_model_idx)

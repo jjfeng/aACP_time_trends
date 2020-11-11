@@ -57,7 +57,7 @@ class ApprovalHistory:
         @return average idx of the previously approved robot (normalized by robot weight,
         not total weight)
         """
-        for i in range(2, len(self.expert_weights_history)):
+        for i in range(2, len(self.expert_weights_history) + 1):
             robot_weights = self.expert_weights_history[-i]
             if np.sum(robot_weights) > 0:
                 return np.sum(np.arange(robot_weights.size) * robot_weights)/robot_weights.sum()

@@ -79,7 +79,7 @@ class AdversarialNature(Nature):
         self.num_p = data_gen.num_p
         self.init_coef = init_coef
         self.trial_data = TrialData([])
-        self.coefs = [self.init_coef]
+        self.coefs = []
         self.prob_revert_drift = prob_revert_drift
         self.last_coef_change = 0
 
@@ -87,11 +87,11 @@ class AdversarialNature(Nature):
         # np.random.seed(len(self.coefs))
         curr_approv = 0
         prev_approv = 0
-        if approval_hist is not None and approval_hist.size > 2:
+        if approval_hist is not None and approval_hist.size >= 2:
             curr_approv = approval_hist.currently_approved_idx
             prev_approv = approval_hist.last_approved_idx
 
-        if curr_approv is not None and prev_approv is not None and curr_approv - prev_approv > 1:
+        if curr_approv is not None and prev_approv is not None and (curr_approv - prev_approv) >= 1:
             # do drift because the approval history approved something new
             print("time", self.curr_time, "DO DRIFT", curr_approv, prev_approv)
             new_coef = np.copy(self.coefs[-1])
@@ -112,7 +112,7 @@ class AdversarialNature(Nature):
                 self.last_coef_change = len(self.coefs) - 1
             else:
                 # no drift at all
-                new_coef = self.coefs[-1]
+                new_coef = self.coefs[-1] if len(self.coefs) else self.init_coef
 
         self.coefs.append(new_coef)
 
@@ -120,6 +120,7 @@ class AdversarialNature(Nature):
             self.batch_sizes[self.curr_time], self.curr_time, coef=self.coefs[-1]
         )
         self.trial_data.add_batch(new_data)
+        assert self.trial_data.num_batches == len(self.coefs)
 
     @property
     def curr_time(self):

@@ -30,8 +30,11 @@ class TrialData:
         last_batch = self.batch_data[end_index]
         sub_last_batch = last_batch.subset(np.arange(int(last_batch.num_obs * (1 -
             holdout_last_batch))))
-        cum_data = cum_data.merge(sub_last_batch)
-        return cum_data
+        if start_index < end_index:
+            cum_data = cum_data.merge(sub_last_batch)
+            return cum_data
+        else:
+            return sub_last_batch
 
     def add_batch(self, data: Dataset):
         self.batch_data.append(data)
