@@ -1,5 +1,6 @@
 import sys
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 from scipy.stats import norm
 
@@ -90,10 +91,12 @@ def main(args=sys.argv[1:]):
     delta_bounds_restrict = get_restrict_bounds(lambdas, deltas, m)
     delta_bounds_small = get_small_loss_bounds(lambdas, deltas, m, max_loss)
 
+    sns.set_context("paper", font_scale=1.5)
+
     colors = []
     for delta in deltas:
         bounds = delta_bounds_restrict[delta]
-        p = plt.plot(lambdas, bounds, label="d=%.2f" % delta)
+        p = plt.plot(lambdas, bounds, label=r"$\delta$=%.2f" % delta)
         colors.append(p[0].get_color())
     for delta, color in zip(deltas, colors):
         bounds = delta_bounds_small[delta]
@@ -102,7 +105,7 @@ def main(args=sys.argv[1:]):
 
     # Add X and y Label#
     plt.ylim(0, min(1, max_loss * 2))
-    plt.xlabel("Lambda")
+    plt.xlabel(r"$\lambda$")
     plt.ylabel("Average risk bound")
 
     # Add a Legend
