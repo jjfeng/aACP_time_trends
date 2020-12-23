@@ -130,7 +130,8 @@ def plot_losses(
         tick_locs = np.arange(0, np.max(mean_data.Time), x_skip)
         plt.xticks(tick_locs, np.arange(x_start, x_start + tick_locs.size))
         plt.xlabel("Year")
-    plt.legend([labeler(k) for k in key_order])
+        plt.xticks(rotation='vertical')
+    #plt.legend([labeler(k) for k in key_order])
     plt.tight_layout()
     plt.savefig(fig_name)
 
@@ -205,7 +206,8 @@ def plot_human_uses(
         tick_locs = np.arange(0, np.max(mean_data.Time), x_skip)
         plt.xticks(tick_locs, np.arange(x_start, x_start + tick_locs.size))
         plt.xlabel("Year")
-    plt.legend([labeler(k) for k in key_order])
+        plt.xticks(rotation='vertical')
+    plt.legend([labeler(k) for k in key_order], loc="upper right")
     plt.tight_layout()
     plt.savefig(fig_name)
 
@@ -244,6 +246,7 @@ def main(args=sys.argv[1:]):
     if "Fixed" in sorted_keys:
         ordered_approval_history_keys.append("Fixed")
 
+    sns.set_context("paper", font_scale=2)
     plot_losses(
         approval_history_dict,
         args.loss_plot,
