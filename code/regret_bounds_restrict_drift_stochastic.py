@@ -1,8 +1,10 @@
 import sys
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 from scipy.stats import norm
 
+from regret_bounds_small_loss import get_small_loss_bounds
 
 def _get_bernstein_factor(max_val, lambdas):
     assert np.all(max_val <= 1)
@@ -16,6 +18,8 @@ def get_regret_bounds(
     lambdas = lambdas.reshape((1, -1))
     eps = np.exp(np.arange(-3, 0, 0.02))
     _alpha3 = T * np.exp(-2 * np.power(eps, 2) * np.power(sigma_max, 2) * n)
+    _alpha3 = (T - 1) * np.exp(-2 * np.power(eps, 2) * np.power(sigma_max, 2) * n) + np.exp(-2 * np.power(eps, 2) * np.power(sigma_max, 2) * n/2)
+
     eps_mask = ((delta + ni_margin + drift + eps * sigma_max) < 1) & (
         _alpha3 + alpha < 1
     )
@@ -28,6 +32,8 @@ def get_regret_bounds(
     factor3 = _get_bernstein_factor(1, lambdas)
     alpha2 = alpha
     alpha3 = T * np.exp(-2 * np.power(eps, 2) * np.power(sigma_max, 2) * n)
+    alpha3 = (T - 1) * np.exp(-2 * np.power(eps, 2) * np.power(sigma_max, 2) * n) + np.exp(-2 * np.power(eps, 2) * np.power(sigma_max, 2) * n/2)
+    #print(alpha3_o, alpha3)
     alpha1 = 1 - alpha3 - alpha2
     factor = 1 / (factor1 * alpha1 + factor2 * alpha2 + factor3 * alpha3)
 
@@ -47,16 +53,12 @@ def get_regret_bounds(
     bounds = np.min(bounds, axis=0)
     return bounds
 
-
-def main(args=sys.argv[1:]):
+def get_restrict_bounds(lambdas, deltas, m):
     NI_FACTOR = 0.1
-    max_loss = 1
-    n = 750000
-    m = 10
+    n = 10000
     T = 50
-    lambdas = np.exp(np.arange(-6, 2, 0.05))
-    deltas = np.arange(0.03, min(max_loss, 0.2), 0.03)
     alpha = 0.1
+    delta_bounds = {}
     for delta in deltas:
         print("======================")
         print("%.3f" % delta)
@@ -77,17 +79,37 @@ def main(args=sys.argv[1:]):
         best_lambda = lambdas[best_idx]
         print(delta, best_bound, best_lambda)
         print(delta, delta * 2, lambdas[np.max(np.where(bounds < delta * 2)[0])])
+        delta_bounds[delta] = bounds
+    return delta_bounds
 
-        # Create the plot
-        plt.plot(lambdas, bounds, label="d=%.2f" % delta)
+def main(args=sys.argv[1:]):
+    max_loss = 1
+    m = 10
+    lambdas = np.exp(np.arange(-6, 2, 0.05))
+    deltas = np.arange(0.03, min(max_loss, 0.2), 0.03)
+
+    delta_bounds_restrict = get_restrict_bounds(lambdas, deltas, m)
+    delta_bounds_small = get_small_loss_bounds(lambdas, deltas, m, max_loss)
+
+    sns.set_context("paper", font_scale=1.5)
+
+    colors = []
+    for delta in deltas:
+        bounds = delta_bounds_restrict[delta]
+        p = plt.plot(lambdas, bounds, label=r"$\delta$=%.2f" % delta)
+        colors.append(p[0].get_color())
+    for delta, color in zip(deltas, colors):
+        bounds = delta_bounds_small[delta]
+        plt.plot(lambdas, bounds, '--', color=color)
+
 
     # Add X and y Label#
     plt.ylim(0, min(1, max_loss * 2))
-    plt.xlabel("Lambda")
+    plt.xlabel(r"$\lambda$")
     plt.ylabel("Average risk bound")
 
     # Add a Legend
-    plt.legend()
+    plt.legend(loc="upper left")
 
     plt.savefig("_output/avg_loss_bounds_drift_restrict_stoch_%d.png" % m)
     print("_output/avg_loss_bounds_drift_restrict_stoch_%d.png" % m)
