@@ -89,7 +89,6 @@ def create_nature(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def create_proposer(env, outdir, c):
-    # TODO: create a lasso proposer that only trains on the most recent data
     targets = [
         join(outdir, 'proposer.pkl'),
         join(outdir, 'proposer_log.txt')]
