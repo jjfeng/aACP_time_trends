@@ -42,8 +42,6 @@ def main(args=sys.argv[1:]):
     nature = pickle_from_file(args.nature_file)
     logging.info("BATCH SIZES %s", nature.batch_sizes)
 
-    # TODO: check that nature and propower are all fixed
-
     approval_hist = ApprovalHistory(human_max_loss=1, policy_name="Placeholder")
     proposer = FixedProposerFromFile(
         [args.model_file], criterion_str="l1", max_loss=args.max_loss

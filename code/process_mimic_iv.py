@@ -111,7 +111,6 @@ def create_features(chartevents_sub, mean_only=False):
 
 
 def impute_mean(variables):
-    # TODO: impute better
     # Fill missing with mean
     fill_vals = variables.mean(axis=0, skipna=True)
     for s in ["max", "min", "mean"]:

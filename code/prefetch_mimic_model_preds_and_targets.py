@@ -38,8 +38,6 @@ def main(args=sys.argv[1:]):
 
     nature = pickle_from_file(args.nature_file)
 
-    # TODO: check that nature and propower are all fixed
-
     approval_hist = ApprovalHistory(human_max_loss=1, policy_name="Placeholder")
     model = pickle_from_file(args.model_file)
     proposer = FixedProposer([model])
