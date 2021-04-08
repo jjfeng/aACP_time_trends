@@ -16,7 +16,7 @@ NUM_EPOCHS = 500
 
 MAX_TRAIN = 2000
 START_YEAR = 2008
-NUM_YEARS = 1 #11
+NUM_YEARS = 11
 NUM_MONTHS = 12
 MAX_LOSS = 4
 HUMAN_LOSS = 1/MAX_LOSS
@@ -30,6 +30,7 @@ nest.add(
     label_func=lambda c: 'seed_%d' % c)
 
 nest.add_aggregate('proposer_list', list)
+nest.add_aggregate('star_list', list)
 nest.add_aggregate('prefetch_list', list)
 nest.add_aggregate('valid_data_list', list)
 
@@ -70,6 +71,24 @@ def create_yelp_data(env, outdir, c):
         ' '.join(map(str, cmd)))
 
 @nest.add_target_with_env(localenv)
+def get_avg_stars(env, outdir, c):
+    targets = [
+        join(outdir, 'num_stars.csv')]
+    c['star_list'].append(targets[0])
+    cmd = [
+        'python summarize_yelp_stars.py',
+	    '--train-file ${SOURCES[0]}',
+	    '--year',
+        c['year'],
+	    '--month',
+        c['month'],
+	    '--out-file ${TARGETS[0]}']
+    return env.Command(
+        targets,
+        c['create_yelp_data'][:1],
+        ' '.join(map(str, cmd)))
+
+@nest.add_target_with_env(localenv)
 def fit_yelp_year_month_model(env, outdir, c):
     targets = [
         join(outdir, 'model.pkl'),
@@ -96,6 +115,21 @@ def fit_yelp_year_month_model(env, outdir, c):
         ' '.join(map(str, cmd)))
 
 nest.pop('year')
+
+@nest.add_target_with_env(localenv)
+def plot_drift(env, outdir, c):
+    cmd = [
+        "python plot_drift_yelp.py",
+        "--file-template",
+        '"experiment_yelp/_output/seed_0/year_%d/month_%d/num_stars.csv"',
+        "--num-year",
+        NUM_YEARS,
+        '--out-file ${TARGETS[0]}',
+    ]
+    return env.Command(
+        ["drift_yelp.png"],
+        c['star_list'],
+        ' '.join(map(str, cmd)))
 
 nest.add(
     'num_months',
